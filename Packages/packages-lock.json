@@ -154,6 +154,13 @@
       },
       "url": "https://packages.unity.com"
     },
+    "com.wonjeong.template": {
+      "version": "https://github.com/wonjeong97/Template.git",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "a7a1e3fc045f66e4e778cdcac88a2fbbbf2b1f1e"
+    },
     "com.unity.modules.ai": {
       "version": "1.0.0",
       "depth": 0,
