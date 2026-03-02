@@ -1,0 +1,39 @@
+{
+  "warningTime": 20.0,
+  "resetTime": 33.0,
+  "closeSetting": {
+    "position": { "x": 1.0, "y": 1.0 },  
+    "numToClose": 10,
+    "resetClickTime": 3.0,
+    "imageAlpha": 0.0
+  },
+  "fadeTime": 1,
+  "fontMap": {
+    "font1": "Fonts/Freesentation-1Thin.ttf",
+    "font2": "Fonts/Freesentation-2ExtraLight.ttf",
+    "font3": "Fonts/Freesentation-3Light.ttf",
+    "font4": "Fonts/Freesentation-4Regular.ttf",
+    "font5": "Fonts/Freesentation-5Medium.ttf",
+    "font6": "Fonts/Freesentation-6SemiBold.ttf",
+    "font7": "Fonts/Freesentation-7Bold.ttf",
+    "font8": "Fonts/Freesentation-8ExtraBold.ttf",
+    "font9": "Fonts/Freesentation-9Black.ttf"
+  },
+  "sounds": [
+    {"key": "MainBGM", "clipPath": "Sound/Anous_Sound_A1카메라_공간BGM_1.mp3", "volume": 1.0},
+    {"key": "카메라_1", "clipPath": "Sound/Anous_Sound_카메라_1.mp3", "volume": 1.0},
+    {"key": "카메라_2", "clipPath": "Sound/Anous_Sound_카메라_2.mp3", "volume": 1.0},
+    {"key": "카메라_3", "clipPath": "Sound/Anous_Sound_카메라_3.mp3", "volume": 1.0},
+    {"key": "공통_1", "clipPath": "Sound/Anous_Sound_공통_1.mp3", "volume": 1.0},
+    {"key": "공통_3", "clipPath": "Sound/Anous_Sound_공통_3.mp3", "volume": 1.0},
+    {"key": "공통_6", "clipPath": "Sound/Anous_Sound_공통_6.mp3", "volume": 1.0},
+    {"key": "공통_8", "clipPath": "Sound/Anous_Sound_공통_8.mp3", "volume": 1.0},
+    {"key": "공통_9", "clipPath": "Sound/Anous_Sound_공통_9.mp3", "volume": 1.0},
+    {"key": "공통_10_3초", "clipPath": "Sound/Anous_Sound_공통_10_3초.mp3", "volume": 1.0},
+    {"key": "공통_11", "clipPath": "Sound/Anous_Sound_공통_11.mp3", "volume": 1.0},
+    {"key": "공통_12", "clipPath": "Sound/Anous_Sound_공통_12.mp3", "volume": 1.0},
+    {"key": "공통_13", "clipPath": "Sound/Anous_Sound_공통_13.mp3", "volume": 1.0},
+    {"key": "공통_14", "clipPath": "Sound/Anous_Sound_공통_14.mp3", "volume": 1.0},
+    {"key": "공통_22", "clipPath": "Sound/Anous_Sound_공통_22.mp3", "volume": 1.0}
+  ]
+}

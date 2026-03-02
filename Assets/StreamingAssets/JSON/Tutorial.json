@@ -1,0 +1,53 @@
+{
+  "page1": {
+    "descriptionText": {
+      "name": "Text_Tag",
+      "position": {"x": 960, "y": -800},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "두 사람 모두 태그하면, 체험이 시작됩니다.",
+      "fontName": "font4",
+      "fontSize": 55,
+      "fontColor": {"r": 0.2588235, "g": 0.2588235, "b": 0.2588235, "a": 0}
+    }
+  },
+  "page2": {
+    "descriptionText": {
+      "name": "Text_MindPiece",
+      "position": {"x": 960, "y": -800},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "체험 후 마음 조각 5개를 받을 수 있습니다.",
+      "fontName": "font4",
+      "fontSize": 55,
+      "fontColor": {"r": 0.2588235, "g": 0.2588235, "b": 0.2588235, "a": 0}
+    }
+  },
+  "page3": {
+    "descriptionText": {
+      "name": "Text_Stand",
+      "position": {"x": 960, "y": -800},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "각자의 이름이 있는 자리에 서 주세요",
+      "fontName": "font4",
+      "fontSize": 55,
+      "fontColor": {"r": 0.2588235, "g": 0.2588235, "b": 0.2588235, "a": 0}
+    },
+    "playerNameA": {
+      "name": "Text_PlayerA",
+      "position": {"x": 960, "y": -550},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "{nameA}님 자리",
+      "fontName": "font8",
+      "fontSize": 67,
+      "fontColor": {"r": 0.7176471, "g": 0.6627451, "b": 0.6235294, "a": 0}
+    },
+    "playerNameB": {
+      "name": "Text_PlayerB",
+      "position": {"x": 960, "y": -550},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "{nameB}님 자리",
+      "fontName": "font8",
+      "fontSize": 67,
+      "fontColor": {"r": 0.7176471, "g": 0.6627451, "b": 0.6235294, "a": 0}
+    }
+  }
+}
