@@ -105,6 +105,10 @@ namespace My.Scripts._01_Tutorial.Pages
             }
 
             // 3초 후 자동으로 다음 페이지로 넘어가기 위한 코루틴 실행
+            if (_autoTransitionCoroutine != null)
+            {
+                StopCoroutine(_autoTransitionCoroutine);
+            }
             _autoTransitionCoroutine = StartCoroutine(AutoTransitionRoutine());
         }
 

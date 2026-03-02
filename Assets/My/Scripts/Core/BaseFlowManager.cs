@@ -26,6 +26,7 @@ namespace My.Scripts.Core
 
         protected int currentPageIndex = -1;
         protected bool isTransitioning = false;
+        private bool isFlowFinished = false;
 
         protected virtual void Start()
         {
@@ -41,10 +42,25 @@ namespace My.Scripts.Core
         /// </summary>
         public virtual void TransitionToPage(int index)
         {
-            if (isTransitioning) return;
+            if (isTransitioning || isFlowFinished) return;
             
             if (index < 0 || index >= pageSets.Count)
             {
+                isFlowFinished = true;
+                if (currentPageIndex >= 0 && currentPageIndex < pageSets.Count)
+                {
+                    PageSet currentSet = pageSets[currentPageIndex];
+                    if (currentSet.pageP1)
+                    {
+                        currentSet.pageP1.onStepComplete = null;
+                        currentSet.pageP1.OnExit();
+                    }
+                    if (currentSet.pageP2)
+                    {
+                        currentSet.pageP2.onStepComplete = null;
+                        currentSet.pageP2.OnExit();
+                    }
+                }
                 OnAllFinished();
                 return;
             }

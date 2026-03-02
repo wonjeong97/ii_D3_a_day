@@ -55,7 +55,8 @@ namespace My.Scripts._01_Tutorial.Pages
                 cachedMessage = pageData.descriptionText.text;
             }
             else
-            {
+            {   
+                cachedMessage = string.Empty;
                 // 데이터 로드 실패 시 디버깅을 위해 로그를 남김
                 Debug.LogError("[TutorialPage1Controller] 전달된 데이터가 비어있거나 형식이 잘못되었습니다.");
             }
