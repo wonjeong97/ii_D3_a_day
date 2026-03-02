@@ -65,8 +65,16 @@ namespace My.Scripts.Core
                 yield return StartCoroutine(FadePageSet(pageSets[currentPageIndex], 1f, 0f));
                 
                 PageSet prevSet = pageSets[currentPageIndex];
-                if (prevSet.pageP1) prevSet.pageP1.OnExit();
-                if (prevSet.pageP2) prevSet.pageP2.OnExit();
+                if (prevSet.pageP1)
+                {
+                    prevSet.pageP1.onStepComplete = null;
+                    prevSet.pageP1.OnExit();
+                }
+                if (prevSet.pageP2)
+                {
+                    prevSet.pageP2.onStepComplete = null;
+                    prevSet.pageP2.OnExit();
+                }
             }
 
             currentPageIndex = index;

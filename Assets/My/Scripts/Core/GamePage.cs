@@ -54,6 +54,10 @@ namespace My.Scripts.Core
             {
                 SetupData(typedData);
             }
+            else
+            {
+                Debug.LogError($"[{GetType().Name}] SetupData 타입 불일치: expected={typeof(T).Name}, actual={data?.GetType().Name ?? "null"}");
+            }
         }
 
         /// <summary> 실제 데이터 설정 구현 (자식용) </summary>

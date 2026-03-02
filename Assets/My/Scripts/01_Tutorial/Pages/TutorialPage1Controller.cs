@@ -26,12 +26,15 @@ namespace My.Scripts._01_Tutorial.Pages
         private Text descriptionText;
 
         private string cachedMessage = string.Empty;
+        private bool isPageActive;
 
         /// <summary>
         /// 매 프레임 엔터 키 입력을 확인하여 페이지 완료 여부를 결정함.
         /// </summary>
         private void Update()
-        {
+        {   
+            if (!isPageActive) return;
+            
             // 사용자가 엔터(일반/키패드)를 눌러 확인했는지 감지
             if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
             {
@@ -65,6 +68,7 @@ namespace My.Scripts._01_Tutorial.Pages
         {
             base.OnEnter();
 
+            isPageActive = true;
             if (descriptionText)
             {
                 // 데이터가 없을 경우를 대비해 기본 문구를 할당함
@@ -83,6 +87,12 @@ namespace My.Scripts._01_Tutorial.Pages
             {
                 onStepComplete.Invoke(0);
             }
+        }
+
+        public override void OnExit()
+        {
+            base.OnExit();
+            isPageActive = false;
         }
     }
 }

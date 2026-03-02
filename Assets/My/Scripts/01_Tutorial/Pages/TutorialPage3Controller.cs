@@ -52,6 +52,7 @@ namespace My.Scripts._01_Tutorial.Pages
             }
             else
             {
+                _cachedData = null;
                 Debug.LogError("[TutorialPage3Controller] SetupData: 전달된 데이터가 TutorialPage3Data 형식이 아닙니다.");
             }
         }

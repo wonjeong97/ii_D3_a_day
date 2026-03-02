@@ -128,6 +128,11 @@ namespace My.Scripts.Global
             {
                 return;
             }
+            if (string.IsNullOrWhiteSpace(sceneName) || !Application.CanStreamedLevelBeLoaded(sceneName))
+            {
+                Debug.LogError($"[GameManager] ChangeScene 실패: 유효하지 않은 씬 이름 '{sceneName}'");
+                return;
+            }
             
             isTransitioning = true;
             StartCoroutine(ChangeSceneRoutine(sceneName));
