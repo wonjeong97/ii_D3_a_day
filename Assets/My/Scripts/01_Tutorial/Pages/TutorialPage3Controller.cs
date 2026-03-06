@@ -32,9 +32,8 @@ namespace My.Scripts._01_Tutorial.Pages
         [Tooltip("P1용 프리팹이면 체크, P2용이면 체크 해제")]
         [SerializeField] private bool isPlayer1;
 
-        [Header("Transition Settings")]
-        [SerializeField] private float autoTransitionDelay = 3.0f;
-
+        
+        private readonly float _autoTransitionDelay = 10.0f;
         private TutorialPage3Data _cachedData;
         private Coroutine _autoTransitionCoroutine;
 
@@ -131,7 +130,7 @@ namespace My.Scripts._01_Tutorial.Pages
         /// </summary>
         private IEnumerator AutoTransitionRoutine()
         {
-            yield return new WaitForSeconds(autoTransitionDelay);
+            yield return new WaitForSeconds(_autoTransitionDelay);
             
             if (onStepComplete != null)
             {

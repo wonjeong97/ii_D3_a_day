@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using My.Scripts.Core;
 using UnityEngine;
 using UnityEngine.UI;
@@ -12,30 +13,33 @@ namespace My.Scripts._01_Tutorial.Pages
     [Serializable]
     public class TutorialPage1Data
     {
-        public TextSetting descriptionText; // JSON의 descriptionText 필드와 매핑
+        public TextSetting descriptionText; 
     }
     
     /// <summary>
     /// 첫 번째 튜토리얼 페이지를 제어하는 컨트롤러.
-    /// 하나의 텍스트 컴포넌트를 관리하며 엔터 키 입력을 통해 다음 단계로 진행함.
+    /// 페이지 자체는 즉시 나타나고 텍스트만 단독으로 페이드인 됨.
     /// </summary>
     public class TutorialPage1Controller : GamePage
     {
         [Header("UI Components")]
-        [SerializeField] 
-        private Text descriptionText;
+        [SerializeField] private CanvasGroup textCanvasGroup;
+        [SerializeField] private Text descriptionText;
 
-        private string cachedMessage = string.Empty;
-        private bool isPageActive;
+        [Header("Animation Settings")]
+        [SerializeField] private float fadeDuration = 0.5f;
+
+        private string _cachedMessage = string.Empty;
+        private bool _isPageActive;
+        private Coroutine _fadeCoroutine;
 
         /// <summary>
         /// 매 프레임 엔터 키 입력을 확인하여 페이지 완료 여부를 결정함.
         /// </summary>
         private void Update()
         {   
-            if (!isPageActive) return;
+            if (!_isPageActive) return;
             
-            // 사용자가 엔터(일반/키패드)를 눌러 확인했는지 감지
             if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
             {
                 OnConfirmInput();
@@ -45,37 +49,42 @@ namespace My.Scripts._01_Tutorial.Pages
         /// <summary>
         /// TutorialManager로부터 전달받은 JSON 데이터를 텍스트 변수에 저장함.
         /// </summary>
-        /// <param name="data">TutorialPage1Data 타입의 데이터 객체.</param>
         public override void SetupData(object data)
         {
             TutorialPage1Data pageData = data as TutorialPage1Data;
             
             if (pageData != null && pageData.descriptionText != null)
             {
-                cachedMessage = pageData.descriptionText.text;
+                _cachedMessage = pageData.descriptionText.text;
             }
             else
             {   
-                cachedMessage = string.Empty;
-                // 데이터 로드 실패 시 디버깅을 위해 로그를 남김
+                _cachedMessage = string.Empty;
                 Debug.LogError("[TutorialPage1Controller] 전달된 데이터가 비어있거나 형식이 잘못되었습니다.");
             }
         }
 
         /// <summary>
-        /// 페이지가 활성화될 때 캐싱된 메시지를 텍스트 컴포넌트에 적용함.
+        /// 페이지가 활성화될 때 텍스트용 캔버스 그룹을 페이드인 연출함.
         /// </summary>
         public override void OnEnter()
         {
-            base.OnEnter();
+            base.OnEnter(); // 루트 객체를 켜고 알파값을 1로 고정함
 
-            isPageActive = true;
+            _isPageActive = true;
+            
             if (descriptionText)
             {
-                // 데이터가 없을 경우를 대비해 기본 문구를 할당함
-                descriptionText.text = !string.IsNullOrEmpty(cachedMessage) 
-                    ? cachedMessage 
+                descriptionText.text = !string.IsNullOrEmpty(_cachedMessage) 
+                    ? _cachedMessage 
                     : "엔터 키를 눌러 진행하세요.";
+            }
+
+            // Why: 씬 진입 시 부자연스러운 화면 전체 페이드 대신, 텍스트만 자연스럽게 떠오르도록 연출
+            if (textCanvasGroup)
+            {
+                textCanvasGroup.alpha = 0f;
+                _fadeCoroutine = StartCoroutine(FadeTextRoutine(textCanvasGroup, 0f, 1f, fadeDuration));
             }
         }
 
@@ -93,7 +102,38 @@ namespace My.Scripts._01_Tutorial.Pages
         public override void OnExit()
         {
             base.OnExit();
-            isPageActive = false;
+            _isPageActive = false;
+            
+            if (_fadeCoroutine != null)
+            {
+                StopCoroutine(_fadeCoroutine);
+                _fadeCoroutine = null;
+            }
+        }
+
+        /// <summary>
+        /// 텍스트를 감싸는 캔버스 그룹의 알파값을 지정된 시간 동안 조절함.
+        /// </summary>
+        private IEnumerator FadeTextRoutine(CanvasGroup target, float start, float end, float duration)
+        {
+            float elapsed = 0f;
+            
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                
+                if (target) 
+                {
+                    target.alpha = Mathf.Lerp(start, end, elapsed / duration);
+                }
+                
+                yield return null;
+            }
+
+            if (target) 
+            {
+                target.alpha = end;
+            }
         }
     }
 }

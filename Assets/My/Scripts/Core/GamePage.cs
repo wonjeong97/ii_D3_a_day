@@ -27,8 +27,8 @@ namespace My.Scripts.Core
 
         /// <summary> 퇴장 (비활성화) </summary>
         public virtual void OnExit() 
-        { 
-            gameObject.SetActive(false); 
+        {
+            gameObject.SetActive(false);
         }
 
         /// <summary> 투명도 설정 </summary>
