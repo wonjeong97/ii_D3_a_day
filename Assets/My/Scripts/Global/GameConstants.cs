@@ -8,7 +8,7 @@ namespace My.Scripts.Global
         { 
             public const string Title = "00_Title"; // 타이틀 씬
             public const string Tutorial = "01_Tutorial"; // 튜토리얼 씬
-            public const string PlayTutorial = "02_Play_Tutorial"; // 플레이 튜토리얼 씬
+            public const string PlayTutorial = "02_PlayTutorial"; // 플레이 튜토리얼 씬
         }
 
         /// <summary> 리소스 경로 상수 모음 </summary>

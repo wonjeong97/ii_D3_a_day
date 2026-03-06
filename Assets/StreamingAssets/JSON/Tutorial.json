@@ -49,5 +49,83 @@
       "fontSize": 67,
       "fontColor": {"r": 0.7176471, "g": 0.6627451, "b": 0.6235294, "a": 0}
     }
+  },
+  "page4": {
+    "descriptionText": {
+      "name": "Text_Description",
+      "position": {"x": 960, "y": -290},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "이곳에서는 지금 이 순간의 당신을,\n하나의 장면으로 기록할 거예요. 바로 시작해 볼까요?",
+      "fontName": "font4",
+      "fontSize": 68,
+      "fontColor": {"r": 0.2588235, "g": 0.2588235, "b": 0.2588235, "a": 0}
+    }
+  },
+  "page5": {
+    "descriptionText": {
+      "name": "Text_Description",
+      "position": {"x": 960, "y": -250},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "질문을 보고 답변과 같은 피규어를\n숫자의 화살표 방향에 맞춰 <color=#000000><b>‘답변 자리’</b></color>에 올려놔주세요.",
+      "fontName": "font4",
+      "fontSize": 68,
+      "fontColor": {"r": 0.2588235, "g": 0.2588235, "b": 0.2588235, "a": 0}
+    },
+    "descriptionText2": {
+      "name": "Text_Description",
+      "position": {"x": 960, "y": -250},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "잠시 기다리시면 나의 피규어를 촬영합니다.",
+      "fontName": "font4",
+      "fontSize": 68,
+      "fontColor": {"r": 0.2588235, "g": 0.2588235, "b": 0.2588235, "a": 0}
+    }
+  },
+  "page6": {
+    "descriptionTextA": {
+      "name": "Text_Description",
+      "position": {"x": 960, "y": -325},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "{nameA}님은 이제 3 종류의 피규어 중\n‘{cartridge}’에 해당하는 피규어로 답변을 진행합니다.",
+      "fontName": "font4",
+      "fontSize": 55,
+      "fontColor": {"r": 0.2588235, "g": 0.2588235, "b": 0.2588235, "a": 0}
+    },
+    "descriptionTextB": {
+      "name": "Text_Description",
+      "position": {"x": 960, "y": -325},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "{nameB}님은 이제 3 종류의 피규어 중\n‘{cartridge}’에 해당하는 피규어로 답변을 진행합니다.",
+      "fontName": "font4",
+      "fontSize": 55,
+      "fontColor": {"r": 0.2588235, "g": 0.2588235, "b": 0.2588235, "a": 0}
+    },
+    "cartNameA": {
+      "name": "Text_A",
+      "position": {"x": 20, "y": 170},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "A 카트리지",
+      "fontName": "font4",
+      "fontSize": 38,
+      "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 0}
+    },
+    "cartNameB": {
+      "name": "Text_B",
+      "position": {"x": 20, "y": 170},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "B 카트리지",
+      "fontName": "font4",
+      "fontSize": 38,
+      "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 0}
+    },
+    "cartNameC": {
+      "name": "Text_C",
+      "position": {"x": 20, "y": 170},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "C 카트리지",
+      "fontName": "font4",
+      "fontSize": 38,
+      "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 0}
+    }
   }
 }
