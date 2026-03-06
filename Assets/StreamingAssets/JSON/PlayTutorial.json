@@ -1,0 +1,42 @@
+{
+  "page1": {
+    "text1": {
+      "name": "Text_1",
+      "position": {"x": 960, "y": -300},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "A 카트리지에는 5종의 ‘답변 피규어’가 있습니다.\n하나를 선택해 답변 자리에 올려볼까요?",
+      "fontName": "font4",
+      "fontSize": 55,
+      "fontColor": {"r": 0.2588235, "g": 0.2588235, "b": 0.2588235, "a": 0}
+    },
+    "text2": {
+      "name": "Text_2",
+      "position": {"x": 960, "y": -300},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "<size= 45><b>1번 화살표 자리</b></size>에 맞춰 올려주세요",
+      "fontName": "font6",
+      "fontSize": 38,
+      "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 0}
+    }
+  },
+  "page3":  {
+    "descriptionText": {
+      "name": "Text_Description",
+      "position": {"x": 960, "y": -250},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "네, 그렇게 답변해 주시면 됩니다.",
+      "fontName": "font4",
+      "fontSize": 55,
+      "fontColor": {"r": 0.2588235, "g": 0.2588235, "b": 0.2588235, "a": 0}
+    },
+    "waitText": {
+      "name": "Text_Wait",
+      "position": {"x": 960, "y": -340},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "이제 질문을 시작하니, 잠시만 기다려 주세요.",
+      "fontName": "font4",
+      "fontSize": 38,
+      "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 0}
+    }
+  }
+}

@@ -3,25 +3,28 @@ using System.Collections;
 using System.Collections.Generic;
 using My.Scripts.Core;
 using My.Scripts.Global;
+using My.Scripts._02_PlayTutorial.Pages;
 using UnityEngine;
+using Wonjeong.Utils;
 
-namespace My.Scripts._02_Play_Tutorial
+namespace My.Scripts._02_PlayTutorial
 {
-    /// <summary>
-    /// PlayTutorial 씬 전용 JSON 설정 데이터.
-    /// </summary>
     [Serializable]
     public class PlayTutorialSetting
     {
-        // # TODO: 제이슨 구조 확정 시 각 페이지 데이터 구조체 필드 추가
+        public PlayTutorialPage1Data page1;
+        public PlayTutorialPage2Data page2;
+        public PlayTutorialPage3Data page3;
     }
 
     /// <summary>
-    /// P1과 P2의 튜토리얼 진행 상황을 완전히 독립적으로 제어하는 매니저.
-    /// 화면 간 상호 간섭 없이 개별적인 페이지 전환 연출을 수행함.
+    /// 싱글톤 기반으로 두 플레이어의 튜토리얼 진행을 관리하는 매니저.
+    /// 개별 진행 후 카운트(_finishCount)를 통해 최종 동기화를 처리함.
     /// </summary>
     public class PlayTutorialManager : MonoBehaviour
-    {
+    {   
+        public static PlayTutorialManager Instance { get; private set; }
+        
         [Header("Pages")]
         [SerializeField] private List<GamePage> p1Pages = new List<GamePage>();
         [SerializeField] private List<GamePage> p2Pages = new List<GamePage>();
@@ -31,190 +34,170 @@ namespace My.Scripts._02_Play_Tutorial
 
         private int _p1CurrentIndex = -1;
         private int _p2CurrentIndex = -1;
-
         private bool _isP1Transitioning = false;
         private bool _isP2Transitioning = false;
+
+        private int _finishCount = 0;
+
+        private void Awake()
+        {
+            if (!Instance)
+            {
+                Instance = this;
+            }
+            else if (Instance != this)
+            {
+                Destroy(gameObject);
+            }
+        }
 
         private void Start()
         {
             LoadSettings();
-            
-            // 씬 진입 시 양쪽 화면 모두 0번 페이지로 페이드인 시작
-            TransitionP1ToPage(0);
-            TransitionP2ToPage(0);
+
+            // 초기화 시 모든 페이지를 비활성화하여 겹침 방지
+            foreach (GamePage page in p1Pages)
+            {
+                if (page) page.gameObject.SetActive(false);
+            }
+            foreach (GamePage page in p2Pages)
+            {
+                if (page) page.gameObject.SetActive(false);
+            }
+
+            if (p1Pages.Count > 0) TransitionP1ToPage(0);
+            if (p2Pages.Count > 0) TransitionP2ToPage(0);
         }
 
-        /// <summary>
-        /// JSON 데이터를 로드하고 각 페이지에 주입함.
-        /// </summary>
         private void LoadSettings()
         {
-            // # TODO: PlayTutorial 전용 JSON 데이터를 JsonLoader로 읽어와 각 페이지(SetupData)에 주입하는 로직 연동
-        }
+            string jsonPath = "JSON/PlayTutorial";
+            PlayTutorialSetting setting = JsonLoader.Load<PlayTutorialSetting>(jsonPath);
 
-        /// <summary>
-        /// P1 화면을 특정 페이지 인덱스로 전환함.
-        /// </summary>
-        /// <param name="index">전환할 페이지 인덱스.</param>
-        public void TransitionP1ToPage(int index)
-        {
-            if (_isP1Transitioning)
+            if (setting == null)
             {
+                Debug.LogError($"[PlayTutorialManager] {jsonPath} 로드 실패.");
                 return;
             }
 
-            if (index < 0 || index >= p1Pages.Count)
+            if (p1Pages.Count > 0 && p1Pages[0]) p1Pages[0].SetupData(setting.page1);
+            if (p1Pages.Count > 1 && p1Pages[1]) p1Pages[1].SetupData(setting.page2);
+            if (p1Pages.Count > 2 && p1Pages[2]) p1Pages[2].SetupData(setting.page3);
+
+            if (p2Pages.Count > 0 && p2Pages[0]) p2Pages[0].SetupData(setting.page1);
+            if (p2Pages.Count > 1 && p2Pages[1]) p2Pages[1].SetupData(setting.page2);
+            if (p2Pages.Count > 2 && p2Pages[2]) p2Pages[2].SetupData(setting.page3);
+        }
+
+        public void TransitionP1ToPage(int index)
+        {
+            if (_isP1Transitioning) return;
+
+            // Why: 완료 처리는 PlayTutorialFinished에서 전담하므로, 인덱스를 초과하면 로직만 종료함
+            if (index >= p1Pages.Count)
             {
-                OnP1Finished();
+                _p1CurrentIndex = p1Pages.Count;
                 return;
             }
 
             StartCoroutine(PageTransitionRoutine(true, index));
         }
 
-        /// <summary>
-        /// P2 화면을 특정 페이지 인덱스로 전환함.
-        /// </summary>
-        /// <param name="index">전환할 페이지 인덱스.</param>
         public void TransitionP2ToPage(int index)
         {
-            if (_isP2Transitioning)
-            {
-                return;
-            }
+            if (_isP2Transitioning) return;
 
-            if (index < 0 || index >= p2Pages.Count)
+            if (index >= p2Pages.Count)
             {
-                OnP2Finished();
+                _p2CurrentIndex = p2Pages.Count;
                 return;
             }
 
             StartCoroutine(PageTransitionRoutine(false, index));
         }
 
-        /// <summary>
-        /// 단일 화면의 기존 페이지를 끄고 새 페이지를 켜는 비동기 시퀀스.
-        /// </summary>
-        /// <param name="isPlayer1">P1 화면 여부.</param>
-        /// <param name="nextIndex">이동할 대상 인덱스.</param>
         private IEnumerator PageTransitionRoutine(bool isPlayer1, int nextIndex)
         {
-            // Why: P1과 P2의 참조 데이터를 분기하여 한쪽의 화면 전환이 다른 쪽에 영향을 주지 않도록 함
-            List<GamePage> targetPages = isPlayer1 ? p1Pages : p2Pages;
-            int currentIndex = isPlayer1 ? _p1CurrentIndex : _p2CurrentIndex;
-
             if (isPlayer1) _isP1Transitioning = true;
             else _isP2Transitioning = true;
 
-            // 1. 기존 페이지 페이드 아웃
-            if (currentIndex >= 0 && currentIndex < targetPages.Count)
+            List<GamePage> targetList = isPlayer1 ? p1Pages : p2Pages;
+            int currentIndex = isPlayer1 ? _p1CurrentIndex : _p2CurrentIndex;
+
+            if (currentIndex >= 0 && currentIndex < targetList.Count)
             {
-                GamePage prevPage = targetPages[currentIndex];
-                if (prevPage)
+                GamePage prev = targetList[currentIndex];
+                if (prev)
                 {
-                    yield return StartCoroutine(FadePageRoutine(prevPage, 1f, 0f));
-                    prevPage.OnExit();
+                    yield return StartCoroutine(FadeRoutine(prev, 1f, 0f));
+                    prev.OnExit();
+                    prev.gameObject.SetActive(false);
                 }
             }
 
-            // 인덱스 갱신
             if (isPlayer1) _p1CurrentIndex = nextIndex;
             else _p2CurrentIndex = nextIndex;
 
-            // 2. 새 페이지 진입 및 페이드 인
-            GamePage nextPage = targetPages[nextIndex];
+            GamePage nextPage = targetList[nextIndex];
             if (nextPage)
             {
-                // Why: 페이지 내부에서 완료 이벤트 발생 시 자신의 화면에 맞는 다음 페이지로 넘어가도록 동적 연결
+                nextPage.gameObject.SetActive(true);
                 nextPage.onStepComplete = (trigger) =>
                 {
-                    if (isPlayer1) TransitionP1ToPage(_p1CurrentIndex + 1);
-                    else TransitionP2ToPage(_p2CurrentIndex + 1);
+                    if (isPlayer1) TransitionP1ToPage(nextIndex + 1);
+                    else TransitionP2ToPage(nextIndex + 1);
                 };
-                
                 nextPage.OnEnter();
-                yield return StartCoroutine(FadePageRoutine(nextPage, 0f, 1f));
-            }
-            else
-            {
-                Debug.LogWarning($"[PlayTutorialManager] {(isPlayer1 ? "P1" : "P2")}의 {nextIndex}번째 페이지 객체가 인스펙터에 할당되지 않았습니다.");
+                yield return StartCoroutine(FadeRoutine(nextPage, 0f, 1f));
             }
 
             if (isPlayer1) _isP1Transitioning = false;
             else _isP2Transitioning = false;
         }
 
-        /// <summary>
-        /// 단일 GamePage 오브젝트의 CanvasGroup 알파값을 목표치로 변경함.
-        /// </summary>
-        /// <param name="page">대상 페이지 컨트롤러.</param>
-        /// <param name="startAlpha">시작 알파.</param>
-        /// <param name="endAlpha">목표 알파.</param>
-        private IEnumerator FadePageRoutine(GamePage page, float startAlpha, float endAlpha)
+        private IEnumerator FadeRoutine(GamePage page, float start, float end)
         {
-            if (!page) yield break;
-
-            // # TODO: 반복적인 GetComponent 호출 방지를 위해 GamePage 클래스 내부에서 CanvasGroup을 public Getter로 제공하도록 리팩토링 검토
-            CanvasGroup canvasGroup = page.GetComponent<CanvasGroup>();
-            if (!canvasGroup)
-            {
-                Debug.LogWarning($"[PlayTutorialManager] {page.gameObject.name}에 CanvasGroup이 없습니다.");
-                yield break;
-            }
+            CanvasGroup group = page.GetComponent<CanvasGroup>();
+            if (!group) yield break;
 
             float elapsed = 0f;
-            canvasGroup.alpha = startAlpha;
-
             while (elapsed < fadeDuration)
             {
                 elapsed += Time.deltaTime;
-                canvasGroup.alpha = Mathf.Lerp(startAlpha, endAlpha, elapsed / fadeDuration);
+                group.alpha = Mathf.Lerp(start, end, elapsed / fadeDuration);
                 yield return null;
             }
 
-            canvasGroup.alpha = endAlpha;
+            group.alpha = end;
         }
 
         /// <summary>
-        /// P1 화면의 모든 튜토리얼 단계가 완료되었을 때 호출됨.
+        /// 개별 튜토리얼 종료 신호를 수신하고 카운트를 증가시킴.
         /// </summary>
-        private void OnP1Finished()
+        public void PlayTutorialFinished()
         {
-            // Why: 각 화면이 언제 종료되었는지 개별적으로 추적하기 위함
-            Debug.Log("[PlayTutorialManager] P1 완료");
+            _finishCount++;
             CheckAllFinished();
         }
 
         /// <summary>
-        /// P2 화면의 모든 튜토리얼 단계가 완료되었을 때 호출됨.
-        /// </summary>
-        private void OnP2Finished()
-        {
-            // Why: 각 화면이 언제 종료되었는지 개별적으로 추적하기 위함
-            Debug.Log("[PlayTutorialManager] P2 완료");
-            CheckAllFinished();
-        }
-
-        /// <summary>
-        /// 두 플레이어가 모두 튜토리얼을 마쳤는지 확인하고 메인 게임으로 전환함.
+        /// 두 플레이어가 모두 튜토리얼을 끝냈는지 확인하고 씬을 전환함.
         /// </summary>
         private void CheckAllFinished()
         {
-            bool isP1Done = _p1CurrentIndex >= p1Pages.Count;
-            bool isP2Done = _p2CurrentIndex >= p2Pages.Count;
-
-            // Why: 한쪽이 일찍 끝나더라도 다른 쪽이 끝날 때까지 대기시켜 흐름을 동기화함
-            if (isP1Done && isP2Done)
+            // Why: 누가 먼저 끝냈는지 계산할 필요 없이 카운트가 2에 도달하면 즉시 동기화 완료 처리
+            if (_finishCount >= 2)
             {
-                Debug.Log("[PlayTutorialManager] 양쪽 모두 튜토리얼 완료. 본 게임 씬으로 이동합니다.");
+                Debug.Log("<color=cyan>[PlayTutorialManager] 동기화 완료. 메인 게임으로 이동합니다.</color>");
                 
-                // # TODO: GameConstants.Scene에 MainPlay 씬 이름 정의 후 아래 주석 해제하여 씬 이동 연동
-                /*
                 if (GameManager.Instance)
                 {
-                    GameManager.Instance.ChangeScene(GameConstants.Scene.MainPlay);
+                    //GameManager.Instance.ChangeScene(GameConstants.Scene.MainPlay); // TODO: 해당 씬 상수가 정의되어 있는지 확인
                 }
-                */
+                else
+                {
+                    Debug.LogError("[PlayTutorialManager] GameManager가 존재하지 않습니다.");
+                }
             }
         }
     }

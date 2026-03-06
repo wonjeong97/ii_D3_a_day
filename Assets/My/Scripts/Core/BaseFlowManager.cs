@@ -46,10 +46,33 @@ namespace My.Scripts.Core
                 }
             }
             
-            // 씬 진입 시 첫 페이지 0.5초 페이드인
-            TransitionToPage(0);
+            // Why: 씬 진입 시 첫 페이지의 루트 캔버스는 즉시 노출(알파 1)하고, 
+            // 세부적인 요소(텍스트 등)의 페이드인은 각 페이지 컨트롤러에 위임함
+            if (pageSets.Count > 0)
+            {
+                currentPageIndex = 0;
+                PageSet firstSet = pageSets[0];
+
+                if (firstSet.pageP1)
+                {
+                    firstSet.pageP1.onStepComplete = TransitionToNext;
+                    firstSet.pageP1.OnEnter();
+                    firstSet.pageP1.SetAlpha(1f);
+                }
+
+                if (firstSet.pageP2)
+                {
+                    firstSet.pageP2.onStepComplete = TransitionToNext;
+                    firstSet.pageP2.OnEnter();
+                    firstSet.pageP2.SetAlpha(1f);
+                }
+            }
         }
 
+        /// <summary>
+        /// 외부 JSON 데이터 등을 로드하여 페이지에 주입하기 위한 추상 메서드.
+        /// (자식 클래스에서 반드시 구현해야 함)
+        /// </summary>
         protected abstract void LoadSettings();
 
         /// <summary>
@@ -138,7 +161,6 @@ namespace My.Scripts.Core
             CanvasGroup cg1 = set.pageP1 ? set.pageP1.GetComponent<CanvasGroup>() : null;
             CanvasGroup cg2 = set.pageP2 ? set.pageP2.GetComponent<CanvasGroup>() : null;
 
-            // 시작 알파값 강제 설정
             if (cg1) cg1.alpha = startAlpha;
             if (cg2) cg2.alpha = startAlpha;
 

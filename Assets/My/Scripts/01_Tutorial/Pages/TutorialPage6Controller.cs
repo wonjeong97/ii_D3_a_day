@@ -4,7 +4,7 @@ using My.Scripts.Core;
 using UnityEngine;
 using UnityEngine.UI;
 using Wonjeong.Data;
-using Wonjeong.Utils; // CoroutineData 사용을 위해 추가
+using Wonjeong.Utils; 
 
 namespace My.Scripts._01_Tutorial.Pages
 {
@@ -20,12 +20,14 @@ namespace My.Scripts._01_Tutorial.Pages
 
     /// <summary>
     /// 여섯 번째 튜토리얼 페이지 컨트롤러.
-    /// 선택된 카트리지 연출 후 3초 뒤 페이지 전체를 페이드 아웃하여 부드러운 씬 전환을 유도함.
+    /// 진입 시 페이드 효과는 상위 매니저(BaseFlowManager)에 위임하고, 
+    /// 퇴장 시에만 메인 배경은 유지한 채 내부 UI 묶음(Cg1)을 페이드 아웃시킴.
     /// </summary>
     public class TutorialPage6Controller : GamePage
     {
         [Header("UI Components")]
-        [SerializeField] private CanvasGroup mainGroupCanvas; 
+        [SerializeField] private CanvasGroup pageCanvasGroup; 
+        [SerializeField] private CanvasGroup cg1CanvasGroup;  
         [SerializeField] private Text descriptionUI; 
         
         [Header("Display Settings")]
@@ -48,17 +50,16 @@ namespace My.Scripts._01_Tutorial.Pages
 
         [Header("Animation Settings")]
         [SerializeField] private float fadeDuration = 0.5f;
-        [SerializeField] private float finalHoldTime = 3.0f; // 씬 전환 전 대기 시간 추가
+        [SerializeField] private float finalHoldTime = 3.0f;
 
         private readonly Vector2 _selectedTargetPos = new Vector2(900f, -500f);
         private TutorialPage6Data _cachedData;
 
-        private Coroutine _mainFadeCoroutine;
         private Coroutine _animationCoroutineA;
         private Coroutine _animationCoroutineB;
         private Coroutine _animationCoroutineC;
         
-        private bool _isCompleted = false; // 중복 선택 및 코루틴 다중 실행 방지용 플래그
+        private bool _isCompleted = false; 
 
         public override void SetupData(object data)
         {
@@ -67,6 +68,10 @@ namespace My.Scripts._01_Tutorial.Pages
             {
                 _cachedData = pageData;
             }
+            else
+            {
+                Debug.LogWarning("[TutorialPage6Controller] SetupData: 전달된 데이터가 null입니다.");
+            }
         }
 
         public override void OnEnter()
@@ -74,7 +79,7 @@ namespace My.Scripts._01_Tutorial.Pages
             base.OnEnter();
             _isCompleted = false;
 
-            if (mainGroupCanvas) mainGroupCanvas.alpha = 0f;
+            if (cg1CanvasGroup) cg1CanvasGroup.alpha = 1f;
             if (cartACanvas) cartACanvas.alpha = 1f;
             if (cartBCanvas) cartBCanvas.alpha = 1f;
             if (cartCCanvas) cartCCanvas.alpha = 1f;
@@ -93,35 +98,36 @@ namespace My.Scripts._01_Tutorial.Pages
                     {
                         rawText = _cachedData.descriptionTextB.text;
                     }
+                    else
+                    {
+                        Debug.LogWarning("[TutorialPage6Controller] descriptionText 데이터가 null입니다.");
+                    }
 
-                    string processedText = rawText
-                        .Replace("{nameA}", "사용자A")
-                        .Replace("{nameB}", "사용자B")
-                        .Replace("{cartridge}", "A 카트리지"); 
+                    if (!string.IsNullOrEmpty(rawText))
+                    {
+                        string processedText = rawText
+                            .Replace("{nameA}", "사용자A")
+                            .Replace("{nameB}", "사용자B")
+                            .Replace("{cartridge}", "A 카트리지"); 
 
-                    descriptionUI.text = processedText;
+                        descriptionUI.text = processedText;
+                    }
                 }
 
                 if (cartAText && _cachedData.cartNameA != null) cartAText.text = _cachedData.cartNameA.text;
                 if (cartBText && _cachedData.cartNameB != null) cartBText.text = _cachedData.cartNameB.text;
                 if (cartCText && _cachedData.cartNameC != null) cartCText.text = _cachedData.cartNameC.text;
             }
-
-            if (mainGroupCanvas)
-            {
-                _mainFadeCoroutine = StartCoroutine(FadeCanvasGroupRoutine(mainGroupCanvas, 0f, 1f, fadeDuration));
-            }
         }
 
         public override void OnExit()
         {
-            base.OnExit();
+            // Why: 씬 전환 중 마지막 페이지의 게임 오브젝트가 꺼져버려 화면이 깜빡이는 현상(암전)을 막기 위해 base.OnExit() 호출을 생략함
             StopAllAnimationCoroutines();
         }
 
         private void Update()
         {
-            // 이미 선택되어 씬 전환 연출이 진행 중이라면 추가 입력을 무시함
             if (_isCompleted) return;
 
             if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Keypad1)) SelectLegoCart(1);
@@ -131,52 +137,45 @@ namespace My.Scripts._01_Tutorial.Pages
 
         private void SelectLegoCart(int selectedIndex)
         {
-            _isCompleted = true; // 이후의 키 입력 차단
+            _isCompleted = true; 
 
             ManageCartAnimation(ref _animationCoroutineA, cartACanvas, cartATransform, selectedIndex == 1);
             ManageCartAnimation(ref _animationCoroutineB, cartBCanvas, cartBTransform, selectedIndex == 2);
             ManageCartAnimation(ref _animationCoroutineC, cartCCanvas, cartCTransform, selectedIndex == 3);
 
-            // 이동 애니메이션과 동시에 최종 마무리 시퀀스 코루틴 실행
             StartCoroutine(FinalTransitionRoutine());
         }
 
-        /// <summary>
-        /// 3초 대기 후 페이지 내의 모든 UI 요소를 페이드 아웃시키고 매니저에 완료 신호를 보냄.
-        /// </summary>
         private IEnumerator FinalTransitionRoutine()
         {
-            // 1. 결과 연출을 볼 수 있도록 3초 대기
             yield return CoroutineData.GetWaitForSeconds(finalHoldTime);
 
-            // 2. 화면에 남아있는 UI를 모두 투명하게 페이드 아웃 처리함
-            // Why: GameManager가 암전(검은 화면) 없이 씬을 로드하므로, UI를 먼저 부드럽게 지워서 화면 전환의 이질감을 줄이기 위함
             float elapsed = 0f;
-            
-            float startMainAlpha = mainGroupCanvas ? mainGroupCanvas.alpha : 0f;
-            float startCartAAlpha = cartACanvas ? cartACanvas.alpha : 0f;
-            float startCartBAlpha = cartBCanvas ? cartBCanvas.alpha : 0f;
-            float startCartCAlpha = cartCCanvas ? cartCCanvas.alpha : 0f;
+            float startAlpha = cg1CanvasGroup ? cg1CanvasGroup.alpha : 0f;
 
             while (elapsed < fadeDuration)
             {
                 elapsed += Time.deltaTime;
                 float t = elapsed / fadeDuration;
 
-                if (mainGroupCanvas) mainGroupCanvas.alpha = Mathf.Lerp(startMainAlpha, 0f, t);
-                if (cartACanvas) cartACanvas.alpha = Mathf.Lerp(startCartAAlpha, 0f, t);
-                if (cartBCanvas) cartBCanvas.alpha = Mathf.Lerp(startCartBAlpha, 0f, t);
-                if (cartCCanvas) cartCCanvas.alpha = Mathf.Lerp(startCartCAlpha, 0f, t);
+                if (cg1CanvasGroup) 
+                {
+                    cg1CanvasGroup.alpha = Mathf.Lerp(startAlpha, 0f, t);
+                }
 
                 yield return null;
             }
 
-            if (mainGroupCanvas) mainGroupCanvas.alpha = 0f;
-            if (cartACanvas) cartACanvas.alpha = 0f;
-            if (cartBCanvas) cartBCanvas.alpha = 0f;
-            if (cartCCanvas) cartCCanvas.alpha = 0f;
+            if (cg1CanvasGroup) 
+            {
+                cg1CanvasGroup.alpha = 0f;
+            }
 
-            // 3. 페이지 완료 신호 전송 -> TutorialManager.OnAllFinished() -> PlayTutorial 씬 전환
+            if (pageCanvasGroup)
+            {
+                pageCanvasGroup.alpha = 1f;
+            }
+
             if (onStepComplete != null)
             {
                 onStepComplete.Invoke(0);
@@ -223,26 +222,12 @@ namespace My.Scripts._01_Tutorial.Pages
             if (isSelected && rectTransform) rectTransform.anchoredPosition = _selectedTargetPos;
         }
 
-        private IEnumerator FadeCanvasGroupRoutine(CanvasGroup target, float start, float end, float duration)
-        {
-            float elapsed = 0f;
-            while (elapsed < duration)
-            {
-                elapsed += Time.deltaTime;
-                if (target) target.alpha = Mathf.Lerp(start, end, elapsed / duration);
-                yield return null;
-            }
-            if (target) target.alpha = end;
-        }
-
         private void StopAllAnimationCoroutines()
         {
-            if (_mainFadeCoroutine != null) StopCoroutine(_mainFadeCoroutine);
             if (_animationCoroutineA != null) StopCoroutine(_animationCoroutineA);
             if (_animationCoroutineB != null) StopCoroutine(_animationCoroutineB);
             if (_animationCoroutineC != null) StopCoroutine(_animationCoroutineC);
 
-            _mainFadeCoroutine = null;
             _animationCoroutineA = null;
             _animationCoroutineB = null;
             _animationCoroutineC = null;
