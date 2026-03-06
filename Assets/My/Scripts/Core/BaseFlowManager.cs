@@ -35,8 +35,15 @@ namespace My.Scripts.Core
             // 첫 시작 시 모든 페이지 비활성화
             foreach (PageSet page in pageSets)
             {
-                if (page.pageP1.gameObject.activeSelf) page.pageP1.gameObject.SetActive(false);
-                if (page.pageP2.gameObject.activeSelf) page.pageP2.gameObject.SetActive(false);
+                if (page.pageP1 && page.pageP1.gameObject.activeSelf)
+                {
+                    page.pageP1.gameObject.SetActive(false);
+                }
+
+                if (page.pageP2 && page.pageP2.gameObject.activeSelf)
+                {
+                    page.pageP2.gameObject.SetActive(false);
+                }
             }
             
             // 씬 진입 시 첫 페이지 0.5초 페이드인
