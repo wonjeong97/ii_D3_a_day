@@ -4,7 +4,8 @@ using My.Scripts.Core;
 using UnityEngine;
 using UnityEngine.UI;
 using Wonjeong.Data;
-using Wonjeong.Utils; 
+using Wonjeong.Utils;
+using My.Scripts.Network; // TCP 통신 매니저 접근
 
 namespace My.Scripts._01_Tutorial.Pages
 {
@@ -20,8 +21,7 @@ namespace My.Scripts._01_Tutorial.Pages
 
     /// <summary>
     /// 여섯 번째 튜토리얼 페이지 컨트롤러.
-    /// 진입 시 페이드 효과는 상위 매니저(BaseFlowManager)에 위임하고, 
-    /// 퇴장 시에만 메인 배경은 유지한 채 내부 UI 묶음(Cg1)을 페이드 아웃시킴.
+    /// 진입 후 자동으로 1번 카트리지를 선택하며, 내부 UI 페이드 아웃 연출 후 다음 단계로 넘어감.
     /// </summary>
     public class TutorialPage6Controller : GamePage
     {
@@ -29,9 +29,8 @@ namespace My.Scripts._01_Tutorial.Pages
         [SerializeField] private CanvasGroup pageCanvasGroup; 
         [SerializeField] private CanvasGroup cg1CanvasGroup;  
         [SerializeField] private Text descriptionUI; 
-        
-        [Header("Display Settings")]
-        [SerializeField] private bool isPlayer1; 
+
+        // Why: TCP 네트워크 상태에 따라 동적으로 판단하므로 isPlayer1 변수는 삭제함
 
         [Header("Cart A")]
         [SerializeField] private CanvasGroup cartACanvas; 
@@ -49,12 +48,14 @@ namespace My.Scripts._01_Tutorial.Pages
         [SerializeField] private Text cartCText; 
 
         [Header("Animation Settings")]
+        [SerializeField] private float autoSelectDelay = 1.5f; // 자동 선택 대기 시간
         [SerializeField] private float fadeDuration = 0.5f;
         [SerializeField] private float finalHoldTime = 3.0f;
 
         private readonly Vector2 _selectedTargetPos = new Vector2(900f, -500f);
         private TutorialPage6Data _cachedData;
 
+        private Coroutine _autoSelectCoroutine;
         private Coroutine _animationCoroutineA;
         private Coroutine _animationCoroutineB;
         private Coroutine _animationCoroutineC;
@@ -89,12 +90,14 @@ namespace My.Scripts._01_Tutorial.Pages
                 if (descriptionUI)
                 {
                     string rawText = string.Empty;
+                    bool isServer = TcpManager.Instance && TcpManager.Instance.IsServer;
 
-                    if (isPlayer1 && _cachedData.descriptionTextA != null)
+                    // Why: 현재 PC가 서버(P1)이면 A 텍스트, 클라이언트(P2)이면 B 텍스트를 출력함
+                    if (isServer && _cachedData.descriptionTextA != null)
                     {
                         rawText = _cachedData.descriptionTextA.text;
                     }
-                    else if (!isPlayer1 && _cachedData.descriptionTextB != null)
+                    else if (!isServer && _cachedData.descriptionTextB != null)
                     {
                         rawText = _cachedData.descriptionTextB.text;
                     }
@@ -118,21 +121,38 @@ namespace My.Scripts._01_Tutorial.Pages
                 if (cartBText && _cachedData.cartNameB != null) cartBText.text = _cachedData.cartNameB.text;
                 if (cartCText && _cachedData.cartNameC != null) cartCText.text = _cachedData.cartNameC.text;
             }
+
+            // Why: 외부 연동 전 임시로 일정 시간 대기 후 1번 카트리지를 자동 선택함
+            if (_autoSelectCoroutine != null) StopCoroutine(_autoSelectCoroutine);
+            _autoSelectCoroutine = StartCoroutine(AutoSelectRoutine());
         }
 
         public override void OnExit()
         {
-            // Why: 씬 전환 중 마지막 페이지의 게임 오브젝트가 꺼져버려 화면이 깜빡이는 현상(암전)을 막기 위해 base.OnExit() 호출을 생략함
+            // Why: 씬 전환 중 화면 암전 방지를 위해 base.OnExit() 생략
             StopAllAnimationCoroutines();
+
+            if (_autoSelectCoroutine != null)
+            {
+                StopCoroutine(_autoSelectCoroutine);
+                _autoSelectCoroutine = null;
+            }
         }
 
         private void Update()
         {
-            if (_isCompleted) return;
+            // Why: 자동으로 넘어가도록 수정되었으므로 기존의 키보드 입력 체크 로직은 비워둠
+        }
 
-            if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Keypad1)) SelectLegoCart(1);
-            else if (Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.Keypad2)) SelectLegoCart(2);
-            else if (Input.GetKeyDown(KeyCode.Alpha3) || Input.GetKeyDown(KeyCode.Keypad3)) SelectLegoCart(3);
+        private IEnumerator AutoSelectRoutine()
+        {
+            // 화면에 요소들이 나타난 뒤 사용자가 인지할 수 있도록 짧게 대기함
+            yield return new WaitForSeconds(autoSelectDelay);
+            
+            if (!_isCompleted)
+            {
+                SelectLegoCart(1);
+            }
         }
 
         private void SelectLegoCart(int selectedIndex)

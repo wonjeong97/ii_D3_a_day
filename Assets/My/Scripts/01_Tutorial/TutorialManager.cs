@@ -4,13 +4,10 @@ using My.Scripts._01_Tutorial.Pages;
 using UnityEngine;
 using My.Scripts.Global;
 using Wonjeong.Utils;
+using My.Scripts.Network; // TCP 통신 매니저 접근을 위한 네임스페이스 추가
 
 namespace My.Scripts._01_Tutorial
 {
-    /// <summary>
-    /// JSON 데이터 파싱을 위한 루트 설정 클래스.
-    /// 튜토리얼 4, 5페이지 데이터를 추가로 매핑함.
-    /// </summary>
     [Serializable]
     public class TutorialSetting
     {
@@ -23,86 +20,108 @@ namespace My.Scripts._01_Tutorial
     }
 
     /// <summary>
-    /// 튜토리얼 씬의 전체 진행 순서와 페이지 전환을 관리하는 매니저.
-    /// P1, P2 페이지 세트를 제어하며 외부 JSON 데이터를 주입함.
+    /// 튜토리얼 씬의 페이지 전환을 관리하는 매니저.
+    /// 단일 흐름으로 동작하며, TCP 통신을 통해 다른 PC와의 완료 타이밍을 동기화함.
     /// </summary>
     public class TutorialManager : BaseFlowManager
     {
-        /// <summary> 튜토리얼에 필요한 외부 데이터를 로드하여 각 페이지 세트에 전달함. </summary>
+        private bool _isLocalFinished = false;
+        private bool _isRemoteFinished = false;
+
+        protected override void Start()
+        {
+            base.Start(); // 상위 클래스(BaseFlowManager)의 초기화 실행
+            
+            // Why: 상대방 PC의 완료 신호를 수신하기 위해 네트워크 이벤트를 구독함
+            if (TcpManager.Instance)
+            {
+                TcpManager.Instance.onMessageReceived += OnNetworkMessageReceived;
+            }
+        }
+
         protected override void LoadSettings()
         {
-            // 지정된 경로에서 전체 튜토리얼 설정 데이터 로드
             TutorialSetting setting = JsonLoader.Load<TutorialSetting>(GameConstants.Path.Tutorial);
 
+            // 일반 C# 객체이므로 명시적 null 검사 적용
             if (setting == null)
             {
-                Debug.LogError("[TutorialManager] Tutorial.json 로드에 실패했습니다. 경로를 확인하세요.");
+                Debug.LogError("[TutorialManager] Tutorial.json 로드 실패.");
                 return;
             }
             
-            // 물리적으로 분리된 두 디스플레이(P1, P2)가 동일한 진행 상황과 텍스트를 유지해야 하므로 각각 독립적으로 데이터를 주입함
-            if (pageSets.Count > 0)
-            {
-                PageSet firstSet = pageSets[0];
-                if (firstSet.pageP1) firstSet.pageP1.SetupData(setting.page1);
-                if (firstSet.pageP2) firstSet.pageP2.SetupData(setting.page1);
-            }
-
-            if (pageSets.Count > 1)
-            {
-                PageSet secondSet = pageSets[1];
-                if (secondSet.pageP1) secondSet.pageP1.SetupData(setting.page2);
-                if (secondSet.pageP2) secondSet.pageP2.SetupData(setting.page2);
-            }
-
-            if (pageSets.Count > 2)
-            {
-                PageSet thirdSet = pageSets[2];
-                if (thirdSet.pageP1) thirdSet.pageP1.SetupData(setting.page3);
-                if (thirdSet.pageP2) thirdSet.pageP2.SetupData(setting.page3);
-            }
-
-            if (pageSets.Count > 3)
-            {
-                PageSet fourthSet = pageSets[3];
-                if (fourthSet.pageP1) fourthSet.pageP1.SetupData(setting.page4);
-                if (fourthSet.pageP2) fourthSet.pageP2.SetupData(setting.page4);
-            }
-
-            if (pageSets.Count > 4)
-            {
-                PageSet fifthSet = pageSets[4];
-                if (fifthSet.pageP1) fifthSet.pageP1.SetupData(setting.page5);
-                if (fifthSet.pageP2) fifthSet.pageP2.SetupData(setting.page5);
-            }
-            
-            if (pageSets.Count > 5)
-            {
-                PageSet sixthSet = pageSets[5];
-                if (sixthSet.pageP1) sixthSet.pageP1.SetupData(setting.page6);
-                if (sixthSet.pageP2) sixthSet.pageP2.SetupData(setting.page6);
-            }
+            if (pages.Count > 0 && pages[0]) pages[0].SetupData(setting.page1);
+            if (pages.Count > 1 && pages[1]) pages[1].SetupData(setting.page2);
+            if (pages.Count > 2 && pages[2]) pages[2].SetupData(setting.page3);
+            if (pages.Count > 3 && pages[3]) pages[3].SetupData(setting.page4);
+            if (pages.Count > 4 && pages[4]) pages[4].SetupData(setting.page5);
+            if (pages.Count > 5 && pages[5]) pages[5].SetupData(setting.page6);
         }
 
-        /// <summary> 모든 튜토리얼 단계가 끝나면 실제 플레이 튜토리얼 씬으로 전환함. </summary>
+        /// <summary>
+        /// 내 PC의 튜토리얼 흐름이 모두 끝났을 때 호출됨.
+        /// </summary>
         protected override void OnAllFinished()
         {
-            if (GameManager.Instance)
+            _isLocalFinished = true;
+            Debug.Log("[TutorialManager] 내 PC 튜토리얼 완료. 상대방을 기다립니다...");
+
+            // 내 튜토리얼이 끝났음을 상대방 PC에 전송함
+            if (TcpManager.Instance)
             {
-                GameManager.Instance.ChangeScene(GameConstants.Scene.PlayTutorial);
+                TcpManager.Instance.SendMessageToTarget("TUTORIAL_COMPLETE");
             }
-            else
+            
+            CheckSyncAndChangeScene();
+        }
+
+        /// <summary>
+        /// TCP를 통해 메시지가 수신될 때마다 호출되는 콜백.
+        /// </summary>
+        private void OnNetworkMessageReceived(TcpMessage msg)
+        {
+            // C# 객체 및 문자열 명시적 null 검사
+            if (msg != null && msg.command == "TUTORIAL_COMPLETE")
             {
-                Debug.LogError("TutorialManager: GameManager가 존재하지 않아 씬을 전환할 수 없습니다.");
+                _isRemoteFinished = true;
+                Debug.Log("[TutorialManager] 상대방 PC 튜토리얼 완료 신호 수신.");
+                
+                CheckSyncAndChangeScene();
             }
         }
 
-        private void Update()
+        /// <summary>
+        /// 양쪽 PC가 모두 완료 상태인지 확인하고 다음 씬으로 동시 진입함.
+        /// </summary>
+        private void CheckSyncAndChangeScene()
         {
-            // 페이지 전환 연출 중에는 추가적인 로직 실행을 차단하여 흐름 꼬임 방지
-            if (isTransitioning)
+            // Why: 양쪽 PC의 완료 플래그가 모두 true일 때만 씬을 전환하여 완벽한 타이밍 동기화를 이룸
+            if (_isLocalFinished && _isRemoteFinished)
             {
-                return;
+                // 중복 씬 전환을 막기 위해 이벤트 구독 즉시 해제
+                if (TcpManager.Instance)
+                {
+                    TcpManager.Instance.onMessageReceived -= OnNetworkMessageReceived;
+                }
+
+                if (GameManager.Instance)
+                {
+                    Debug.Log("[TutorialManager] 양방향 동기화 완료. PlayTutorial로 이동합니다.");
+                    GameManager.Instance.ChangeScene(GameConstants.Scene.PlayTutorial);
+                }
+                else
+                {
+                    Debug.LogError("[TutorialManager] GameManager가 존재하지 않습니다.");
+                }
+            }
+        }
+
+        private void OnDestroy()
+        {
+            // Why: 씬이 강제로 파괴되거나 전환될 때 메모리 누수 및 에러를 막기 위해 이벤트 구독을 안전하게 해제함
+            if (TcpManager.Instance)
+            {
+                TcpManager.Instance.onMessageReceived -= OnNetworkMessageReceived;
             }
         }
     }

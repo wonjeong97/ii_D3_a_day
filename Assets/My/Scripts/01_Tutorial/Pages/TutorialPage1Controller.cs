@@ -1,15 +1,13 @@
 using System;
 using System.Collections;
 using My.Scripts.Core;
+using My.Scripts.Network; // TCP 매니저 접근
 using UnityEngine;
 using UnityEngine.UI;
 using Wonjeong.Data;
 
 namespace My.Scripts._01_Tutorial.Pages
 {   
-    /// <summary>
-    /// JSON에서 로드되는 튜토리얼 1페이지 데이터 구조체.
-    /// </summary>
     [Serializable]
     public class TutorialPage1Data
     {
@@ -17,8 +15,8 @@ namespace My.Scripts._01_Tutorial.Pages
     }
     
     /// <summary>
-    /// 첫 번째 튜토리얼 페이지를 제어하는 컨트롤러.
-    /// 페이지 자체는 즉시 나타나고 텍스트만 단독으로 페이드인 됨.
+    /// 첫 번째 튜토리얼 페이지 컨트롤러.
+    /// 서버(P1)에서 확인 입력을 받으면 클라이언트(P2)에 TCP 신호를 보내 동시에 다음 페이지로 넘어감.
     /// </summary>
     public class TutorialPage1Controller : GamePage
     {
@@ -33,43 +31,44 @@ namespace My.Scripts._01_Tutorial.Pages
         private bool _isPageActive;
         private Coroutine _fadeCoroutine;
 
-        /// <summary>
-        /// 매 프레임 엔터 키 입력을 확인하여 페이지 완료 여부를 결정함.
-        /// </summary>
         private void Update()
         {   
             if (!_isPageActive) return;
             
-            if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+            // Why: 씬 동기화와 동일하게 외부 API 신호를 전담하는 서버에서만 넘김 입력을 처리함
+            if (TcpManager.Instance && TcpManager.Instance.IsServer)
             {
-                OnConfirmInput();
+                if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+                {
+                    OnConfirmInput();
+                }
             }
         }
 
-        /// <summary>
-        /// TutorialManager로부터 전달받은 JSON 데이터를 텍스트 변수에 저장함.
-        /// </summary>
         public override void SetupData(object data)
         {
             TutorialPage1Data pageData = data as TutorialPage1Data;
             
-            if (pageData != null && pageData.descriptionText != null)
+            if (pageData != null)
             {
-                _cachedMessage = pageData.descriptionText.text;
+                if (pageData.descriptionText != null)
+                {
+                    _cachedMessage = pageData.descriptionText.text;
+                }
+                else
+                {
+                    Debug.LogWarning("[TutorialPage1Controller] descriptionText 데이터가 null입니다.");
+                }
             }
             else
             {   
-                _cachedMessage = string.Empty;
-                Debug.LogError("[TutorialPage1Controller] 전달된 데이터가 비어있거나 형식이 잘못되었습니다.");
+                Debug.LogError("[TutorialPage1Controller] 전달된 데이터가 null이거나 형식이 잘못되었습니다.");
             }
         }
 
-        /// <summary>
-        /// 페이지가 활성화될 때 텍스트용 캔버스 그룹을 페이드인 연출함.
-        /// </summary>
         public override void OnEnter()
         {
-            base.OnEnter(); // 루트 객체를 켜고 알파값을 1로 고정함
+            base.OnEnter(); 
 
             _isPageActive = true;
             
@@ -80,19 +79,44 @@ namespace My.Scripts._01_Tutorial.Pages
                     : "엔터 키를 눌러 진행하세요.";
             }
 
-            // Why: 씬 진입 시 부자연스러운 화면 전체 페이드 대신, 텍스트만 자연스럽게 떠오르도록 연출
             if (textCanvasGroup)
             {
                 textCanvasGroup.alpha = 0f;
                 _fadeCoroutine = StartCoroutine(FadeTextRoutine(textCanvasGroup, 0f, 1f, fadeDuration));
             }
+
+            // Why: 클라이언트가 서버의 페이지 넘김 신호를 받기 위해 진입 시 구독함
+            if (TcpManager.Instance)
+            {
+                TcpManager.Instance.onMessageReceived += OnNetworkMessageReceived;
+            }
         }
 
-        /// <summary>
-        /// 확인 입력 발생 시 상위 매니저에게 현재 페이지 세트가 완료되었음을 알림.
-        /// </summary>
         private void OnConfirmInput()
         {
+            // Why: 서버가 먼저 완료 신호를 보내 클라이언트도 함께 페이지를 넘기도록 유도함
+            if (TcpManager.Instance && TcpManager.Instance.IsServer)
+            {
+                TcpManager.Instance.SendMessageToTarget("PAGE1_COMPLETE", "");
+            }
+
+            CompletePage();
+        }
+
+        private void OnNetworkMessageReceived(TcpMessage msg)
+        {
+            if (msg != null && msg.command == "PAGE1_COMPLETE")
+            {
+                CompletePage();
+            }
+        }
+
+        /// <summary> 완료 신호를 발생시켜 매니저의 TransitionToNext()를 트리거함. </summary>
+        private void CompletePage()
+        {
+            if (!_isPageActive) return; 
+            _isPageActive = false;
+            
             if (onStepComplete != null)
             {
                 onStepComplete.Invoke(0);
@@ -109,11 +133,14 @@ namespace My.Scripts._01_Tutorial.Pages
                 StopCoroutine(_fadeCoroutine);
                 _fadeCoroutine = null;
             }
+
+            // Why: 이벤트 중복 구독을 막기 위해 페이지 종료 시 안전하게 해제함
+            if (TcpManager.Instance)
+            {
+                TcpManager.Instance.onMessageReceived -= OnNetworkMessageReceived;
+            }
         }
 
-        /// <summary>
-        /// 텍스트를 감싸는 캔버스 그룹의 알파값을 지정된 시간 동안 조절함.
-        /// </summary>
         private IEnumerator FadeTextRoutine(CanvasGroup target, float start, float end, float duration)
         {
             float elapsed = 0f;

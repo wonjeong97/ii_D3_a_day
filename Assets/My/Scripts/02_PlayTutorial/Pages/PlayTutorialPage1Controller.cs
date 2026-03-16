@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using My.Scripts.Core;
+using My.Scripts.Network; // TCP 매니저 네임스페이스 추가
 using UnityEngine;
 using UnityEngine.UI;
 using Wonjeong.Data;
@@ -17,12 +18,11 @@ namespace My.Scripts._02_PlayTutorial.Pages
 
     /// <summary>
     /// 플레이 튜토리얼의 첫 번째 페이지 컨트롤러.
-    /// 기기(P1, P2)별로 지정된 독립적인 키 입력을 감지하여 다음 단계로 전환함.
+    /// 기기(Server, Client)별로 지정된 독립적인 키 입력을 감지하여 다음 단계로 전환함.
     /// </summary>
     public class PlayTutorialPage1Controller : GamePage
     {
-        [Header("Display Settings")]
-        [SerializeField] private bool isPlayer1; // P1 화면 여부
+        // Why: TCP 네트워크 상태에 따라 동적으로 판단하므로 isPlayer1 변수는 삭제함
 
         [Header("UI Components")]
         [SerializeField] private CanvasGroup text1Canvas;
@@ -68,30 +68,18 @@ namespace My.Scripts._02_PlayTutorial.Pages
             {
                 if (text1UI)
                 {
-                    if (_cachedData.text1 != null)
-                    {
-                        text1UI.text = _cachedData.text1.text;
-                    }
-                    else
-                    {
-                        Debug.LogWarning("[PlayTutorialPage1Controller] text1 데이터가 null입니다.");
-                    }
+                    if (_cachedData.text1 != null) text1UI.text = _cachedData.text1.text;
+                    else Debug.LogWarning("[PlayTutorialPage1Controller] text1 데이터가 null입니다.");
                 }
 
                 if (text2UI)
                 {
                     if (_cachedData.text2 != null)
                     {
-                        if (text2UI.supportRichText == false)
-                        {
-                            text2UI.supportRichText = true;
-                        }
+                        if (text2UI.supportRichText == false) text2UI.supportRichText = true;
                         text2UI.text = _cachedData.text2.text;
                     }
-                    else
-                    {
-                        Debug.LogWarning("[PlayTutorialPage1Controller] text2 데이터가 null입니다.");
-                    }
+                    else Debug.LogWarning("[PlayTutorialPage1Controller] text2 데이터가 null입니다.");
                 }
             }
             else
@@ -117,24 +105,23 @@ namespace My.Scripts._02_PlayTutorial.Pages
         {
             if (_isCompleted) return;
 
-            // Why: P1과 P2가 동일한 프리팹을 사용하지만, 물리적 입력 장치의 신호(키 매핑)가 다르므로 인스펙터 설정에 따라 분기함
-            if (isPlayer1)
+            // Why: TCP 매니저를 통해 현재 기기의 역할(방장/접속자)을 자동으로 판별함
+            bool isServer = false;
+            if (TcpManager.Instance)
             {
-                if (CheckP1Input())
-                {
-                    OnValidInputReceived();
-                }
+                isServer = TcpManager.Instance.IsServer;
+            }
+
+            if (isServer)
+            {
+                if (CheckP1Input()) OnValidInputReceived();
             }
             else
             {
-                if (CheckP2Input())
-                {
-                    OnValidInputReceived();
-                }
+                if (CheckP2Input()) OnValidInputReceived();
             }
         }
 
-        /// <summary> P1 기기에 할당된 키(1, 2, 3, 4, 5) 입력 여부를 반환함. </summary>
         private bool CheckP1Input()
         {
             return Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Keypad1) ||
@@ -144,7 +131,6 @@ namespace My.Scripts._02_PlayTutorial.Pages
                    Input.GetKeyDown(KeyCode.Alpha5) || Input.GetKeyDown(KeyCode.Keypad5);
         }
 
-        /// <summary> P2 기기에 할당된 키(6, 7, 8, 9, 0) 입력 여부를 반환함. </summary>
         private bool CheckP2Input()
         {
             return Input.GetKeyDown(KeyCode.Alpha6) || Input.GetKeyDown(KeyCode.Keypad6) ||
@@ -154,10 +140,9 @@ namespace My.Scripts._02_PlayTutorial.Pages
                    Input.GetKeyDown(KeyCode.Alpha0) || Input.GetKeyDown(KeyCode.Keypad0);
         }
 
-        /// <summary> 올바른 입력이 감지되었을 때 페이지를 완료 처리하고 매니저에 신호를 보냄. </summary>
         private void OnValidInputReceived()
         {
-            _isCompleted = true; // 중복 호출 방지
+            _isCompleted = true; 
 
             if (onStepComplete != null)
             {
@@ -179,23 +164,13 @@ namespace My.Scripts._02_PlayTutorial.Pages
         private IEnumerator FadeCanvasGroupRoutine(CanvasGroup target, float start, float end, float duration)
         {
             float elapsed = 0f;
-            
             while (elapsed < duration)
             {
                 elapsed += Time.deltaTime;
-                
-                if (target) 
-                {
-                    target.alpha = Mathf.Lerp(start, end, elapsed / duration);
-                }
-                
+                if (target) target.alpha = Mathf.Lerp(start, end, elapsed / duration);
                 yield return null;
             }
-
-            if (target) 
-            {
-                target.alpha = end;
-            }
+            if (target) target.alpha = end;
         }
     }
 }

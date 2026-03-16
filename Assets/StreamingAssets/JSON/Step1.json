@@ -1,0 +1,127 @@
+{
+  "background": {
+    "nameA": {
+      "name": "Text_NameA",
+      "position": {"x": 216, "y": -190},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "{nameA}",
+      "fontName": "font6",
+      "fontSize": 24,
+      "fontColor": {"r": 0.627451, "g": 0.627451, "b": 0.627451, "a": 1}
+    },
+    "nameB": {
+      "name": "Text_NameB",
+      "position": {"x": 216, "y": -190},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "{nameB}",
+      "fontName": "font6",
+      "fontSize": 24,
+      "fontColor": {"r": 0.627451, "g": 0.627451, "b": 0.627451, "a": 1}
+    }
+  },
+  "page1":
+  {
+    "nameA": {
+      "name": "Text_NameA",
+      "position": {"x": 216, "y": -190},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "{nameA}",
+      "fontName": "font6",
+      "fontSize": 24,
+      "fontColor": {"r": 1, "g": 1, "b": 1, "a": 0}
+    },
+    "nameB": {
+      "name": "Text_NameB",
+      "position": {"x": 216, "y": -190},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "{nameB}",
+      "fontName": "font6",
+      "fontSize": 24,
+      "fontColor": {"r": 1, "g": 1, "b": 1, "a": 0}
+    }
+  },
+  "page2":  {
+    "textQuestion":{
+      "name": "Text_Q1",
+      "position": {"x": 0, "y": 5},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "Q1.당신은 상대방과 함께 어떤 여행지로 떠나고 싶나요?",
+      "fontName": "font4",
+      "fontSize": 55,
+      "fontColor": {"r": 0, "g": 0, "b": 0, "a": 1}
+    },
+    "textSelected": {
+      "name": "Text_Selected",
+      "position": {"x": 0, "y": 5},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "해당 답변을 선택하셨습니다.",
+      "fontName": "font4",
+      "fontSize": 55,
+      "fontColor": {"r": 0, "g": 0, "b": 0, "a": 1}
+    },
+    "textDescription": {
+      "name": "Text_Description",
+      "position": {"x": 0, "y": 96},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "<b><size=45>1번 화살표 자리</size></b>에 맞춰 올려 주세요.",
+      "fontName": "font6",
+      "fontSize": 38,
+      "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 1}
+    },
+    "textWait": {
+      "name": "Text_Wait",
+      "position": {"x": 0, "y": 96},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "확정하시려면, 잠시 기다려주세요.",
+      "fontName": "font6",
+      "fontSize": 38,
+      "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 1}
+    },
+    "textAnswer1": {
+      "name": "Text_A1",
+      "position": {"x": -125, "y": 160},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "ㄱ. 바다",
+      "fontName": "font8",
+      "fontSize": 28,
+      "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1}
+    },
+    "textAnswer2": {
+      "name": "Text_A2",
+      "position": {"x": -125, "y": 160},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "ㄴ. 산",
+      "fontName": "font8",
+      "fontSize": 28,
+      "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1}
+    },
+    "textAnswer3": {
+      "name": "Text_A3",
+      "position": {"x": -125, "y": 160},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "ㄷ. 강",
+      "fontName": "font8",
+      "fontSize": 28,
+      "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1}
+    },
+    "textAnswer4": {
+      "name": "Text_A4",
+      "position": {"x": -125, "y": 160},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "ㄹ. 하늘",
+      "fontName": "font8",
+      "fontSize": 28,
+      "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1}
+    },
+    "textAnswer5": {
+      "name": "Text_A5",
+      "position": {"x": -125, "y": 160},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "ㅁ. 숲",
+      "fontName": "font8",
+      "fontSize": 28,
+      "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1}
+    }
+  }
+}
+  

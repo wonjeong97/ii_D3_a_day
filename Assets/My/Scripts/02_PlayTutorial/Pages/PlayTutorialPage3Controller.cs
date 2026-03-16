@@ -16,7 +16,7 @@ namespace My.Scripts._02_PlayTutorial.Pages
 
     /// <summary>
     /// 상대 플레이어를 기다리는 마지막 대기 페이지 컨트롤러.
-    /// JSON 데이터를 UI에 적용하고 페이드 연출 후 매니저에게 완료 신호를 보냄.
+    /// 연출이 끝나면 스스로 단계 완료를 호출하여 매니저의 동기화 로직을 발동시킴.
     /// </summary>
     public class PlayTutorialPage3Controller : GamePage
     {
@@ -32,7 +32,6 @@ namespace My.Scripts._02_PlayTutorial.Pages
 
         public override void SetupData(object data)
         {
-            // Why: 일반 C# 클래스 객체이므로 명시적 null 비교를 수행함
             PlayTutorialPage3Data pageData = data as PlayTutorialPage3Data;
 
             if (pageData != null)
@@ -49,23 +48,15 @@ namespace My.Scripts._02_PlayTutorial.Pages
         {
             base.OnEnter();
             
-            // Why: 화면이 페이드인 되기 전에 JSON 데이터를 UI 텍스트에 미리 적용함
             ApplyDataToUI();
 
             if (mainGroupCanvas) mainGroupCanvas.alpha = 0f;
             StartCoroutine(SequenceRoutine());
         }
 
-        /// <summary>
-        /// 캐싱된 데이터를 UI 텍스트 컴포넌트에 할당함.
-        /// </summary>
         private void ApplyDataToUI()
         {
-            if (_cachedData == null) 
-            {
-                Debug.LogWarning($"[{gameObject.name}] 표시할 캐시 데이터가 없습니다.");
-                return;
-            }
+            if (_cachedData == null) return;
 
             if (descriptionUI && _cachedData.descriptionText != null)
             {
@@ -93,7 +84,13 @@ namespace My.Scripts._02_PlayTutorial.Pages
                 mainGroupCanvas.alpha = 1f;
             }
 
-            PlayTutorialManager.Instance.PlayTutorialFinished();
+            // Why: 상위 매니저의 isTransitioning 플래그가 안전하게 해제될 수 있도록 0.5초 대기 후 완료 신호를 쏨
+            yield return new WaitForSeconds(0.5f);
+
+            if (onStepComplete != null)
+            {
+                onStepComplete.Invoke(0);
+            }
         }
     }
 }

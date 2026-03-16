@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using My.Scripts.Core;
+using My.Scripts.Network; // TCP 매니저 네임스페이스 추가
 using UnityEngine;
 using UnityEngine.UI;
 using Wonjeong.Utils;
@@ -19,8 +20,7 @@ namespace My.Scripts._02_PlayTutorial.Pages
     /// </summary>
     public class PlayTutorialPage2Controller : GamePage
     {
-        [Header("Display Settings")]
-        [SerializeField] private bool isPlayer1; 
+        // Why: TCP 네트워크 상태에 따라 동적으로 판단하므로 isPlayer1 변수는 삭제함
 
         [Header("UI Components")]
         [SerializeField] private CanvasGroup mainGroupCanvas;
@@ -37,7 +37,6 @@ namespace My.Scripts._02_PlayTutorial.Pages
         private bool _isWaitingForReset = false;
         private KeyCode _holdingKey = KeyCode.None;
 
-        // P1과 P2가 각각 허용하는 키 목록
         private readonly KeyCode[] _p1Keys = new KeyCode[] { 
             KeyCode.Alpha1, KeyCode.Keypad1, KeyCode.Alpha2, KeyCode.Keypad2, 
             KeyCode.Alpha3, KeyCode.Keypad3, KeyCode.Alpha4, KeyCode.Keypad4, KeyCode.Alpha5, KeyCode.Keypad5 
@@ -94,13 +93,11 @@ namespace My.Scripts._02_PlayTutorial.Pages
             {
                 if (_holdingKey == KeyCode.None)
                 {
-                    // Why: 입력을 처음 감지하면 5초 카운트다운 코루틴을 시작함
                     _holdingKey = pressedKey;
                     _countdownCoroutine = StartCoroutine(CountdownRoutine());
                 }
                 else if (_holdingKey != pressedKey)
                 {
-                    // Why: 누르던 도중 다른 카드로 교체(다른 키 입력)되면 진행을 무효화함
                     InterruptCountdown();
                 }
             }
@@ -108,18 +105,21 @@ namespace My.Scripts._02_PlayTutorial.Pages
             {
                 if (_holdingKey != KeyCode.None)
                 {
-                    // Why: 홀드 중이던 키에서 손을 떼면 진행을 무효화함
                     InterruptCountdown();
                 }
             }
         }
 
-        /// <summary>
-        /// 인스펙터 설정(P1, P2)에 따라 현재 눌려있는 유효한 키코드를 반환함.
-        /// </summary>
         private KeyCode GetCurrentValidKey()
         {
-            KeyCode[] keysToCheck = isPlayer1 ? _p1Keys : _p2Keys;
+            // Why: TCP 매니저를 통해 현재 기기의 역할(방장/접속자)을 자동으로 판별하여 할당할 키를 결정함
+            bool isServer = false;
+            if (TcpManager.Instance)
+            {
+                isServer = TcpManager.Instance.IsServer;
+            }
+
+            KeyCode[] keysToCheck = isServer ? _p1Keys : _p2Keys;
             
             foreach (KeyCode key in keysToCheck)
             {
@@ -131,19 +131,14 @@ namespace My.Scripts._02_PlayTutorial.Pages
             return KeyCode.None;
         }
 
-        /// <summary>
-        /// 5초 동안 1초 주기로 카운트를 줄여나가는 루틴.
-        /// </summary>
         private IEnumerator CountdownRoutine()
         {
-            // Why: RFID 카드가 리더기에 5초간 안정적으로 태그되고 있는지 폴링(Polling) 간격인 1초마다 시각적으로 피드백함
             for (int i = 5; i >= 1; i--)
             {
                 if (countdownUI) countdownUI.text = i.ToString();
                 yield return CoroutineData.GetWaitForSeconds(1.0f);
             }
 
-            // 5초 모두 유지 달성
             _isCompleted = true;
             if (onStepComplete != null)
             {
@@ -151,9 +146,6 @@ namespace My.Scripts._02_PlayTutorial.Pages
             }
         }
 
-        /// <summary>
-        /// 입력이 끊겼을 때 카운트다운을 즉시 멈추고 페널티 루틴을 시작함.
-        /// </summary>
         private void InterruptCountdown()
         {
             if (_countdownCoroutine != null)
@@ -166,14 +158,9 @@ namespace My.Scripts._02_PlayTutorial.Pages
             StartCoroutine(ResetWaitRoutine());
         }
 
-        /// <summary>
-        /// 1초 동안 멈춘 뒤 다시 카운트를 5로 리셋하여 재입력을 기다림.
-        /// </summary>
         private IEnumerator ResetWaitRoutine()
         {
             _isWaitingForReset = true;
-
-            // Why: 카드를 떼었을 때 즉시 리셋되지 않고 1초간 멈춘 상태를 보여주어 사용자에게 페널티(실패) 상황을 명확히 인지시킴
             yield return CoroutineData.GetWaitForSeconds(1.0f);
 
             if (countdownUI) countdownUI.text = "5"; 
@@ -183,23 +170,13 @@ namespace My.Scripts._02_PlayTutorial.Pages
         private IEnumerator FadeCanvasGroupRoutine(CanvasGroup target, float start, float end, float duration)
         {
             float elapsed = 0f;
-            
             while (elapsed < duration)
             {
                 elapsed += Time.deltaTime;
-                
-                if (target) 
-                {
-                    target.alpha = Mathf.Lerp(start, end, elapsed / duration);
-                }
-                
+                if (target) target.alpha = Mathf.Lerp(start, end, elapsed / duration);
                 yield return null;
             }
-
-            if (target) 
-            {
-                target.alpha = end;
-            }
+            if (target) target.alpha = end;
         }
     }
 }
