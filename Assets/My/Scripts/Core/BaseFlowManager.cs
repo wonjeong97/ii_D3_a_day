@@ -6,76 +6,85 @@ using UnityEngine;
 namespace My.Scripts.Core
 {
     /// <summary>
-    /// 각 단계별로 출력될 P1(Main), P2(Sub) 페이지 쌍을 정의함.
-    /// </summary>
-    [Serializable]
-    public struct PageSet
-    {
-        public GamePage pageP1;
-        public GamePage pageP2;
-    }
-
-    /// <summary>
-    /// CanvasGroup을 활용하여 페이지 세트 간 페이드 연출 및 흐름을 제어하는 베이스 클래스.
+    /// CanvasGroup을 활용하여 단일 PC 환경의 페이지 흐름을 제어하는 베이스 클래스.
+    /// TCP 통신 도입으로 P1/P2 구분이 사라지고, 각 PC가 자신의 페이지 리스트만 독립적으로 관리함.
     /// </summary>
     public abstract class BaseFlowManager : MonoBehaviour
     {
         [Header("Flow Settings")]
-        [SerializeField] protected List<PageSet> pageSets = new List<PageSet>();
+        [SerializeField] protected List<GamePage> pages = new List<GamePage>();
         [SerializeField] private float fadeDuration = 0.5f;
 
         protected int currentPageIndex = -1;
         protected bool isTransitioning = false;
-        private bool isFlowFinished = false;
+        protected bool isFinished = false;
+        
+        // Why: 특정 씬(Step1 등)에서 시작 즉시 화면이 페이드 없이 노출되어야 할 때 사용하는 플래그
+        protected bool skipFirstPageFade = false;
 
         protected virtual void Start()
         {
             LoadSettings();
             
-            // 첫 시작 시 모든 페이지 비활성화
-            foreach (PageSet page in pageSets)
+            for (int i = 0; i < pages.Count; i++)
             {
-                if (page.pageP1 && page.pageP1.gameObject.activeSelf)
+                GamePage page = pages[i];
+                if (page && page.gameObject.activeSelf)
                 {
-                    page.pageP1.gameObject.SetActive(false);
-                }
-
-                if (page.pageP2 && page.pageP2.gameObject.activeSelf)
-                {
-                    page.pageP2.gameObject.SetActive(false);
+                    page.gameObject.SetActive(false);
                 }
             }
             
-            // 씬 진입 시 첫 페이지 0.5초 페이드인
-            TransitionToPage(0);
+            if (pages.Count > 0)
+            {
+                if (skipFirstPageFade)
+                {
+                    // Why: 페이드 연출을 무시하고 첫 페이지를 알파값 1로 즉시 활성화함
+                    currentPageIndex = 0;
+                    GamePage firstPage = pages[0];
+                    if (firstPage)
+                    {
+                        firstPage.onStepComplete = (trigger) => TransitionToNext();
+                        firstPage.OnEnter();
+                        firstPage.SetAlpha(1f);
+                    }
+                }
+                else
+                {
+                    TransitionToPage(0);
+                }
+            }
+            else
+            {
+                OnAllFinished();
+            }
         }
 
         protected abstract void LoadSettings();
 
-        /// <summary>
-        /// 특정 인덱스의 페이지 세트로 전환함 (페이드 아웃 -> 페이드 인 시퀀스).
-        /// </summary>
+        public void TransitionToNext()
+        {
+            TransitionToPage(currentPageIndex + 1);
+        }
+
         public virtual void TransitionToPage(int index)
         {
-            if (isTransitioning || isFlowFinished) return;
+            if (isTransitioning || isFinished) return;
             
-            if (index < 0 || index >= pageSets.Count)
+            if (index < 0 || index >= pages.Count)
             {
-                isFlowFinished = true;
-                if (currentPageIndex >= 0 && currentPageIndex < pageSets.Count)
+                isFinished = true;
+                
+                if (currentPageIndex >= 0 && currentPageIndex < pages.Count)
                 {
-                    PageSet currentSet = pageSets[currentPageIndex];
-                    if (currentSet.pageP1)
+                    GamePage prevPage = pages[currentPageIndex];
+                    if (prevPage)
                     {
-                        currentSet.pageP1.onStepComplete = null;
-                        currentSet.pageP1.OnExit();
-                    }
-                    if (currentSet.pageP2)
-                    {
-                        currentSet.pageP2.onStepComplete = null;
-                        currentSet.pageP2.OnExit();
+                        prevPage.onStepComplete = null;
+                        prevPage.OnExit();
                     }
                 }
+                
                 OnAllFinished();
                 return;
             }
@@ -83,83 +92,53 @@ namespace My.Scripts.Core
             StartCoroutine(PageTransitionRoutine(index));
         }
 
-        /// <summary>
-        /// 이전 페이지를 페이드 아웃시키고 새 페이지를 페이드 인시키는 루틴.
-        /// </summary>
         private IEnumerator PageTransitionRoutine(int index)
         {
             isTransitioning = true;
 
-            // 1. 이전 페이지 세트 페이드 아웃
-            if (currentPageIndex >= 0)
+            if (currentPageIndex >= 0 && currentPageIndex < pages.Count)
             {
-                yield return StartCoroutine(FadePageSet(pageSets[currentPageIndex], 1f, 0f));
-                
-                PageSet prevSet = pageSets[currentPageIndex];
-                if (prevSet.pageP1)
+                GamePage prevPage = pages[currentPageIndex];
+                if (prevPage)
                 {
-                    prevSet.pageP1.onStepComplete = null;
-                    prevSet.pageP1.OnExit();
-                }
-                if (prevSet.pageP2)
-                {
-                    prevSet.pageP2.onStepComplete = null;
-                    prevSet.pageP2.OnExit();
+                    yield return StartCoroutine(FadePage(prevPage, 1f, 0f));
+                    prevPage.onStepComplete = null;
+                    prevPage.OnExit();
                 }
             }
 
             currentPageIndex = index;
-            PageSet nextSet = pageSets[currentPageIndex];
+            GamePage nextPage = pages[currentPageIndex];
 
-            // 2. 새 페이지 진입 및 초기화 (알파 0에서 시작)
-            if (nextSet.pageP1)
+            if (nextPage)
             {
-                nextSet.pageP1.onStepComplete = TransitionToNext;
-                nextSet.pageP1.OnEnter();
+                nextPage.onStepComplete = (trigger) => TransitionToNext();
+                nextPage.OnEnter();
+                nextPage.SetAlpha(0f);
+                yield return StartCoroutine(FadePage(nextPage, 0f, 1f));
             }
-            if (nextSet.pageP2)
-            {
-                nextSet.pageP2.onStepComplete = TransitionToNext;
-                nextSet.pageP2.OnEnter();
-            }
-
-            // 3. 새 페이지 세트 페이드 인
-            yield return StartCoroutine(FadePageSet(nextSet, 0f, 1f));
 
             isTransitioning = false;
         }
 
-        /// <summary>
-        /// 지정된 페이지 세트의 CanvasGroup 알파값을 조절하여 페이드 효과를 줌.
-        /// </summary>
-        private IEnumerator FadePageSet(PageSet set, float startAlpha, float endAlpha)
+        private IEnumerator FadePage(GamePage page, float startAlpha, float endAlpha)
         {
-            float elapsed = 0f;
-            CanvasGroup cg1 = set.pageP1 ? set.pageP1.GetComponent<CanvasGroup>() : null;
-            CanvasGroup cg2 = set.pageP2 ? set.pageP2.GetComponent<CanvasGroup>() : null;
+            if (!page) yield break;
 
-            // 시작 알파값 강제 설정
-            if (cg1) cg1.alpha = startAlpha;
-            if (cg2) cg2.alpha = startAlpha;
+            CanvasGroup cg = page.GetComponent<CanvasGroup>();
+            if (!cg) yield break;
+
+            float elapsed = 0f;
+            cg.alpha = startAlpha;
 
             while (elapsed < fadeDuration)
             {
                 elapsed += Time.deltaTime;
-                float currentAlpha = Mathf.Lerp(startAlpha, endAlpha, elapsed / fadeDuration);
-
-                if (cg1) cg1.alpha = currentAlpha;
-                if (cg2) cg2.alpha = currentAlpha;
-
+                cg.alpha = Mathf.Lerp(startAlpha, endAlpha, elapsed / fadeDuration);
                 yield return null;
             }
 
-            if (cg1) cg1.alpha = endAlpha;
-            if (cg2) cg2.alpha = endAlpha;
-        }
-
-        protected void TransitionToNext(int trigger)
-        {
-            TransitionToPage(currentPageIndex + 1);
+            cg.alpha = endAlpha;
         }
 
         protected abstract void OnAllFinished();

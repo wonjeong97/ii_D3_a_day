@@ -1,0 +1,356 @@
+using System;
+using System.Collections;
+using System.Collections.Concurrent;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
+using System.Threading;
+using My.Scripts.Global;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using Wonjeong.Utils;
+
+namespace My.Scripts.Network
+{
+    [Serializable]
+    public class TcpSetting
+    {
+        public bool isServer;
+        public string serverIP;
+        public int port;
+    }
+
+    [Serializable]
+    public class TcpMessage
+    {
+        public string command; 
+        public string payload; 
+    }
+
+    /// <summary>
+    /// TCP 통신을 관리하는 싱글톤 매니저.
+    /// 3초 주기의 하트비트로 연결을 체크하며, 단절 시 백그라운드 재접속을 시도하고 10회 실패 시 타이틀로 복귀함.
+    /// </summary>
+    public class TcpManager : MonoBehaviour
+    {
+        public static TcpManager Instance { get; private set; }
+
+        public Action<TcpMessage> onMessageReceived;
+
+        private TcpSetting _tcpSetting;
+
+        private TcpListener _serverListener;
+        private Thread _serverThread;
+
+        private TcpClient _connectedClient;
+        private NetworkStream _networkStream;
+        private Thread _receiveThread;
+        private Thread _connectThread;
+
+        private ConcurrentQueue<TcpMessage> _messageQueue = new ConcurrentQueue<TcpMessage>();
+        
+        private volatile bool _isRunning = false;
+        private volatile bool _isConnectionActive = false;
+        
+        private bool _needsToReturnToTitle = false;
+        private int _failedConnectionCount = 0;
+        private Coroutine _heartbeatCoroutine;
+        
+        public bool IsServer 
+        {
+            get 
+            {
+                return _tcpSetting != null && _tcpSetting.isServer;
+            }
+        }
+
+        private void Awake()
+        {
+            if (!Instance)
+            {
+                Instance = this;
+                DontDestroyOnLoad(gameObject);
+                InitializeNetwork();
+            }
+            else
+            {
+                Destroy(gameObject);
+            }
+        }
+
+        private void InitializeNetwork()
+        {
+            TcpSetting loadedSetting = JsonLoader.Load<TcpSetting>(GameConstants.Path.TcpSetting);
+
+            if (loadedSetting != null)
+            {
+                _tcpSetting = loadedSetting;
+                _isRunning = true;
+
+                if (_tcpSetting.isServer) StartServer();
+                else StartClient();
+                
+                _heartbeatCoroutine = StartCoroutine(ConnectionMonitorRoutine());
+            }
+            else
+            {
+                Debug.LogError("[TcpManager] JSON/TcpSetting 로드 실패. 통신을 시작할 수 없습니다.");
+            }
+        }
+
+        private void Update()
+        {
+            // 1. 10회 연속 연결 실패 시 타이틀 씬 복귀 처리
+            if (_needsToReturnToTitle)
+            {
+                _needsToReturnToTitle = false;
+                Debug.LogError("[TcpManager] 10회 연속 연결 실패. 타이틀로 강제 복귀합니다.");
+                
+                // Why: 백그라운드 스레드에서 유니티 API(씬 이동)를 직접 호출할 수 없어 플래그를 통해 메인 스레드에서 실행함
+                if (GameManager.Instance)
+                {
+                    GameManager.Instance.ReturnToTitle();
+                }
+                else
+                {
+                    SceneManager.LoadScene(GameConstants.Scene.Title); 
+                }
+            }
+
+            // 2. 수신된 메시지 이벤트 방출
+            while (_messageQueue.TryDequeue(out TcpMessage message))
+            {
+                if (message != null)
+                {
+                    // 하트비트는 내부 연결 확인용이므로 외부 로직으로 넘기지 않음
+                    if (message.command == "HEARTBEAT") continue;
+
+                    if (onMessageReceived != null)
+                    {
+                        onMessageReceived.Invoke(message);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 3초마다 통신 상태를 모니터링하고 연결 실패 카운트를 누적하는 코루틴.
+        /// </summary>
+        private IEnumerator ConnectionMonitorRoutine()
+        {
+            while (_isRunning)
+            {
+                yield return new WaitForSeconds(3.0f);
+                
+                if (_isConnectionActive)
+                {
+                    // 정상 연결 상태이므로 하트비트를 전송하고 실패 카운트를 초기화함
+                    _failedConnectionCount = 0;
+                    SendMessageToTarget("HEARTBEAT", "");
+                }
+                else
+                {
+                    // 연결이 끊어진 상태면 즉시 튕기지 않고 실패 카운트를 누적시키며 대기함
+                    _failedConnectionCount++;
+                    Debug.LogWarning($"[TcpManager] 연결 대기 중... ({_failedConnectionCount}/10)");
+
+                    if (_failedConnectionCount >= 10)
+                    {
+                        _failedConnectionCount = 0; // 다시 카운트하기 위해 초기화
+                        _needsToReturnToTitle = true;
+                    }
+                }
+            }
+        }
+
+        private void StartServer()
+        {
+            _serverThread = new Thread(ServerListenRoutine);
+            _serverThread.IsBackground = true;
+            _serverThread.Start();
+        }
+
+        private void ServerListenRoutine()
+        {
+            try
+            {
+                _serverListener = new TcpListener(IPAddress.Any, _tcpSetting.port);
+                _serverListener.Start();
+
+                // 스레드를 종료하지 않고 무한 루프를 돌며, 연결이 끊어지면 스스로 다시 접속을 대기함
+                while (_isRunning)
+                {
+                    if (!_isConnectionActive)
+                    {
+                        TcpClient incomingClient = _serverListener.AcceptTcpClient(); // 클라이언트 올 때까지 블로킹됨
+                        
+                        if (incomingClient != null)
+                        {
+                            Debug.Log("[TcpManager] Client 접속 완료");
+                            _connectedClient = incomingClient;
+                            _networkStream = _connectedClient.GetStream();
+                            
+                            _failedConnectionCount = 0; // 연결 성공 시 즉각 리셋
+                            _isConnectionActive = true;
+
+                            _receiveThread = new Thread(ReceiveDataRoutine);
+                            _receiveThread.IsBackground = true;
+                            _receiveThread.Start();
+                        }
+                    }
+                    else
+                    {
+                        Thread.Sleep(1000); // 이미 연결된 상태면 리소스 낭비 방지를 위해 1초씩 휴식
+                    }
+                }
+            }
+            catch (SocketException)
+            {
+                // 프로그램 종료 시 _serverListener.Stop() 에 의해 발생하는 정상적인 예외
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[TcpManager] 서버 리스닝 중단: {e.Message}");
+            }
+        }
+
+        private void StartClient()
+        {
+            _connectThread = new Thread(ClientConnectRoutine);
+            _connectThread.IsBackground = true;
+            _connectThread.Start();
+        }
+
+        private void ClientConnectRoutine()
+        {
+            while (_isRunning)
+            {
+                if (!_isConnectionActive)
+                {
+                    try
+                    {
+                        _connectedClient = new TcpClient(_tcpSetting.serverIP, _tcpSetting.port);
+                        _networkStream = _connectedClient.GetStream();
+                        
+                        _failedConnectionCount = 0;
+                        _isConnectionActive = true;
+
+                        Debug.Log($"[TcpManager] Server({_tcpSetting.serverIP}) 접속 완료");
+
+                        _receiveThread = new Thread(ReceiveDataRoutine);
+                        _receiveThread.IsBackground = true;
+                        _receiveThread.Start();
+                    }
+                    catch (Exception)
+                    {
+                        // 접속 실패 시 유니티 멈춤을 방지하기 위해 백그라운드에서 3초 슬립 후 재시도
+                        Thread.Sleep(3000);
+                    }
+                }
+                else
+                {
+                    Thread.Sleep(1000); // 연결된 상태면 휴식
+                }
+            }
+        }
+
+        private void ReceiveDataRoutine()
+        {
+            byte[] buffer = new byte[1024];
+
+            while (_isRunning && _isConnectionActive && _networkStream != null)
+            {
+                try
+                {
+                    int bytesRead = _networkStream.Read(buffer, 0, buffer.Length);
+                    
+                    if (bytesRead > 0)
+                    {
+                        string jsonString = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+                        TcpMessage receivedMessage = JsonUtility.FromJson<TcpMessage>(jsonString);
+
+                        if (receivedMessage != null)
+                        {
+                            _messageQueue.Enqueue(receivedMessage);
+                        }
+                    }
+                    else
+                    {
+                        // 읽은 바이트가 0이면 상대방이 연결을 끊었음을 의미함
+                        HandleDisconnect();
+                        break;
+                    }
+                }
+                catch (Exception)
+                {
+                    HandleDisconnect();
+                    break;
+                }
+            }
+        }
+
+        public void SendMessageToTarget(string command, string payload = "")
+        {
+            if (_isConnectionActive && _networkStream != null)
+            {
+                TcpMessage msg = new TcpMessage 
+                { 
+                    command = command, 
+                    payload = payload 
+                };
+
+                string jsonString = JsonUtility.ToJson(msg);
+                byte[] data = Encoding.UTF8.GetBytes(jsonString);
+
+                try
+                {
+                    _networkStream.Write(data, 0, data.Length);
+                    _networkStream.Flush();
+                }
+                catch (Exception)
+                {
+                    HandleDisconnect();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 통신 에러 발생 시 플래그를 내리고 자원을 정리하여 연결 대기 스레드가 다시 작동하도록 유도함.
+        /// </summary>
+        private void HandleDisconnect()
+        {
+            if (!_isConnectionActive) return; // 중복 실행 방지
+            
+            _isConnectionActive = false;
+            Debug.LogWarning("[TcpManager] 통신 단절 감지. 백그라운드 재연결을 시도합니다.");
+
+            // 물리적 소켓을 정리해야 Listen/Connect 루틴에서 예외 없이 새 연결을 시도할 수 있음
+            if (_networkStream != null) 
+            {
+                _networkStream.Close();
+                _networkStream = null;
+            }
+            if (_connectedClient != null) 
+            {
+                _connectedClient.Close();
+                _connectedClient = null;
+            }
+        }
+
+        private void OnDestroy()
+        {
+            _isRunning = false;
+            _isConnectionActive = false;
+
+            if (_heartbeatCoroutine != null) StopCoroutine(_heartbeatCoroutine);
+
+            if (_networkStream != null) _networkStream.Close();
+            if (_connectedClient != null) _connectedClient.Close();
+            if (_serverListener != null) _serverListener.Stop();
+            
+            if (_receiveThread != null && _receiveThread.IsAlive) _receiveThread.Abort();
+            if (_serverThread != null && _serverThread.IsAlive) _serverThread.Abort();
+            if (_connectThread != null && _connectThread.IsAlive) _connectThread.Abort();
+        }
+    }
+}

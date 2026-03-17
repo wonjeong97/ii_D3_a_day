@@ -1,9 +1,10 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Wonjeong.Reporter;
 
 namespace My.Scripts.Global
-{   
+{ 
     /// <summary>
     /// 사용자 유형을 정의하는 열거형.
     /// </summary>
@@ -23,6 +24,8 @@ namespace My.Scripts.Global
     public class GameManager : MonoBehaviour
     {
         public static GameManager Instance;
+
+        [SerializeField] private Reporter reporter;
 
         [Header("Settings")]
         [SerializeField] private float inactivityLimit = 60f;
@@ -61,6 +64,8 @@ namespace My.Scripts.Global
         {
             // 키오스크 환경을 위해 커서 숨김
             Cursor.visible = false;
+            Application.runInBackground = true;
+            if (reporter && reporter.show) reporter.show = false;
         }
 
         /// <summary>
@@ -78,11 +83,12 @@ namespace My.Scripts.Global
 
         private void Update()
         {
-            // M키: 관리자용 마우스 커서 토글
-            if (Input.GetKeyDown(KeyCode.M))
+            if (Input.GetKeyDown(KeyCode.D) && reporter)
             {
-                Cursor.visible = !Cursor.visible;
+                reporter.showGameManagerControl = !reporter.showGameManagerControl;
+                if (reporter.show) reporter.show = false;
             }
+            else if (Input.GetKeyDown(KeyCode.M)) Cursor.visible = !Cursor.visible;
 
             if (isTransitioning)
             {
@@ -98,7 +104,7 @@ namespace My.Scripts.Global
         private void HandleInactivity()
         {
             // 타이틀 화면에서는 자동 복귀 로직을 수행하지 않음
-            if (SceneManager.GetActiveScene().name == "Title")
+            if (SceneManager.GetActiveScene().name == GameConstants.Scene.Title)
             {
                 currentInactivityTimer = 0f;
                 return;
@@ -143,7 +149,6 @@ namespace My.Scripts.Global
         /// </summary>
         private IEnumerator ChangeSceneRoutine(string sceneName)
         {
-            // TODO: FadeManager 구현체에 맞춰 페이드 아웃/인 로직 정밀 조정 필요
             AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(sceneName);
             while (asyncLoad != null && !asyncLoad.isDone)
             {
@@ -166,7 +171,7 @@ namespace My.Scripts.Global
             firstTaggedPlayer = 0; 
             currentInactivityTimer = 0f;
 
-            ChangeScene("Title");
+            ChangeScene(GameConstants.Scene.Title);
         }
     }
 }

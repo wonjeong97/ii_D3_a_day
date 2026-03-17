@@ -1640,7 +1640,8 @@ MonoBehaviour:
     m_HorizontalOverflow: 1
     m_VerticalOverflow: 1
     m_LineSpacing: 1
-  m_Text: text
+  m_Text: "Q1.\uB2F9\uC2E0\uC740 \uC0C1\uB300\uBC29\uACFC \uD568\uAED8 \uC5B4\uB5A4
+    \uC5EC\uD589\uC9C0\uB85C \uB5A0\uB098\uACE0 \uC2F6\uB098\uC694?"
 --- !u!222 &599723942
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -1827,10 +1828,6 @@ MonoBehaviour:
   cgC: {fileID: 1052901277}
   cgD: {fileID: 371092433}
   cgE: {fileID: 159338668}
-  legoArrowCg: {fileID: 1884344877}
-  fadeDuration: 0.5
-  holdDuration: 3
-  countdownFont: {fileID: 12800000, guid: 21dce1006a1218d408c793e5a94501d3, type: 3}
 --- !u!1 &705489025
 GameObject:
   m_ObjectHideFlags: 0
@@ -4262,14 +4259,13 @@ GameObject:
   - component: {fileID: 1884344874}
   - component: {fileID: 1884344876}
   - component: {fileID: 1884344875}
-  - component: {fileID: 1884344877}
   m_Layer: 5
   m_Name: Image_Lego_Arrow
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1884344874
 RectTransform:
   m_ObjectHideFlags: 0
@@ -4327,18 +4323,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1884344873}
   m_CullTransparentMesh: 1
---- !u!225 &1884344877
-CanvasGroup:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1884344873}
-  m_Enabled: 1
-  m_Alpha: 1
-  m_Interactable: 1
-  m_BlocksRaycasts: 1
-  m_IgnoreParentGroups: 0
 --- !u!1001 &1899809389
 PrefabInstance:
   m_ObjectHideFlags: 0
