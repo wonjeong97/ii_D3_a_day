@@ -1,0 +1,189 @@
+{
+  "background": {
+    "nameA": {
+      "name": "Text_NameA",
+      "position": {"x": 216, "y": -190},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "{nameA}",
+      "fontName": "font6",
+      "fontSize": 24,
+      "fontColor": {"r": 0.627451, "g": 0.627451, "b": 0.627451, "a": 1},
+      "alignment": 3
+    },
+    "nameB": {
+      "name": "Text_NameB",
+      "position": {"x": 216, "y": -190},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "{nameB}",
+      "fontName": "font6",
+      "fontSize": 24,
+      "fontColor": {"r": 0.627451, "g": 0.627451, "b": 0.627451, "a": 1},
+      "alignment": 3
+    }
+  },
+  "introPage": {
+    "nameA": {
+      "name": "Text_NameA",
+      "position": {"x": 216, "y": -190},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "{nameA}",
+      "fontName": "font6",
+      "fontSize": 24,
+      "fontColor": {"r": 1, "g": 1, "b": 1, "a": 1},
+      "alignment": 3
+    },
+    "nameB": {
+      "name": "Text_NameB",
+      "position": {"x": 216, "y": -190},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "{nameB}",
+      "fontName": "font6",
+      "fontSize": 24,
+      "fontColor": {"r": 1, "g": 1, "b": 1, "a": 1},
+      "alignment": 3
+    }
+  },
+  "outroPage": {
+    "textOutro": {
+      "name": "Text_Outro",
+      "position": {"x": 0, "y": 212},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "상대방과 나의 하루는 어떨까요?",
+      "fontName": "font4",
+      "fontSize": 55,
+      "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1}
+    },
+    "textOutro2": {
+      "name": "Text_Outro2",
+      "position": {"x": 0, "y": 140},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "잠시 후, 상영이 시작됩니다.",
+      "fontName": "font4",
+      "fontSize": 38,
+      "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 1}
+    }
+  },
+  "commonQuestionUI": {
+    "textSelected": {
+      "name": "Text_Selected",
+      "position": {"x": 0, "y": 5},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "해당 답변을 선택하셨습니다.",
+      "fontName": "font4",
+      "fontSize": 55,
+      "fontColor": {"r": 0, "g": 0, "b": 0, "a": 1}
+    },
+    "textDescription": {
+      "name": "Text_Description",
+      "position": {"x": 0, "y": 96},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "<b><size=45>2번 화살표 자리</size></b>에 맞춰 올려 주세요.",
+      "fontName": "font6",
+      "fontSize": 38,
+      "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 1}
+    },
+    "textWait": {
+      "name": "Text_Wait",
+      "position": {"x": 0, "y": 96},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "확정하시려면, 잠시 기다려주세요.",
+      "fontName": "font6",
+      "fontSize": 38,
+      "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 1}
+    }
+  },
+  "commonResultUI": {
+    "textAnswerComplete": {
+      "name": "Text_AnswerComplete",
+      "position": {"x": 0, "y": 212},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "답변을 완료 하셨습니다.",
+      "fontName": "font4",
+      "fontSize": 55,
+      "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1}
+    },
+    "textPhotoSaved": {
+      "name": "Text_Saved",
+      "position": {"x": 0, "y": 212},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "사진이 기록되었습니다.",
+      "fontName": "font4",
+      "fontSize": 55,
+      "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1}
+    }
+  },
+  "questionSets": [
+    {
+      "questionSetting": {
+        "textQuestion": {
+          "name": "Text_Q1",
+          "position": {"x": 0, "y": 5},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "Q1. 평소 상대방은 어떤 표정을 하고 있나요?",
+          "fontName": "font4",
+          "fontSize": 55,
+          "fontColor": {"r": 0, "g": 0, "b": 0, "a": 1}
+        },
+        "textAnswer1": {
+          "name": "Text_A1",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄱ. 웃음",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer2": {
+          "name": "Text_A2",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄴ. 화남",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer3": {
+          "name": "Text_A3",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄷ. 멍함",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer4": {
+          "name": "Text_A4",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄹ. 무표정",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer5": {
+          "name": "Text_A5",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㅁ. 슬픔",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        }
+      },
+      "textMyScene": {
+        "name": "Text_Take",
+        "position": {"x": 0, "y": 140},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "나의 장면 take18",
+        "fontName": "font4",
+        "fontSize": 38,
+        "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 1}
+      }
+    }
+  ]
+}

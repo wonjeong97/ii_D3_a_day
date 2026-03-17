@@ -104,16 +104,24 @@ namespace My.Scripts.Network
             if (_needsToReturnToTitle)
             {
                 _needsToReturnToTitle = false;
-                Debug.LogError("[TcpManager] 10회 연속 연결 실패. 타이틀로 강제 복귀합니다.");
                 
-                // Why: 백그라운드 스레드에서 유니티 API(씬 이동)를 직접 호출할 수 없어 플래그를 통해 메인 스레드에서 실행함
-                if (GameManager.Instance)
+                // 현재 씬이 이미 타이틀 씬인지 확인하여 무한 재로드 방지
+                if (SceneManager.GetActiveScene().name != GameConstants.Scene.Title)
                 {
-                    GameManager.Instance.ReturnToTitle();
+                    Debug.LogError("[TcpManager] 10회 연속 연결 실패. 타이틀로 강제 복귀합니다.");
+                    
+                    if (GameManager.Instance)
+                    {
+                        GameManager.Instance.ReturnToTitle();
+                    }
+                    else
+                    {
+                        SceneManager.LoadScene(GameConstants.Scene.Title); 
+                    }
                 }
                 else
                 {
-                    SceneManager.LoadScene(GameConstants.Scene.Title); 
+                    Debug.LogWarning("[TcpManager] 통신 대기 상태 유지 중 (이미 타이틀 씬이므로 재로드 생략)");
                 }
             }
 

@@ -54,19 +54,23 @@ namespace My.Scripts._02_PlayTutorial.Pages
             StartCoroutine(SequenceRoutine());
         }
 
+        /// <summary>
+        /// 페이지가 완료되고 매니저에 의해 전환 처리가 일어날 때 호출됨.
+        /// Why: 부모 클래스(GamePage)의 OnExit에 있는 gameObject.SetActive(false)가 
+        /// 실행되는 것을 막기 위해 의도적으로 base.OnExit() 호출을 생략함.
+        /// </summary>
+        public override void OnExit()
+        {
+            // 의도적으로 비워둠 (화면이 꺼지지 않고 유지됨)
+        }
+
         private void ApplyDataToUI()
         {
             if (_cachedData == null) return;
 
-            if (descriptionUI && _cachedData.descriptionText != null)
-            {
-                descriptionUI.text = _cachedData.descriptionText.text;
-            }
-
-            if (waitUI && _cachedData.waitText != null)
-            {
-                waitUI.text = _cachedData.waitText.text;
-            }
+            // 수정됨: 텍스트 내용뿐만 아니라 JSON에 설정된 위치, 정렬, 폰트 등을 일괄 적용
+            SetUIText(descriptionUI, _cachedData.descriptionText);
+            SetUIText(waitUI, _cachedData.waitText);
         }
 
         private IEnumerator SequenceRoutine()
