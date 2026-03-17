@@ -3,7 +3,11 @@
 --- !u!78 &1
 TagManager:
   serializedVersion: 2
-  tags: []
+  tags:
+  - P1_Main
+  - P1_Sub
+  - P2_Main
+  - P2_Sub
   layers:
   - Default
   - TransparentFX

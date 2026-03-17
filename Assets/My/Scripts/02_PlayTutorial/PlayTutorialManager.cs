@@ -1,220 +1,116 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using My.Scripts.Core;
-using My.Scripts.Global;
+using My.Scripts._02_PlayTutorial.Pages;
 using UnityEngine;
+using My.Scripts.Global;
+using Wonjeong.Utils;
+using My.Scripts.Network; // TCP 통신 매니저 접근을 위한 네임스페이스
 
-namespace My.Scripts._02_Play_Tutorial
+namespace My.Scripts._02_PlayTutorial
 {
-    /// <summary>
-    /// PlayTutorial 씬 전용 JSON 설정 데이터.
-    /// </summary>
     [Serializable]
     public class PlayTutorialSetting
     {
-        // # TODO: 제이슨 구조 확정 시 각 페이지 데이터 구조체 필드 추가
+        public PlayTutorialPage1Data page1;
+        public PlayTutorialPage2Data page2;
+        public PlayTutorialPage3Data page3;
     }
 
     /// <summary>
-    /// P1과 P2의 튜토리얼 진행 상황을 완전히 독립적으로 제어하는 매니저.
-    /// 화면 간 상호 간섭 없이 개별적인 페이지 전환 연출을 수행함.
+    /// 플레이 튜토리얼 씬의 매니저.
+    /// 단일 페이지 흐름으로 동작하며, 마지막 3페이지 완료 시 TCP로 상대방과 동기화 후 Step1 씬으로 넘어감.
     /// </summary>
-    public class PlayTutorialManager : MonoBehaviour
+    public class PlayTutorialManager : BaseFlowManager
     {
-        [Header("Pages")]
-        [SerializeField] private List<GamePage> p1Pages = new List<GamePage>();
-        [SerializeField] private List<GamePage> p2Pages = new List<GamePage>();
+        private bool _isLocalFinished = false;
+        private bool _isRemoteFinished = false;
 
-        [Header("Settings")]
-        [SerializeField] private float fadeDuration = 0.5f;
-
-        private int _p1CurrentIndex = -1;
-        private int _p2CurrentIndex = -1;
-
-        private bool _isP1Transitioning = false;
-        private bool _isP2Transitioning = false;
-
-        private void Start()
+        protected override void Start()
         {
-            LoadSettings();
+            base.Start();
             
-            // 씬 진입 시 양쪽 화면 모두 0번 페이지로 페이드인 시작
-            TransitionP1ToPage(0);
-            TransitionP2ToPage(0);
-        }
-
-        /// <summary>
-        /// JSON 데이터를 로드하고 각 페이지에 주입함.
-        /// </summary>
-        private void LoadSettings()
-        {
-            // # TODO: PlayTutorial 전용 JSON 데이터를 JsonLoader로 읽어와 각 페이지(SetupData)에 주입하는 로직 연동
-        }
-
-        /// <summary>
-        /// P1 화면을 특정 페이지 인덱스로 전환함.
-        /// </summary>
-        /// <param name="index">전환할 페이지 인덱스.</param>
-        public void TransitionP1ToPage(int index)
-        {
-            if (_isP1Transitioning)
+            // Why: 상대방 PC의 튜토리얼 완료 신호를 받기 위해 이벤트 구독
+            if (TcpManager.Instance)
             {
+                TcpManager.Instance.onMessageReceived += OnNetworkMessageReceived;
+            }
+        }
+
+        protected override void LoadSettings()
+        {
+            PlayTutorialSetting setting = JsonLoader.Load<PlayTutorialSetting>(GameConstants.Path.PlayTutorial);
+
+            // 일반 C# 객체이므로 명시적 null 검사 수행
+            if (setting == null)
+            {
+                Debug.LogError("[PlayTutorialManager] JSON/PlayTutorial 로드 실패.");
                 return;
             }
 
-            if (index < 0 || index >= p1Pages.Count)
-            {
-                OnP1Finished();
-                return;
-            }
-
-            StartCoroutine(PageTransitionRoutine(true, index));
+            // 기기에 할당된 단일 페이지들에만 데이터 주입
+            if (pages.Count > 0 && pages[0]) pages[0].SetupData(setting.page1);
+            if (pages.Count > 1 && pages[1]) pages[1].SetupData(setting.page2);
+            if (pages.Count > 2 && pages[2]) pages[2].SetupData(setting.page3);
         }
 
         /// <summary>
-        /// P2 화면을 특정 페이지 인덱스로 전환함.
+        /// 3페이지 연출까지 모두 끝났을 때 자동 호출됨.
         /// </summary>
-        /// <param name="index">전환할 페이지 인덱스.</param>
-        public void TransitionP2ToPage(int index)
+        protected override void OnAllFinished()
         {
-            if (_isP2Transitioning)
+            _isLocalFinished = true;
+            Debug.Log("[PlayTutorialManager] 내 PC 플레이 튜토리얼 완료. 상대방 대기 중...");
+
+            // Why: 내 쪽 진행이 끝났음을 상대방에게 알려서 동기화를 유도함
+            if (TcpManager.Instance)
             {
-                return;
+                TcpManager.Instance.SendMessageToTarget("PLAY_TUTORIAL_COMPLETE");
             }
 
-            if (index < 0 || index >= p2Pages.Count)
-            {
-                OnP2Finished();
-                return;
-            }
-
-            StartCoroutine(PageTransitionRoutine(false, index));
+            CheckSyncAndChangeScene();
         }
 
-        /// <summary>
-        /// 단일 화면의 기존 페이지를 끄고 새 페이지를 켜는 비동기 시퀀스.
-        /// </summary>
-        /// <param name="isPlayer1">P1 화면 여부.</param>
-        /// <param name="nextIndex">이동할 대상 인덱스.</param>
-        private IEnumerator PageTransitionRoutine(bool isPlayer1, int nextIndex)
+        private void OnNetworkMessageReceived(TcpMessage msg)
         {
-            // Why: P1과 P2의 참조 데이터를 분기하여 한쪽의 화면 전환이 다른 쪽에 영향을 주지 않도록 함
-            List<GamePage> targetPages = isPlayer1 ? p1Pages : p2Pages;
-            int currentIndex = isPlayer1 ? _p1CurrentIndex : _p2CurrentIndex;
-
-            if (isPlayer1) _isP1Transitioning = true;
-            else _isP2Transitioning = true;
-
-            // 1. 기존 페이지 페이드 아웃
-            if (currentIndex >= 0 && currentIndex < targetPages.Count)
+            if (msg != null && msg.command == "PLAY_TUTORIAL_COMPLETE")
             {
-                GamePage prevPage = targetPages[currentIndex];
-                if (prevPage)
+                _isRemoteFinished = true;
+                Debug.Log("[PlayTutorialManager] 상대방 PC 플레이 튜토리얼 완료 신호 수신.");
+                
+                CheckSyncAndChangeScene();
+            }
+        }
+
+        private void CheckSyncAndChangeScene()
+        {
+            // Why: 양쪽 모두 3페이지 연출이 완전히 끝났을 때만 다음 씬으로 동시 진입함
+            if (_isLocalFinished && _isRemoteFinished)
+            {
+                if (TcpManager.Instance)
                 {
-                    yield return StartCoroutine(FadePageRoutine(prevPage, 1f, 0f));
-                    prevPage.OnExit();
+                    TcpManager.Instance.onMessageReceived -= OnNetworkMessageReceived;
                 }
-            }
 
-            // 인덱스 갱신
-            if (isPlayer1) _p1CurrentIndex = nextIndex;
-            else _p2CurrentIndex = nextIndex;
-
-            // 2. 새 페이지 진입 및 페이드 인
-            GamePage nextPage = targetPages[nextIndex];
-            if (nextPage)
-            {
-                // Why: 페이지 내부에서 완료 이벤트 발생 시 자신의 화면에 맞는 다음 페이지로 넘어가도록 동적 연결
-                nextPage.onStepComplete = (trigger) =>
-                {
-                    if (isPlayer1) TransitionP1ToPage(_p1CurrentIndex + 1);
-                    else TransitionP2ToPage(_p2CurrentIndex + 1);
-                };
-                
-                nextPage.OnEnter();
-                yield return StartCoroutine(FadePageRoutine(nextPage, 0f, 1f));
-            }
-            else
-            {
-                Debug.LogWarning($"[PlayTutorialManager] {(isPlayer1 ? "P1" : "P2")}의 {nextIndex}번째 페이지 객체가 인스펙터에 할당되지 않았습니다.");
-            }
-
-            if (isPlayer1) _isP1Transitioning = false;
-            else _isP2Transitioning = false;
-        }
-
-        /// <summary>
-        /// 단일 GamePage 오브젝트의 CanvasGroup 알파값을 목표치로 변경함.
-        /// </summary>
-        /// <param name="page">대상 페이지 컨트롤러.</param>
-        /// <param name="startAlpha">시작 알파.</param>
-        /// <param name="endAlpha">목표 알파.</param>
-        private IEnumerator FadePageRoutine(GamePage page, float startAlpha, float endAlpha)
-        {
-            if (!page) yield break;
-
-            // # TODO: 반복적인 GetComponent 호출 방지를 위해 GamePage 클래스 내부에서 CanvasGroup을 public Getter로 제공하도록 리팩토링 검토
-            CanvasGroup canvasGroup = page.GetComponent<CanvasGroup>();
-            if (!canvasGroup)
-            {
-                Debug.LogWarning($"[PlayTutorialManager] {page.gameObject.name}에 CanvasGroup이 없습니다.");
-                yield break;
-            }
-
-            float elapsed = 0f;
-            canvasGroup.alpha = startAlpha;
-
-            while (elapsed < fadeDuration)
-            {
-                elapsed += Time.deltaTime;
-                canvasGroup.alpha = Mathf.Lerp(startAlpha, endAlpha, elapsed / fadeDuration);
-                yield return null;
-            }
-
-            canvasGroup.alpha = endAlpha;
-        }
-
-        /// <summary>
-        /// P1 화면의 모든 튜토리얼 단계가 완료되었을 때 호출됨.
-        /// </summary>
-        private void OnP1Finished()
-        {
-            // Why: 각 화면이 언제 종료되었는지 개별적으로 추적하기 위함
-            Debug.Log("[PlayTutorialManager] P1 완료");
-            CheckAllFinished();
-        }
-
-        /// <summary>
-        /// P2 화면의 모든 튜토리얼 단계가 완료되었을 때 호출됨.
-        /// </summary>
-        private void OnP2Finished()
-        {
-            // Why: 각 화면이 언제 종료되었는지 개별적으로 추적하기 위함
-            Debug.Log("[PlayTutorialManager] P2 완료");
-            CheckAllFinished();
-        }
-
-        /// <summary>
-        /// 두 플레이어가 모두 튜토리얼을 마쳤는지 확인하고 메인 게임으로 전환함.
-        /// </summary>
-        private void CheckAllFinished()
-        {
-            bool isP1Done = _p1CurrentIndex >= p1Pages.Count;
-            bool isP2Done = _p2CurrentIndex >= p2Pages.Count;
-
-            // Why: 한쪽이 일찍 끝나더라도 다른 쪽이 끝날 때까지 대기시켜 흐름을 동기화함
-            if (isP1Done && isP2Done)
-            {
-                Debug.Log("[PlayTutorialManager] 양쪽 모두 튜토리얼 완료. 본 게임 씬으로 이동합니다.");
-                
-                // # TODO: GameConstants.Scene에 MainPlay 씬 이름 정의 후 아래 주석 해제하여 씬 이동 연동
-                /*
                 if (GameManager.Instance)
                 {
-                    GameManager.Instance.ChangeScene(GameConstants.Scene.MainPlay);
+                    Debug.Log("[PlayTutorialManager] 양방향 동기화 완료. Step1 씬으로 이동합니다.");
+                    
+                    // Why: 업데이트된 전역 상수를 사용하여 Step1 씬으로 전환함
+                    GameManager.Instance.ChangeScene(GameConstants.Scene.Step1); 
                 }
-                */
+                else
+                {
+                    Debug.LogError("[PlayTutorialManager] GameManager가 존재하지 않습니다.");
+                }
+            }
+        }
+
+        private void OnDestroy()
+        {
+            // 이벤트 구독 안전 해제
+            if (TcpManager.Instance)
+            {
+                TcpManager.Instance.onMessageReceived -= OnNetworkMessageReceived;
             }
         }
     }
