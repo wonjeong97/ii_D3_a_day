@@ -1,32 +1,12 @@
-using System;
 using System.Collections;
-using My.Scripts.Core;
+using My.Scripts.Data;
 using My.Scripts.Network;
 using UnityEngine;
 using UnityEngine.UI;
-using Wonjeong.Data;
 
-namespace My.Scripts._03_Step1.Pages
+namespace My.Scripts.Core.Pages
 {
-    [Serializable]
-    public class Step1Page2Data
-    {
-        public TextSetting textQuestion;
-        public TextSetting textSelected;
-        public TextSetting textDescription;
-        public TextSetting textWait;
-        public TextSetting textAnswer1;
-        public TextSetting textAnswer2;
-        public TextSetting textAnswer3;
-        public TextSetting textAnswer4;
-        public TextSetting textAnswer5;
-    }
-
-    /// <summary>
-    /// Step1의 두 번째 본문 페이지 컨트롤러.
-    /// 선택된 타겟 Cg가 먼저 사라지고 화살표가 이어서 나타나는 순차적 페이드 연출을 수행함.
-    /// </summary>
-    public class Step1Page2Controller : GamePage
+    public class Page_Question : GamePage
     {
         private enum Phase
         {
@@ -64,52 +44,62 @@ namespace My.Scripts._03_Step1.Pages
         
         private readonly Vector2 _targetPosition = new Vector2(0f, -160f);
 
-        private Step1Page2Data _cachedData;
+        private CommonQuestionPageData _cachedData; 
+        private string _syncCommand = "DEFAULT_QUESTION_COMPLETE";
         private Phase _currentPhase = Phase.None;
         private int _selectedIndex = -1;
         private bool _isFirstSelectionDone = false;
         private Coroutine _sequenceCoroutine;
-        private Font _originalQuestionFont;
-
-        protected override void Awake()
+        
+        private Page_Background _background;
+        private string _progressText;
+        
+        public int SelectedIndex
         {
-            base.Awake();
-            
-            if (textQuestion)
-            {
-                _originalQuestionFont = textQuestion.font;
-            }
+            get { return _selectedIndex; }
+        }
+
+        public void SetSyncCommand(string command)
+        {
+            _syncCommand = command;
         }
 
         public override void SetupData(object data)
         {
-            Step1Page2Data pageData = data as Step1Page2Data;
+            CommonQuestionPageData pageData = data as CommonQuestionPageData;
             
-            // 일반 C# 객체이므로 명시적 null 검사 수행
             if (pageData != null)
             {
                 _cachedData = pageData;
             }
             else
             {
-                Debug.LogWarning("[Step1Page2Controller] SetupData: 전달된 데이터가 null입니다.");
+                Debug.LogWarning("[Page_Question] SetupData: 전달된 데이터가 null이거나 형식이 잘못되었습니다.");
             }
+        }
+        
+        public void SetProgressInfo(Page_Background bg, string progress)
+        {
+            _background = bg;
+            _progressText = progress;
         }
 
         public override void OnEnter()
         {
             base.OnEnter();
+            
+            if (_background && !string.IsNullOrEmpty(_progressText))
+            {
+                _background.SetQuestionText(_progressText);
+            }
+            
             _currentPhase = Phase.None;
             _isFirstSelectionDone = false;
             _selectedIndex = -1;
 
             if (legoArrowCg) legoArrowCg.alpha = 0f;
 
-            if (textQuestion && _originalQuestionFont)
-            {
-                textQuestion.font = _originalQuestionFont;
-            }
-
+            // Why: ApplyDataToUI에서 SetUIText가 호출되며 JSON에 있는 폰트와 서식으로 다시 세팅해줌
             ApplyDataToUI();
         }
 
@@ -128,14 +118,23 @@ namespace My.Scripts._03_Step1.Pages
         {
             if (_cachedData == null) return;
 
-            if (textQuestion && _cachedData.textQuestion != null) textQuestion.text = _cachedData.textQuestion.text;
-            if (textDescription && _cachedData.textDescription != null) textDescription.text = _cachedData.textDescription.text;
+            QuestionSetting qSetting = _cachedData.questionSetting;
+            
+            if (qSetting != null)
+            {
+                SetUIText(textQuestion, qSetting.textQuestion);
+                SetUIText(textAnswer1, qSetting.textAnswer1);
+                SetUIText(textAnswer2, qSetting.textAnswer2);
+                SetUIText(textAnswer3, qSetting.textAnswer3);
+                SetUIText(textAnswer4, qSetting.textAnswer4);
+                SetUIText(textAnswer5, qSetting.textAnswer5);
+            }
+            else
+            {
+                Debug.LogWarning("[Page_Question] ApplyDataToUI: questionSetting 데이터가 없습니다.");
+            }
 
-            if (textAnswer1 && _cachedData.textAnswer1 != null) textAnswer1.text = _cachedData.textAnswer1.text;
-            if (textAnswer2 && _cachedData.textAnswer2 != null) textAnswer2.text = _cachedData.textAnswer2.text;
-            if (textAnswer3 && _cachedData.textAnswer3 != null) textAnswer3.text = _cachedData.textAnswer3.text;
-            if (textAnswer4 && _cachedData.textAnswer4 != null) textAnswer4.text = _cachedData.textAnswer4.text;
-            if (textAnswer5 && _cachedData.textAnswer5 != null) textAnswer5.text = _cachedData.textAnswer5.text;
+            SetUIText(textDescription, _cachedData.textDescription);
         }
 
         private void Update()
@@ -143,10 +142,7 @@ namespace My.Scripts._03_Step1.Pages
             if (_currentPhase == Phase.Completed) return;
 
             bool isServer = false;
-            if (TcpManager.Instance)
-            {
-                isServer = TcpManager.Instance.IsServer;
-            }
+            if (TcpManager.Instance) isServer = TcpManager.Instance.IsServer;
 
             bool canSkip = isServer;
 
@@ -214,10 +210,8 @@ namespace My.Scripts._03_Step1.Pages
                     yield return null;
                 }
 
-                if (textQuestion && _cachedData != null && _cachedData.textSelected != null)
-                {
-                    textQuestion.text = _cachedData.textSelected.text;
-                }
+                // 텍스트 뿐만 아니라 선택 후의 서식 정보도 일괄 덮어씌움
+                SetUIText(textQuestion, _cachedData.textSelected);
 
                 for (int i = 0; i < 5; i++)
                 {
@@ -277,10 +271,8 @@ namespace My.Scripts._03_Step1.Pages
 
             _currentPhase = Phase.CountingDown;
 
-            if (textDescription && _cachedData != null && _cachedData.textWait != null)
-            {
-                textDescription.text = _cachedData.textWait.text;
-            }
+            // 대기 텍스트 서식 적용
+            SetUIText(textDescription, _cachedData.textWait);
 
             if (textQuestion)
             {
@@ -288,7 +280,6 @@ namespace My.Scripts._03_Step1.Pages
                 textQuestion.text = "5";
             }
 
-            // Why: 기존 타겟 Cg를 먼저 0.5초간 페이드 아웃시킴
             float fadeOutElapsed = 0f;
             float targetFinalStart = targetCg ? targetCg.alpha : 1f;
 
@@ -302,7 +293,6 @@ namespace My.Scripts._03_Step1.Pages
             }
             if (targetCg) targetCg.alpha = 0f;
 
-            // Why: 타겟이 완전히 사라진 후 화살표를 이어서 0.5초간 페이드 인 시킴
             float fadeInElapsed = 0f;
             while (fadeInElapsed < fadeDuration)
             {
@@ -314,7 +304,6 @@ namespace My.Scripts._03_Step1.Pages
             }
             if (legoArrowCg) legoArrowCg.alpha = 1f;
 
-            // Why: 순차 페이드의 총 소요시간(fadeDuration * 2)이 1초가 안 될 경우 남은 1초 간격을 맞춰줌
             float totalFadeTime = fadeDuration * 2f;
             if (totalFadeTime < 1.0f)
             {
@@ -359,7 +348,7 @@ namespace My.Scripts._03_Step1.Pages
         {
             if (TcpManager.Instance && TcpManager.Instance.IsServer)
             {
-                TcpManager.Instance.SendMessageToTarget("STEP1_PAGE2_COMPLETE", "");
+                TcpManager.Instance.SendMessageToTarget(_syncCommand, "");
             }
 
             if (onStepComplete != null)
@@ -386,30 +375,20 @@ namespace My.Scripts._03_Step1.Pages
 
         private void OnEnable()
         {
-            if (TcpManager.Instance)
-            {
-                TcpManager.Instance.onMessageReceived += OnNetworkMessageReceived;
-            }
+            if (TcpManager.Instance) TcpManager.Instance.onMessageReceived += OnNetworkMessageReceived;
         }
 
         private void OnDisable()
         {
-            if (TcpManager.Instance)
-            {
-                TcpManager.Instance.onMessageReceived -= OnNetworkMessageReceived;
-            }
+            if (TcpManager.Instance) TcpManager.Instance.onMessageReceived -= OnNetworkMessageReceived;
         }
 
         private void OnNetworkMessageReceived(TcpMessage msg)
         {
-            if (msg != null && msg.command == "STEP1_PAGE2_COMPLETE" && _currentPhase != Phase.Completed)
+            if (msg != null && msg.command == _syncCommand && _currentPhase != Phase.Completed)
             {
                 _currentPhase = Phase.Completed;
-                
-                if (onStepComplete != null)
-                {
-                    onStepComplete.Invoke(0);
-                }
+                if (onStepComplete != null) onStepComplete.Invoke(0);
             }
         }
     }

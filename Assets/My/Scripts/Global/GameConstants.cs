@@ -9,6 +9,9 @@ namespace My.Scripts.Global
             public const string Tutorial = "01_Tutorial"; 
             public const string PlayTutorial = "02_PlayTutorial"; 
             public const string Step1 = "03_Step1";
+            public const string Step2 = "04_Step2";
+            public const string Step3 = "05_Step3";
+            public const string PlayVideo = "06_PlayVideo";
         }
 
         public static class Path
@@ -19,6 +22,9 @@ namespace My.Scripts.Global
             public const string PlayTutorial = "JSON/PlayTutorial";
             public const string TcpSetting = "JSON/TcpSetting";
             public const string Step1 = "JSON/Step1";
+            public const string Step2 = "JSON/Step2";
+            public const string Step3 = "JSON/Step3";
+            public const string Ending = "JSON/Ending";
         }
     }
 }

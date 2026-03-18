@@ -4,7 +4,7 @@ using My.Scripts._02_PlayTutorial.Pages;
 using UnityEngine;
 using My.Scripts.Global;
 using Wonjeong.Utils;
-using My.Scripts.Network; // TCP 통신 매니저 접근을 위한 네임스페이스
+using My.Scripts.Network; 
 
 namespace My.Scripts._02_PlayTutorial
 {
@@ -16,10 +16,6 @@ namespace My.Scripts._02_PlayTutorial
         public PlayTutorialPage3Data page3;
     }
 
-    /// <summary>
-    /// 플레이 튜토리얼 씬의 매니저.
-    /// 단일 페이지 흐름으로 동작하며, 마지막 3페이지 완료 시 TCP로 상대방과 동기화 후 Step1 씬으로 넘어감.
-    /// </summary>
     public class PlayTutorialManager : BaseFlowManager
     {
         private bool _isLocalFinished = false;
@@ -29,7 +25,6 @@ namespace My.Scripts._02_PlayTutorial
         {
             base.Start();
             
-            // Why: 상대방 PC의 튜토리얼 완료 신호를 받기 위해 이벤트 구독
             if (TcpManager.Instance)
             {
                 TcpManager.Instance.onMessageReceived += OnNetworkMessageReceived;
@@ -40,28 +35,44 @@ namespace My.Scripts._02_PlayTutorial
         {
             PlayTutorialSetting setting = JsonLoader.Load<PlayTutorialSetting>(GameConstants.Path.PlayTutorial);
 
-            // 일반 C# 객체이므로 명시적 null 검사 수행
             if (setting == null)
             {
                 Debug.LogError("[PlayTutorialManager] JSON/PlayTutorial 로드 실패.");
                 return;
             }
 
-            // 기기에 할당된 단일 페이지들에만 데이터 주입
             if (pages.Count > 0 && pages[0]) pages[0].SetupData(setting.page1);
             if (pages.Count > 1 && pages[1]) pages[1].SetupData(setting.page2);
             if (pages.Count > 2 && pages[2]) pages[2].SetupData(setting.page3);
         }
 
         /// <summary>
-        /// 3페이지 연출까지 모두 끝났을 때 자동 호출됨.
+        /// 페이지 전환 시 Page1의 입력값을 Page2로 넘겨줍니다.
         /// </summary>
+        public override void TransitionToPage(int index)
+        {
+            if (pages != null && index >= 0 && index < pages.Count)
+            {
+                if (index == 1) // Page 2로 전환될 때
+                {
+                    PlayTutorialPage1Controller page1 = pages[0] as PlayTutorialPage1Controller;
+                    PlayTutorialPage2Controller page2 = pages[1] as PlayTutorialPage2Controller;
+
+                    if (page1 && page2)
+                    {
+                        // Page1에서 누른 키를 Page2에 전달
+                        page2.SetInitialKey(page1.PressedKey);
+                    }
+                }
+            }
+            base.TransitionToPage(index);
+        }
+
         protected override void OnAllFinished()
         {
             _isLocalFinished = true;
             Debug.Log("[PlayTutorialManager] 내 PC 플레이 튜토리얼 완료. 상대방 대기 중...");
 
-            // Why: 내 쪽 진행이 끝났음을 상대방에게 알려서 동기화를 유도함
             if (TcpManager.Instance)
             {
                 TcpManager.Instance.SendMessageToTarget("PLAY_TUTORIAL_COMPLETE");
@@ -83,7 +94,6 @@ namespace My.Scripts._02_PlayTutorial
 
         private void CheckSyncAndChangeScene()
         {
-            // Why: 양쪽 모두 3페이지 연출이 완전히 끝났을 때만 다음 씬으로 동시 진입함
             if (_isLocalFinished && _isRemoteFinished)
             {
                 if (TcpManager.Instance)
@@ -94,8 +104,6 @@ namespace My.Scripts._02_PlayTutorial
                 if (GameManager.Instance)
                 {
                     Debug.Log("[PlayTutorialManager] 양방향 동기화 완료. Step1 씬으로 이동합니다.");
-                    
-                    // Why: 업데이트된 전역 상수를 사용하여 Step1 씬으로 전환함
                     GameManager.Instance.ChangeScene(GameConstants.Scene.Step1); 
                 }
                 else
@@ -107,7 +115,6 @@ namespace My.Scripts._02_PlayTutorial
 
         private void OnDestroy()
         {
-            // 이벤트 구독 안전 해제
             if (TcpManager.Instance)
             {
                 TcpManager.Instance.onMessageReceived -= OnNetworkMessageReceived;

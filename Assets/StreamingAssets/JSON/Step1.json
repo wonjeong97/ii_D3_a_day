@@ -7,7 +7,8 @@
       "text": "{nameA}",
       "fontName": "font6",
       "fontSize": 24,
-      "fontColor": {"r": 0.627451, "g": 0.627451, "b": 0.627451, "a": 1}
+      "fontColor": {"r": 0.627451, "g": 0.627451, "b": 0.627451, "a": 1},
+      "alignment": 3      
     },
     "nameB": {
       "name": "Text_NameB",
@@ -16,11 +17,11 @@
       "text": "{nameB}",
       "fontName": "font6",
       "fontSize": 24,
-      "fontColor": {"r": 0.627451, "g": 0.627451, "b": 0.627451, "a": 1}
+      "fontColor": {"r": 0.627451, "g": 0.627451, "b": 0.627451, "a": 1},
+      "alignment": 3
     }
   },
-  "page1":
-  {
+  "introPage": {
     "nameA": {
       "name": "Text_NameA",
       "position": {"x": 216, "y": -190},
@@ -28,7 +29,8 @@
       "text": "{nameA}",
       "fontName": "font6",
       "fontSize": 24,
-      "fontColor": {"r": 1, "g": 1, "b": 1, "a": 0}
+      "fontColor": {"r": 1, "g": 1, "b": 1, "a": 1},
+      "alignment": 3
     },
     "nameB": {
       "name": "Text_NameB",
@@ -37,19 +39,22 @@
       "text": "{nameB}",
       "fontName": "font6",
       "fontSize": 24,
-      "fontColor": {"r": 1, "g": 1, "b": 1, "a": 0}
+      "fontColor": {"r": 1, "g": 1, "b": 1, "a": 1},
+      "alignment": 3
     }
   },
-  "page2":  {
-    "textQuestion":{
-      "name": "Text_Q1",
-      "position": {"x": 0, "y": 5},
+  "outroPage": {
+    "textOutro": {
+      "name": "Text_Outro",
+      "position": {"x": 0, "y": 121},
       "scale": {"x": 1, "y": 1, "z": 1},
-      "text": "Q1.당신은 상대방과 함께 어떤 여행지로 떠나고 싶나요?",
+      "text": "이어서 내가 고른 배경에 스토리를 입혀 볼 거예요.\n질문을 보고 <b>답변에 맞는 피규어</b>를 올려주세요.",
       "fontName": "font4",
       "fontSize": 55,
-      "fontColor": {"r": 0, "g": 0, "b": 0, "a": 1}
-    },
+      "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1}
+    }
+  },
+  "commonQuestionUI": {
     "textSelected": {
       "name": "Text_Selected",
       "position": {"x": 0, "y": 5},
@@ -59,15 +64,6 @@
       "fontSize": 55,
       "fontColor": {"r": 0, "g": 0, "b": 0, "a": 1}
     },
-    "textDescription": {
-      "name": "Text_Description",
-      "position": {"x": 0, "y": 96},
-      "scale": {"x": 1, "y": 1, "z": 1},
-      "text": "<b><size=45>1번 화살표 자리</size></b>에 맞춰 올려 주세요.",
-      "fontName": "font6",
-      "fontSize": 38,
-      "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 1}
-    },
     "textWait": {
       "name": "Text_Wait",
       "position": {"x": 0, "y": 96},
@@ -76,52 +72,452 @@
       "fontName": "font6",
       "fontSize": 38,
       "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 1}
-    },
-    "textAnswer1": {
-      "name": "Text_A1",
-      "position": {"x": -125, "y": 160},
+    }
+  },
+  "commonResultUI": {
+    "textAnswerComplete": {
+      "name": "Text_AnswerComplete",
+      "position": {"x": 0, "y": 212},
       "scale": {"x": 1, "y": 1, "z": 1},
-      "text": "ㄱ. 바다",
-      "fontName": "font8",
-      "fontSize": 28,
+      "text": "답변을 완료 하셨습니다.",
+      "fontName": "font4",
+      "fontSize": 55,
       "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1}
     },
-    "textAnswer2": {
-      "name": "Text_A2",
-      "position": {"x": -125, "y": 160},
+    "textPhotoSaved": {
+      "name": "Text_Saved",
+      "position": {"x": 0, "y": 212},
       "scale": {"x": 1, "y": 1, "z": 1},
-      "text": "ㄴ. 산",
-      "fontName": "font8",
-      "fontSize": 28,
-      "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1}
-    },
-    "textAnswer3": {
-      "name": "Text_A3",
-      "position": {"x": -125, "y": 160},
-      "scale": {"x": 1, "y": 1, "z": 1},
-      "text": "ㄷ. 강",
-      "fontName": "font8",
-      "fontSize": 28,
-      "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1}
-    },
-    "textAnswer4": {
-      "name": "Text_A4",
-      "position": {"x": -125, "y": 160},
-      "scale": {"x": 1, "y": 1, "z": 1},
-      "text": "ㄹ. 하늘",
-      "fontName": "font8",
-      "fontSize": 28,
-      "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1}
-    },
-    "textAnswer5": {
-      "name": "Text_A5",
-      "position": {"x": -125, "y": 160},
-      "scale": {"x": 1, "y": 1, "z": 1},
-      "text": "ㅁ. 숲",
-      "fontName": "font8",
-      "fontSize": 28,
+      "text": "사진이 기록되었습니다.",
+      "fontName": "font4",
+      "fontSize": 55,
       "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1}
     }
-  }
+  },
+  "questionSets": [
+    {
+      "questionSetting": {
+        "textQuestion": {
+          "name": "Text_Q1",
+          "position": {"x": 0, "y": 5},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "Q1.당신은 상대방과 함께 어떤 여행지로 떠나고 싶나요?",
+          "fontName": "font4",
+          "fontSize": 55,
+          "fontColor": {"r": 0, "g": 0, "b": 0, "a": 1}
+        },
+        "textAnswer1": {
+          "name": "Text_A1",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄱ. 바다",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment":0
+        },
+        "textAnswer2": {
+          "name": "Text_A2",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄴ. 산",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment":0
+        },
+        "textAnswer3": {
+          "name": "Text_A3",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄷ. 강",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment":0
+        },
+        "textAnswer4": {
+          "name": "Text_A4",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄹ. 하늘",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment":0
+        },
+        "textAnswer5": {
+          "name": "Text_A5",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㅁ. 숲",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment":0
+        }
+      },
+      "textDescription": {
+        "name": "Text_Description",
+        "position": {"x": 0, "y": 96},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "<b><size=45>1번 화살표 자리</size></b>에 맞춰 올려 주세요.",
+        "fontName": "font6",
+        "fontSize": 38,
+        "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 1}
+      },
+      "textMyScene": {
+        "name": "Text_Take",
+        "position": {"x": 0, "y": 140},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "나의 장면 take1",
+        "fontName": "font4",
+        "fontSize": 38,
+        "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 1}
+      }
+    },
+    {
+      "questionSetting": {
+        "textQuestion": {
+          "name": "Text_Q2",
+          "position": {"x": 0, "y": 5},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "Q2. 그렇다면 그 중 어떤 풍경이 펼쳐질 공간으로 여행을 떠나고 싶은가요?",
+          "fontName": "font4",
+          "fontSize": 55,
+          "fontColor": {"r": 0, "g": 0, "b": 0, "a": 1}
+        },
+        "textAnswer1": {
+          "name": "Text_A1",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄱ. 기본보기",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer2": {
+          "name": "Text_A2",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄴ. 기본보기",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer3": {
+          "name": "Text_A3",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄷ. 기본보기",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer4": {
+          "name": "Text_A4",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄹ. 기본보기",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer5": {
+          "name": "Text_A5",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㅁ. 기본보기",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        }
+      },
+      "textDescription": {
+        "name": "Text_Description",
+        "position": {"x": 0, "y": 96},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "<b><size=45>3번 화살표 자리</size></b>에 맞춰 올려주세요.",
+        "fontName": "font6",
+        "fontSize": 38,
+        "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 1}
+      },
+      "textMyScene": {
+        "name": "Text_Take",
+        "position": {"x": 0, "y": 140},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "나의 장면 take2",
+        "fontName": "font4",
+        "fontSize": 38,
+        "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 1}
+      }
+    }
+  ],
+  "q2DynamicAnswers": [
+    {
+      "textAnswer1": {
+        "name": "Text_A1",
+        "position": {"x": -125, "y": 176},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "ㄱ. 빙하가 있는 바다",
+        "fontName": "font8",
+        "fontSize": 28,
+        "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+        "alignment": 0
+      },
+      "textAnswer2": {
+        "name": "Text_A2",
+        "position": {"x": -125, "y": 176},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "ㄴ. 태양 아래의 바다",
+        "fontName": "font8",
+        "fontSize": 28,
+        "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+        "alignment": 0
+      },
+      "textAnswer3": {
+        "name": "Text_A3",
+        "position": {"x": -125, "y": 176},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "ㄷ. 사막 옆 바다",
+        "fontName": "font8",
+        "fontSize": 28,
+        "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+        "alignment": 0
+      },
+      "textAnswer4": {
+        "name": "Text_A4",
+        "position": {"x": -125, "y": 176},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "ㄹ. 안개의 바다",
+        "fontName": "font8",
+        "fontSize": 28,
+        "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+        "alignment": 0
+      },
+      "textAnswer5": {
+        "name": "Text_A5",
+        "position": {"x": -125, "y": 176},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "ㅁ. 밤빛의 바다",
+        "fontName": "font8",
+        "fontSize": 28,
+        "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+        "alignment": 0
+      }
+    },
+    {
+      "textAnswer1": {
+        "name": "Text_A1",
+        "position": {"x": -125, "y": 176},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "ㄱ. 눈이 내린 설산",
+        "fontName": "font8",
+        "fontSize": 28,
+        "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+        "alignment": 0
+      },
+      "textAnswer2": {
+        "name": "Text_A2",
+        "position": {"x": -125, "y": 176},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "ㄴ. 언덕같은 동산",
+        "fontName": "font8",
+        "fontSize": 28,
+        "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+        "alignment": 0
+      },
+      "textAnswer3": {
+        "name": "Text_A3",
+        "position": {"x": -125, "y": 176},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "ㄷ. 검은 땅의 활화산",
+        "fontName": "font8",
+        "fontSize": 28,
+        "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+        "alignment": 0
+      },
+      "textAnswer4": {
+        "name": "Text_A4",
+        "position": {"x": -125, "y": 176},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "ㄹ. 안개 속 깊은 산",
+        "fontName": "font8",
+        "fontSize": 28,
+        "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+        "alignment": 0
+      },
+      "textAnswer5": {
+        "name": "Text_A5",
+        "position": {"x": -125, "y": 176},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "ㅁ. 오로라가 보이는 산",
+        "fontName": "font8",
+        "fontSize": 28,
+        "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+        "alignment": 0
+      }
+    },
+    {
+      "textAnswer1": {
+        "name": "Text_A1",
+        "position": {"x": -125, "y": 176},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "ㄱ. 초원의 강",
+        "fontName": "font8",
+        "fontSize": 28,
+        "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+        "alignment": 0
+      },
+      "textAnswer2": {
+        "name": "Text_A2",
+        "position": {"x": -125, "y": 176},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "ㄴ. 협곡 사이의 강",
+        "fontName": "font8",
+        "fontSize": 28,
+        "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+        "alignment": 0
+      },
+      "textAnswer3": {
+        "name": "Text_A3",
+        "position": {"x": -125, "y": 176},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "ㄷ. 눈 사이를 흐르는 강",
+        "fontName": "font8",
+        "fontSize": 28,
+        "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+        "alignment": 0
+      },
+      "textAnswer4": {
+        "name": "Text_A4",
+        "position": {"x": -125, "y": 176},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "ㄹ. 폭포가 있는 강",
+        "fontName": "font8",
+        "fontSize": 28,
+        "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+        "alignment": 0
+      },
+      "textAnswer5": {
+        "name": "Text_A5",
+        "position": {"x": -125, "y": 176},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "ㅁ. 사막 사이의 강",
+        "fontName": "font8",
+        "fontSize": 28,
+        "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+        "alignment": 0
+      }
+    },
+    {
+      "textAnswer1": {
+        "name": "Text_A1",
+        "position": {"x": -125, "y": 176},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "ㄱ. 노을이 퍼진 하늘",
+        "fontName": "font8",
+        "fontSize": 28,
+        "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+        "alignment": 0
+      },
+      "textAnswer2": {
+        "name": "Text_A2",
+        "position": {"x": -125, "y": 176},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "ㄴ. 뭉게 구름 가득 하늘",
+        "fontName": "font8",
+        "fontSize": 28,
+        "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+        "alignment": 0
+      },
+      "textAnswer3": {
+        "name": "Text_A3",
+        "position": {"x": -125, "y": 176},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "ㄷ. 별의 밤하늘",
+        "fontName": "font8",
+        "fontSize": 28,
+        "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+        "alignment": 0
+      },
+      "textAnswer4": {
+        "name": "Text_A4",
+        "position": {"x": -125, "y": 176},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "ㄹ. 번개 치는 하늘",
+        "fontName": "font8",
+        "fontSize": 28,
+        "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+        "alignment": 0
+      },
+      "textAnswer5": {
+        "name": "Text_A5",
+        "position": {"x": -125, "y": 176},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "ㅁ. 무지갯빛 하늘",
+        "fontName": "font8",
+        "fontSize": 28,
+        "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+        "alignment": 0
+      }
+    },
+    {
+      "textAnswer1": {
+        "name": "Text_A1",
+        "position": {"x": -125, "y": 176},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "ㄱ. 자작나무 숲",
+        "fontName": "font8",
+        "fontSize": 28,
+        "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+        "alignment": 0
+      },
+      "textAnswer2": {
+        "name": "Text_A2",
+        "position": {"x": -125, "y": 176},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "ㄴ. 대나무 숲",
+        "fontName": "font8",
+        "fontSize": 28,
+        "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+        "alignment": 0
+      },
+      "textAnswer3": {
+        "name": "Text_A3",
+        "position": {"x": -125, "y": 176},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "ㄷ. 꽃이 만개한 숲",
+        "fontName": "font8",
+        "fontSize": 28,
+        "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+        "alignment": 0
+      },
+      "textAnswer4": {
+        "name": "Text_A4",
+        "position": {"x": -125, "y": 176},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "ㄹ. 반딧불이 숲",
+        "fontName": "font8",
+        "fontSize": 28,
+        "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+        "alignment": 0
+      },
+      "textAnswer5": {
+        "name": "Text_A5",
+        "position": {"x": -125, "y": 176},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "ㅁ. 단풍 숲",
+        "fontName": "font8",
+        "fontSize": 28,
+        "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+        "alignment": 0
+      }
+    }
+  ]
 }
-  

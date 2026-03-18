@@ -1,55 +1,52 @@
 using System;
+using System.Collections.Generic; 
 using My.Scripts.Core;
-using My.Scripts.Network;
 using My.Scripts.Global;
-using My.Scripts._03_Step1.Pages;
+using My.Scripts.Core.Pages; 
+using My.Scripts.Data; 
 using UnityEngine;
+using Wonjeong.Data;
 using Wonjeong.Utils;
 
 namespace My.Scripts._03_Step1
 {
-    // Why: Step1Page1Data와 Step1Page2Data는 개별 컨트롤러 스크립트(Pages)에 실제 구조체로 정의되었으므로 임시 선언을 삭제함
-    // # TODO: 추후 3~6페이지 컨트롤러가 완성되면 각 페이지에 맞는 실제 데이터 구조체 선언부도 마저 삭제할 것
-    [Serializable] public class Step1Page3Data { }
-    [Serializable] public class Step1Page4Data { }
-    [Serializable] public class Step1Page5Data { }
-    [Serializable] public class Step1Page6Data { }
-
     [Serializable]
     public class Step1Setting
     {
-        public Step1BackgroundData background;
-        public Step1Page1Data page1;
-        public Step1Page2Data page2;
-        public Step1Page3Data page3;
-        public Step1Page4Data page4;
-        public Step1Page5Data page5;
-        public Step1Page6Data page6;
+        public CommonBackgroundData background; 
+        public CommonIntroData introPage;      
+        public CommonOutroData outroPage;
+        public CommonQuestionUI commonQuestionUI;
+        public CommonResultUI commonResultUI;     
+        
+        public List<QuestionSetItem> questionSets; 
+        public List<DynamicAnswerSet> q2DynamicAnswers;
+    }
+    
+    [Serializable]
+    public class DynamicAnswerSet
+    {
+        public TextSetting textAnswer1;
+        public TextSetting textAnswer2;
+        public TextSetting textAnswer3;
+        public TextSetting textAnswer4;
+        public TextSetting textAnswer5;
     }
 
-    /// <summary>
-    /// Step1 씬의 전체 흐름을 제어하는 매니저.
-    /// 배경 페이지를 독립적으로 띄우고, 1~6페이지의 순차 진행 후 TCP 동기화를 수행함.
-    /// </summary>
     public class Step1Manager : BaseFlowManager
     {
         [Header("Background Setup")]
-        [SerializeField] private Step1BackgroundController backgroundPage;
+        [SerializeField] private Page_Background backgroundPage;
 
-        private bool _isLocalFinished = false;
-        private bool _isRemoteFinished = false;
+        private Page_Question _q1Page;
+        private Page_Question _q2Page;
+        private CommonQuestionPageData _q2Data;
+        private List<DynamicAnswerSet> _q2DynamicAnswers;
 
         protected override void Start()
         {
-            // Why: Step1 씬은 진입 즉시 1페이지가 페이드인 연출 없이 알파값 1로 노출되어야 함
             skipFirstPageFade = true;
-
             base.Start(); 
-            
-            if (TcpManager.Instance)
-            {
-                TcpManager.Instance.onMessageReceived += OnNetworkMessageReceived;
-            }
         }
 
         protected override void LoadSettings()
@@ -58,82 +55,150 @@ namespace My.Scripts._03_Step1
 
             if (setting == null)
             {
-                Debug.LogError("[Step1Manager] JSON/Step1 로드 실패.");
+                Debug.LogError("[Step1Manager] JSON 로드 실패.");
                 return;
             }
 
-            // 1. 배경 페이지 독립 초기화
-            // Why: 배경은 페이드 아웃되지 않고 계속 유지되어야 하므로 순차 리스트(pages)에 넣지 않고 단독으로 켜줌
+            _q2DynamicAnswers = setting.q2DynamicAnswers;
+
             if (backgroundPage)
             {
                 backgroundPage.SetupData(setting.background);
                 backgroundPage.OnEnter();
             }
-            else
+
+            if (pages.Count > 0 && pages[0])
             {
-                Debug.LogWarning("[Step1Manager] backgroundPage가 인스펙터에 할당되지 않았습니다.");
+                Page_Intro intro = pages[0] as Page_Intro;
+                if (intro)
+                {
+                    intro.SetSyncCommand("STEP1_INTRO_COMPLETE");
+                }
+                pages[0].SetupData(setting.introPage);
             }
 
-            // 2. 1~6페이지 순차 리스트 데이터 주입
-            if (pages.Count > 0 && pages[0]) pages[0].SetupData(setting.page1);
-            if (pages.Count > 1 && pages[1]) pages[1].SetupData(setting.page2);
-            if (pages.Count > 2 && pages[2]) pages[2].SetupData(setting.page3);
-            if (pages.Count > 3 && pages[3]) pages[3].SetupData(setting.page4);
-            if (pages.Count > 4 && pages[4]) pages[4].SetupData(setting.page5);
-            if (pages.Count > 5 && pages[5]) pages[5].SetupData(setting.page6);
+            int pageIndex = 1; 
+
+            if (setting.questionSets != null)
+            {
+                int totalQuestions = setting.questionSets.Count;
+
+                for (int i = 0; i < totalQuestions; i++)
+                {
+                    string progressString = $"{i + 1}/{totalQuestions}";
+                    
+                    bool hasOverrideDesc = setting.questionSets[i].textDescription != null && 
+                                           !string.IsNullOrEmpty(setting.questionSets[i].textDescription.text);
+
+                    TextSetting targetDescription = hasOverrideDesc 
+                        ? setting.questionSets[i].textDescription 
+                        : setting.commonQuestionUI.textDescription;
+
+                    CommonQuestionPageData qData = new CommonQuestionPageData 
+                    {
+                        questionSetting = setting.questionSets[i].questionSetting,
+                        textSelected = setting.commonQuestionUI.textSelected,
+                        textDescription = targetDescription,
+                        textWait = setting.commonQuestionUI.textWait
+                    };
+
+                    if (pageIndex < pages.Count && pages[pageIndex])
+                    {
+                        Page_Question qPage = pages[pageIndex] as Page_Question;
+                        if (qPage)
+                        {
+                            if (i == 0) _q1Page = qPage;
+                            else if (i == 1) 
+                            {
+                                _q2Page = qPage;
+                                _q2Data = qData;
+                            }
+
+                            qPage.SetSyncCommand($"STEP1_Q_{i}_COMPLETE");
+                            qPage.SetProgressInfo(backgroundPage, progressString);
+                        }
+                        pages[pageIndex].SetupData(qData);
+                    }
+                    pageIndex++;
+
+                    CommonResultPageData rData = new CommonResultPageData 
+                    {
+                        textAnswerComplete = setting.commonResultUI.textAnswerComplete,
+                        textMyScene = setting.questionSets[i].textMyScene,
+                        textPhotoSaved = setting.commonResultUI.textPhotoSaved
+                    };
+
+                    if (pageIndex < pages.Count && pages[pageIndex])
+                    {
+                        Page_Camera rPage = pages[pageIndex] as Page_Camera;
+                        if (rPage)
+                        {
+                            rPage.SetSyncCommand($"STEP1_R_{i}_COMPLETE");
+                        }
+                        pages[pageIndex].SetupData(rData);
+                    }
+                    pageIndex++;
+                }
+            }
+
+            if (pageIndex < pages.Count && pages[pageIndex])
+            {
+                Page_Outro outro = pages[pageIndex] as Page_Outro;
+                if (outro)
+                {
+                    outro.SetSyncCommand("STEP1_OUTRO_COMPLETE");
+                    outro.SetupData(setting.outroPage);
+                }
+            }
+        }
+        
+        public override void TransitionToPage(int index)
+        {
+            if (pages != null && index >= 0 && index < pages.Count)
+            {
+                if (_q2Page && _q1Page && pages[index] == _q2Page)
+                {
+                    int answerIndex = _q1Page.SelectedIndex - 1; 
+                    
+                    if (_q2DynamicAnswers != null && answerIndex >= 0 && answerIndex < _q2DynamicAnswers.Count)
+                    {
+                        DynamicAnswerSet dynamicSet = _q2DynamicAnswers[answerIndex];
+                        
+                        if (dynamicSet != null)
+                        {
+                            if (_q2Data != null && _q2Data.questionSetting != null)
+                            {
+                                _q2Data.questionSetting.textAnswer1 = dynamicSet.textAnswer1;
+                                _q2Data.questionSetting.textAnswer2 = dynamicSet.textAnswer2;
+                                _q2Data.questionSetting.textAnswer3 = dynamicSet.textAnswer3;
+                                _q2Data.questionSetting.textAnswer4 = dynamicSet.textAnswer4;
+                                _q2Data.questionSetting.textAnswer5 = dynamicSet.textAnswer5;
+                                
+                                _q2Page.SetupData(_q2Data);
+                            }
+                        }
+                        else
+                        {
+                            Debug.LogWarning("[Step1Manager] 매칭되는 DynamicAnswerSet 객체가 null입니다.");
+                        }
+                    }
+                    else
+                    {
+                        Debug.LogWarning("[Step1Manager] 매칭되는 dynamicAnswerSets 인덱스가 없습니다.");
+                    }
+                }
+            }
+            
+            base.TransitionToPage(index);
         }
 
         protected override void OnAllFinished()
         {
-            _isLocalFinished = true;
-            Debug.Log("[Step1Manager] 내 PC Step1 완료. 상대방 대기 중...");
+            Debug.Log("[Step1Manager] 내 PC Step1 완료. Step2로 즉시 이동합니다.");
 
-            if (TcpManager.Instance)
+            if (GameManager.Instance)
             {
-                TcpManager.Instance.SendMessageToTarget("STEP1_COMPLETE");
-            }
-
-            CheckSyncAndChangeScene();
-        }
-
-        private void OnNetworkMessageReceived(TcpMessage msg)
-        {
-            if (msg != null && msg.command == "STEP1_COMPLETE")
-            {
-                _isRemoteFinished = true;
-                Debug.Log("[Step1Manager] 상대방 PC Step1 완료 신호 수신.");
-                
-                CheckSyncAndChangeScene();
-            }
-        }
-
-        private void CheckSyncAndChangeScene()
-        {
-            if (_isLocalFinished && _isRemoteFinished)
-            {
-                if (TcpManager.Instance)
-                {
-                    TcpManager.Instance.onMessageReceived -= OnNetworkMessageReceived;
-                }
-
-                if (GameManager.Instance)
-                {
-                    Debug.Log("<color=cyan>[Step1Manager] 양방향 동기화 완료. Step2 씬으로 이동합니다.</color>");
-                    // # TODO: Step2 씬 이름 상수를 GameConstants.Scene 에 추가하고 적용할 것
-                    GameManager.Instance.ChangeScene("04_Step2"); 
-                }
-                else
-                {
-                    Debug.LogError("[Step1Manager] GameManager가 존재하지 않습니다.");
-                }
-            }
-        }
-
-        private void OnDestroy()
-        {
-            if (TcpManager.Instance)
-            {
-                TcpManager.Instance.onMessageReceived -= OnNetworkMessageReceived;
+                GameManager.Instance.ChangeScene(GameConstants.Scene.Step2); 
             }
         }
     }

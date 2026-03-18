@@ -1,7 +1,7 @@
 using System;
 using System.Collections;
 using My.Scripts.Core;
-using My.Scripts.Network; // TCP 매니저 네임스페이스 추가
+using My.Scripts.Network; 
 using UnityEngine;
 using UnityEngine.UI;
 using Wonjeong.Data;
@@ -16,14 +16,8 @@ namespace My.Scripts._02_PlayTutorial.Pages
         public TextSetting text2;
     }
 
-    /// <summary>
-    /// 플레이 튜토리얼의 첫 번째 페이지 컨트롤러.
-    /// 기기(Server, Client)별로 지정된 독립적인 키 입력을 감지하여 다음 단계로 전환함.
-    /// </summary>
     public class PlayTutorialPage1Controller : GamePage
     {
-        // Why: TCP 네트워크 상태에 따라 동적으로 판단하므로 isPlayer1 변수는 삭제함
-
         [Header("UI Components")]
         [SerializeField] private CanvasGroup text1Canvas;
         [SerializeField] private Text text1UI;
@@ -41,24 +35,22 @@ namespace My.Scripts._02_PlayTutorial.Pages
         private Coroutine _animationCoroutine;
         private bool _isCompleted = false;
 
+        // 수정됨: Page2로 넘겨주기 위해 방금 누른 키를 저장하는 프로퍼티
+        public KeyCode PressedKey { get; private set; } = KeyCode.None;
+
         public override void SetupData(object data)
         {
             PlayTutorialPage1Data pageData = data as PlayTutorialPage1Data;
             
-            if (pageData != null)
-            {
-                _cachedData = pageData;
-            }
-            else
-            {
-                Debug.LogError("[PlayTutorialPage1Controller] SetupData: 전달된 데이터가 null입니다.");
-            }
+            if (pageData != null) _cachedData = pageData;
+            else Debug.LogError("[PlayTutorialPage1Controller] SetupData: 전달된 데이터가 null입니다.");
         }
 
         public override void OnEnter()
         {
             base.OnEnter();
             _isCompleted = false;
+            PressedKey = KeyCode.None;
 
             if (text1Canvas) text1Canvas.alpha = 0f;
             if (imageGroupCanvas) imageGroupCanvas.alpha = 0f;
@@ -66,21 +58,9 @@ namespace My.Scripts._02_PlayTutorial.Pages
 
             if (_cachedData != null)
             {
-                if (text1UI)
-                {
-                    if (_cachedData.text1 != null) text1UI.text = _cachedData.text1.text;
-                    else Debug.LogWarning("[PlayTutorialPage1Controller] text1 데이터가 null입니다.");
-                }
-
-                if (text2UI)
-                {
-                    if (_cachedData.text2 != null)
-                    {
-                        if (text2UI.supportRichText == false) text2UI.supportRichText = true;
-                        text2UI.text = _cachedData.text2.text;
-                    }
-                    else Debug.LogWarning("[PlayTutorialPage1Controller] text2 데이터가 null입니다.");
-                }
+                // 이전 래퍼 메서드 적용하여 위치/서식까지 일괄 적용
+                if (text1UI) SetUIText(text1UI, _cachedData.text1);
+                if (text2UI) SetUIText(text2UI, _cachedData.text2);
             }
             else
             {
@@ -105,39 +85,30 @@ namespace My.Scripts._02_PlayTutorial.Pages
         {
             if (_isCompleted) return;
 
-            // Why: TCP 매니저를 통해 현재 기기의 역할(방장/접속자)을 자동으로 판별함
             bool isServer = false;
-            if (TcpManager.Instance)
-            {
-                isServer = TcpManager.Instance.IsServer;
-            }
+            if (TcpManager.Instance) isServer = TcpManager.Instance.IsServer;
 
-            if (isServer)
+            KeyCode pressed = GetValidKey(isServer);
+
+            if (pressed != KeyCode.None)
             {
-                if (CheckP1Input()) OnValidInputReceived();
-            }
-            else
-            {
-                if (CheckP2Input()) OnValidInputReceived();
+                PressedKey = pressed; // 눌린 키를 저장
+                OnValidInputReceived();
             }
         }
 
-        private bool CheckP1Input()
+        // 수정됨: 넘패드 입력을 제거하고 눌린 키(KeyCode)를 직접 반환함
+        private KeyCode GetValidKey(bool isServer)
         {
-            return Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Keypad1) ||
-                   Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.Keypad2) ||
-                   Input.GetKeyDown(KeyCode.Alpha3) || Input.GetKeyDown(KeyCode.Keypad3) ||
-                   Input.GetKeyDown(KeyCode.Alpha4) || Input.GetKeyDown(KeyCode.Keypad4) ||
-                   Input.GetKeyDown(KeyCode.Alpha5) || Input.GetKeyDown(KeyCode.Keypad5);
-        }
-
-        private bool CheckP2Input()
-        {
-            return Input.GetKeyDown(KeyCode.Alpha6) || Input.GetKeyDown(KeyCode.Keypad6) ||
-                   Input.GetKeyDown(KeyCode.Alpha7) || Input.GetKeyDown(KeyCode.Keypad7) ||
-                   Input.GetKeyDown(KeyCode.Alpha8) || Input.GetKeyDown(KeyCode.Keypad8) ||
-                   Input.GetKeyDown(KeyCode.Alpha9) || Input.GetKeyDown(KeyCode.Keypad9) ||
-                   Input.GetKeyDown(KeyCode.Alpha0) || Input.GetKeyDown(KeyCode.Keypad0);
+            KeyCode[] keys = isServer 
+                ? new KeyCode[] { KeyCode.Alpha1, KeyCode.Alpha2, KeyCode.Alpha3, KeyCode.Alpha4, KeyCode.Alpha5 }
+                : new KeyCode[] { KeyCode.Alpha6, KeyCode.Alpha7, KeyCode.Alpha8, KeyCode.Alpha9, KeyCode.Alpha0 };
+            
+            foreach (var key in keys)
+            {
+                if (Input.GetKeyDown(key)) return key;
+            }
+            return KeyCode.None;
         }
 
         private void OnValidInputReceived()
