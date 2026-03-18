@@ -553,6 +553,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   mainCg: {fileID: 1935379412}
   textOutroUI: {fileID: 1904677598}
+  textOutro2UI: {fileID: 0}
   fadeDuration: 0.5
   autoTransitionDelay: 3
 --- !u!1 &142019329
