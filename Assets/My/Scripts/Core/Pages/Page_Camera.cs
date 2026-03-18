@@ -30,7 +30,7 @@ namespace My.Scripts.Core.Pages
         [SerializeField] private Text textMySceneUI;
 
         [Header("Save Settings")]
-        [Tooltip("사진을 저장할 최상위 경로. 비워두면 로컬 Pictures 폴더 사용.")]
+        [Tooltip("사진을 저장할 최상위 경로. 비워두면 시스템 사진 폴더를 사용합니다.")]
         [SerializeField] private string sharedFolderPath = "";
         [SerializeField] private bool savePhoto = true;
         [SerializeField] private string questionId = "Q1";
@@ -65,6 +65,15 @@ namespace My.Scripts.Core.Pages
         {
             base.OnEnter();
             _isCompleted = false;
+
+            // Finding 4: 시퀀스 시작 전 필수 데이터 검증
+            if (_cachedData == null || _cachedData.textPhotoSaved == null)
+            {
+                Debug.LogError("[Page_Camera] 필수 데이터(_cachedData)가 누락되어 페이지를 시작할 수 없습니다.");
+                if (errorCg != null) errorCg.alpha = 1f;
+                if (textMySceneCg != null) textMySceneCg.alpha = 0f;
+                return;
+            }
 
             ApplyDataToUI();
 
@@ -119,14 +128,12 @@ namespace My.Scripts.Core.Pages
             if (textMySceneCg != null) yield return StartCoroutine(FadeCanvasGroupRoutine(textMySceneCg, 0f, 1f, fadeDuration));
             yield return CoroutineData.GetWaitForSeconds(1.0f);
 
-            // 수정됨: 캡처 및 저장 결과 확인 로직 도입
             var captureTask = CapturePhotoAsync();
             yield return captureTask.ToCoroutine();
             bool isSuccess = captureTask.GetAwaiter().GetResult();
 
             if (!isSuccess)
             {
-                // 실패 시: 에러 UI 노출 및 시퀀스 중단
                 if (textAnswerCompleteCg != null) textAnswerCompleteCg.alpha = 0f;
                 if (textMySceneCg != null) textMySceneCg.alpha = 0f;
                 if (errorCg != null) yield return StartCoroutine(FadeCanvasGroupRoutine(errorCg, 0f, 1f, fadeDuration));
@@ -151,7 +158,6 @@ namespace My.Scripts.Core.Pages
             if (textAnswerCompleteCg != null) textAnswerCompleteCg.alpha = 0f;
             if (textMySceneCg != null) textMySceneCg.alpha = 0f;
 
-            // 성공 시에만 완료 텍스트 세팅 및 완료 처리
             SetUIText(textAnswerCompleteUI, _cachedData.textPhotoSaved);
             if (textAnswerCompleteCg != null) yield return StartCoroutine(FadeCanvasGroupRoutine(textAnswerCompleteCg, 0f, 1f, fadeDuration));
             
@@ -164,15 +170,34 @@ namespace My.Scripts.Core.Pages
         /// <summary> 사진을 캡처하고 설정에 따라 비동기 저장을 수행한 뒤 결과(성공/실패)를 반환함 </summary>
         private async UniTask<bool> CapturePhotoAsync()
         {
+            // Finding 3: 재생 상태 및 프레임 유효성 검사 강화
             if (_webCamTexture == null || !_webCamTexture.isPlaying)
             {
                 Debug.LogError("[Page_Camera] 웹캠이 작동 중이 아니어서 사진을 찍을 수 없습니다.");
                 return false; 
             }
 
+            // 프레임이 준비될 때까지 대기 (최대 2초)
+            float timeout = 2.0f;
+            float elapsed = 0f;
+            while ((_webCamTexture.width <= 16 || !_webCamTexture.didUpdateThisFrame) && elapsed < timeout)
+            {
+                elapsed += Time.deltaTime;
+                await UniTask.Yield();
+            }
+
+            if (_webCamTexture.width <= 16)
+            {
+                Debug.LogError("[Page_Camera] 웹캠 프레임 초기화 실패(해상도 0).");
+                return false;
+            }
+
+            RenderTexture rt = null;
+            RenderTexture prev = null;
+
             try
             {
-                RenderTexture rt = RenderTexture.GetTemporary(PhotoWidth, PhotoHeight, 0, RenderTextureFormat.ARGB32);
+                rt = RenderTexture.GetTemporary(PhotoWidth, PhotoHeight, 0, RenderTextureFormat.ARGB32);
                 Graphics.Blit(_webCamTexture, rt);
 
                 if (_capturedPhoto == null || _capturedPhoto.width != PhotoWidth || _capturedPhoto.height != PhotoHeight)
@@ -181,13 +206,10 @@ namespace My.Scripts.Core.Pages
                     _capturedPhoto = new Texture2D(PhotoWidth, PhotoHeight, TextureFormat.RGBA32, false);
                 }
 
-                RenderTexture prev = RenderTexture.active;
+                prev = RenderTexture.active;
                 RenderTexture.active = rt;
                 _capturedPhoto.ReadPixels(new Rect(0, 0, PhotoWidth, PhotoHeight), 0, 0);
                 _capturedPhoto.Apply();
-
-                RenderTexture.active = prev;
-                RenderTexture.ReleaseTemporary(rt);
 
                 bool result = true;
                 if (savePhoto)
@@ -195,13 +217,19 @@ namespace My.Scripts.Core.Pages
                     result = await SavePhotoAsync(_capturedPhoto);
                 }
 
-                StopWebCam();
                 return result;
             }
             catch (Exception e)
             {
                 Debug.LogError($"[Page_Camera] 캡처 프로세스 중 예외 발생: {e.Message}");
                 return false;
+            }
+            finally
+            {
+                // Finding 1: 예외 발생 시에도 자원 해제 및 웹캠 정지 보장
+                if (prev != null) RenderTexture.active = prev;
+                if (rt != null) RenderTexture.ReleaseTemporary(rt);
+                StopWebCam();
             }
         }
 
@@ -219,7 +247,8 @@ namespace My.Scripts.Core.Pages
             string roleString = isServer ? "Server" : "Client";
             string photoName = $"0_{roleString}_{questionId}"; 
 
-            string dataPath = Application.dataPath;
+            // 메인 스레드에서 접근 가능한 쓰기 전용 경로 미리 캡처
+            string persistentPath = Application.persistentDataPath;
             string customSharedPath = sharedFolderPath;
 
             try
@@ -229,10 +258,21 @@ namespace My.Scripts.Core.Pages
                     byte[] bytes = UnityEngine.ImageConversion.EncodeArrayToPNG(rawData, format, (uint)width, (uint)height);
                     string rootPath = customSharedPath;
                     
+                    // Finding 2: 설치 폴더 대신 보장된 쓰기 가능 경로 로직 사용
                     if (string.IsNullOrEmpty(rootPath))
                     {
-                        DirectoryInfo parentDir = Directory.GetParent(dataPath);
-                        rootPath = Path.Combine(parentDir != null ? parentDir.FullName : dataPath, "Pictures");
+                        try 
+                        {
+                            rootPath = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
+                            if (string.IsNullOrEmpty(rootPath) || !Directory.Exists(rootPath))
+                            {
+                                rootPath = persistentPath;
+                            }
+                        }
+                        catch
+                        {
+                            rootPath = persistentPath;
+                        }
                     }
 
                     string dateFolder = DateTime.Now.ToString("yy-MM-dd");
