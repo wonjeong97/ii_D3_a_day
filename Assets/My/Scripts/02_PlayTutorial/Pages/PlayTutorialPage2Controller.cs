@@ -1,9 +1,11 @@
 using System;
 using System.Collections;
 using My.Scripts.Core;
+using My.Scripts.Global; // 추가됨: SoundManager 접근용
 using My.Scripts.Network; 
 using UnityEngine;
 using UnityEngine.UI;
+using Wonjeong.UI;
 using Wonjeong.Utils;
 
 namespace My.Scripts._02_PlayTutorial.Pages
@@ -38,7 +40,7 @@ namespace My.Scripts._02_PlayTutorial.Pages
             KeyCode.Alpha6, KeyCode.Alpha7, KeyCode.Alpha8, KeyCode.Alpha9, KeyCode.Alpha0 
         };
 
-        // 수정됨: Page1에서 누른 키를 초기값으로 셋팅
+        // Page1에서 누른 키를 초기값으로 셋팅
         public void SetInitialKey(KeyCode key)
         {
             _holdingKey = key;
@@ -64,7 +66,7 @@ namespace My.Scripts._02_PlayTutorial.Pages
 
             _fadeCoroutine = StartCoroutine(FadeCanvasGroupRoutine(mainGroupCanvas, 0f, 1f, fadeDuration));
 
-            // 수정됨: Page1에서 전달받은 키가 있다면 화면에 들어오자마자 자동으로 카운트다운 시작
+            // Page1에서 전달받은 키가 있다면 화면에 들어오자마자 자동으로 카운트다운 시작
             if (_holdingKey != KeyCode.None)
             {
                 _countdownCoroutine = StartCoroutine(CountdownRoutine());
@@ -117,6 +119,13 @@ namespace My.Scripts._02_PlayTutorial.Pages
 
         private IEnumerator CountdownRoutine()
         {
+            // Why: 코루틴이 시작될 때마다(최초 및 1초 페널티 이후 리셋 시) 효과음을 재생함
+            if (SoundManager.Instance)
+            {   
+                SoundManager.Instance.StopSFX();
+                SoundManager.Instance.PlaySFX("공통_10_5초");
+            }
+
             for (int i = 5; i >= 1; i--)
             {
                 if (countdownUI) countdownUI.text = i.ToString();
@@ -153,7 +162,7 @@ namespace My.Scripts._02_PlayTutorial.Pages
             if (countdownUI) countdownUI.text = "5"; 
             _isWaitingForReset = false;
 
-            // 수정됨: 페널티가 끝나면 방금 갱신된 새로운 키를 기준으로 카운트다운 자동 재시작
+            // 페널티가 끝나면 방금 갱신된 새로운 키를 기준으로 카운트다운 자동 재시작
             if (_holdingKey != KeyCode.None && !_isCompleted)
             {
                 _countdownCoroutine = StartCoroutine(CountdownRoutine());

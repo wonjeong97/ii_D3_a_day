@@ -263,6 +263,11 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 21300000, guid: b6fb8e86a61473e4cb9474e6f38de542,
         type: 3}
+    - target: {fileID: 4100283173011006083, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
+        type: 3}
+      propertyPath: questionId
+      value: Q3
+      objectReference: {fileID: 0}
     - target: {fileID: 4525663095100219090, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
         type: 3}
       propertyPath: m_Text
@@ -421,6 +426,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   mainCg: {fileID: 1051803091}
   textOutroUI: {fileID: 1904677598}
+  textOutro2UI: {fileID: 0}
   fadeDuration: 0.5
   autoTransitionDelay: 3
 --- !u!1001 &154396734
@@ -534,6 +540,11 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 21300000, guid: b6fb8e86a61473e4cb9474e6f38de542,
         type: 3}
+    - target: {fileID: 4100283173011006083, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
+        type: 3}
+      propertyPath: questionId
+      value: Q6
+      objectReference: {fileID: 0}
     - target: {fileID: 4525663095100219090, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
         type: 3}
       propertyPath: m_Text
@@ -698,6 +709,11 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 21300000, guid: b6fb8e86a61473e4cb9474e6f38de542,
         type: 3}
+    - target: {fileID: 4100283173011006083, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
+        type: 3}
+      propertyPath: questionId
+      value: Q7
+      objectReference: {fileID: 0}
     - target: {fileID: 4525663095100219090, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
         type: 3}
       propertyPath: m_Text
@@ -937,6 +953,11 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 21300000, guid: b6fb8e86a61473e4cb9474e6f38de542,
         type: 3}
+    - target: {fileID: 4100283173011006083, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
+        type: 3}
+      propertyPath: questionId
+      value: Q9
+      objectReference: {fileID: 0}
     - target: {fileID: 4525663095100219090, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
         type: 3}
       propertyPath: m_Text
@@ -1113,6 +1134,11 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 21300000, guid: b6fb8e86a61473e4cb9474e6f38de542,
         type: 3}
+    - target: {fileID: 4100283173011006083, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
+        type: 3}
+      propertyPath: questionId
+      value: Q2
+      objectReference: {fileID: 0}
     - target: {fileID: 4525663095100219090, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
         type: 3}
       propertyPath: m_Text
@@ -1277,6 +1303,11 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 21300000, guid: b6fb8e86a61473e4cb9474e6f38de542,
         type: 3}
+    - target: {fileID: 4100283173011006083, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
+        type: 3}
+      propertyPath: questionId
+      value: Q5
+      objectReference: {fileID: 0}
     - target: {fileID: 4525663095100219090, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
         type: 3}
       propertyPath: m_Text
@@ -1881,6 +1912,11 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 21300000, guid: b6fb8e86a61473e4cb9474e6f38de542,
         type: 3}
+    - target: {fileID: 4100283173011006083, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
+        type: 3}
+      propertyPath: questionId
+      value: Q10
+      objectReference: {fileID: 0}
     - target: {fileID: 4525663095100219090, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
         type: 3}
       propertyPath: m_Text
@@ -2498,6 +2534,11 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 21300000, guid: b6fb8e86a61473e4cb9474e6f38de542,
         type: 3}
+    - target: {fileID: 4100283173011006083, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
+        type: 3}
+      propertyPath: questionId
+      value: Q15
+      objectReference: {fileID: 0}
     - target: {fileID: 4525663095100219090, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
         type: 3}
       propertyPath: m_Text
@@ -2662,6 +2703,11 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 21300000, guid: b6fb8e86a61473e4cb9474e6f38de542,
         type: 3}
+    - target: {fileID: 4100283173011006083, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
+        type: 3}
+      propertyPath: questionId
+      value: Q12
+      objectReference: {fileID: 0}
     - target: {fileID: 4525663095100219090, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
         type: 3}
       propertyPath: m_Text
@@ -2888,6 +2934,11 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 21300000, guid: b6fb8e86a61473e4cb9474e6f38de542,
         type: 3}
+    - target: {fileID: 4100283173011006083, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
+        type: 3}
+      propertyPath: questionId
+      value: Q4
+      objectReference: {fileID: 0}
     - target: {fileID: 4525663095100219090, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
         type: 3}
       propertyPath: m_Text
@@ -3640,6 +3691,11 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 21300000, guid: b6fb8e86a61473e4cb9474e6f38de542,
         type: 3}
+    - target: {fileID: 4100283173011006083, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
+        type: 3}
+      propertyPath: questionId
+      value: Q13
+      objectReference: {fileID: 0}
     - target: {fileID: 4525663095100219090, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
         type: 3}
       propertyPath: m_Text
@@ -3969,6 +4025,11 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 21300000, guid: b6fb8e86a61473e4cb9474e6f38de542,
         type: 3}
+    - target: {fileID: 4100283173011006083, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
+        type: 3}
+      propertyPath: questionId
+      value: Q14
+      objectReference: {fileID: 0}
     - target: {fileID: 4525663095100219090, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
         type: 3}
       propertyPath: m_Text
@@ -4237,6 +4298,11 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 21300000, guid: b6fb8e86a61473e4cb9474e6f38de542,
         type: 3}
+    - target: {fileID: 4100283173011006083, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
+        type: 3}
+      propertyPath: questionId
+      value: Q11
+      objectReference: {fileID: 0}
     - target: {fileID: 4525663095100219090, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
         type: 3}
       propertyPath: m_Text
@@ -4587,6 +4653,11 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 21300000, guid: b6fb8e86a61473e4cb9474e6f38de542,
         type: 3}
+    - target: {fileID: 4100283173011006083, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
+        type: 3}
+      propertyPath: questionId
+      value: Q8
+      objectReference: {fileID: 0}
     - target: {fileID: 4525663095100219090, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
         type: 3}
       propertyPath: m_Text

@@ -4,6 +4,7 @@ using My.Scripts.Core;
 using UnityEngine;
 using UnityEngine.UI;
 using Wonjeong.Data;
+using Wonjeong.UI;
 using Wonjeong.Utils;
 
 namespace My.Scripts._01_Tutorial.Pages
@@ -122,6 +123,7 @@ namespace My.Scripts._01_Tutorial.Pages
 
             // 6. ImageCamera 페이드 인 (0.5초) -> 대기 (1.0초)
             if (cameraImageCanvas) yield return StartCoroutine(FadeCanvasGroupRoutine(cameraImageCanvas, 0f, 1f, 0.5f));
+            SoundManager.Instance?.PlaySFX("공통_11");
             yield return CoroutineData.GetWaitForSeconds(1.0f);
 
             // 7. 레고 1 -> 레고 2 크로스 페이드
@@ -132,6 +134,7 @@ namespace My.Scripts._01_Tutorial.Pages
 
             // 9. 레고 2 -> 레고 3 크로스 페이드
             yield return StartCoroutine(CrossFadeRoutine(lego2ImageCanvas, lego3ImageCanvas, 0.3f));
+            SoundManager.Instance?.PlaySFX("레고_1");
 
             // 10. 연출 종료 대기
             yield return CoroutineData.GetWaitForSeconds(finalHoldTime);

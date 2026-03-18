@@ -4,7 +4,8 @@ using My.Scripts.Core;
 using UnityEngine;
 using UnityEngine.UI;
 using Wonjeong.Data;
-using My.Scripts.Network; // TCP 매니저에 접근하기 위한 네임스페이스 추가
+using My.Scripts.Network;
+using Wonjeong.Utils; // TCP 매니저에 접근하기 위한 네임스페이스 추가
 
 namespace My.Scripts._01_Tutorial.Pages
 {   
@@ -117,7 +118,7 @@ namespace My.Scripts._01_Tutorial.Pages
 
         private IEnumerator AutoTransitionRoutine()
         {
-            yield return new WaitForSeconds(_autoTransitionDelay);
+            yield return CoroutineData.GetWaitForSeconds(_autoTransitionDelay);
             
             if (onStepComplete != null)
             {

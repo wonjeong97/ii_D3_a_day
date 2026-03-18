@@ -4,6 +4,7 @@ using My.Scripts.Core;
 using UnityEngine;
 using UnityEngine.UI;
 using Wonjeong.Data;
+using Wonjeong.UI;
 using Wonjeong.Utils;
 
 namespace My.Scripts._07_Ending.Pages
@@ -90,8 +91,10 @@ namespace My.Scripts._07_Ending.Pages
                 {
                     if (pieceImg)
                     {
-                        // # TODO: 이 프로젝트의 사운드 매니저 구현 방식에 맞게 주석 해제 및 수정
-                        // SoundManager.Instance?.PlaySFX("공통_6"); 
+                        if (SoundManager.Instance)
+                        {
+                            SoundManager.Instance.PlaySFX("공통_6");    
+                        }
                         yield return StartCoroutine(FadeImage(pieceImg, 0f, 1f, 0.8f));
                     }
                 }

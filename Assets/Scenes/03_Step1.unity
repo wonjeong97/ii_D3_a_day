@@ -2193,7 +2193,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1036292019
 RectTransform:
   m_ObjectHideFlags: 0
@@ -2253,6 +2253,8 @@ MonoBehaviour:
   imageCg: {fileID: 1463505358}
   textAnswerCompleteUI: {fileID: 236104152}
   textMySceneUI: {fileID: 1203964717}
+  savePhoto: 0
+  questionId: Q1
   fadeDuration: 0.5
 --- !u!1001 &1040791686
 PrefabInstance:
@@ -5463,6 +5465,8 @@ MonoBehaviour:
   imageCg: {fileID: 1180411636}
   textAnswerCompleteUI: {fileID: 149919306}
   textMySceneUI: {fileID: 1545742207}
+  savePhoto: 0
+  questionId: Q1
   fadeDuration: 0.5
 --- !u!225 &2108178288
 CanvasGroup:

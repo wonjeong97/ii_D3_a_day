@@ -34,8 +34,10 @@ namespace My.Scripts._02_PlayTutorial.Pages
         private PlayTutorialPage1Data _cachedData;
         private Coroutine _animationCoroutine;
         private bool _isCompleted = false;
+        
+        // 추가됨: 연출 종료 후 입력을 받기 위한 플래그
+        private bool _canAcceptInput = false;
 
-        // 수정됨: Page2로 넘겨주기 위해 방금 누른 키를 저장하는 프로퍼티
         public KeyCode PressedKey { get; private set; } = KeyCode.None;
 
         public override void SetupData(object data)
@@ -50,6 +52,7 @@ namespace My.Scripts._02_PlayTutorial.Pages
         {
             base.OnEnter();
             _isCompleted = false;
+            _canAcceptInput = false; // 진입 시 입력 차단
             PressedKey = KeyCode.None;
 
             if (text1Canvas) text1Canvas.alpha = 0f;
@@ -58,7 +61,6 @@ namespace My.Scripts._02_PlayTutorial.Pages
 
             if (_cachedData != null)
             {
-                // 이전 래퍼 메서드 적용하여 위치/서식까지 일괄 적용
                 if (text1UI) SetUIText(text1UI, _cachedData.text1);
                 if (text2UI) SetUIText(text2UI, _cachedData.text2);
             }
@@ -83,7 +85,8 @@ namespace My.Scripts._02_PlayTutorial.Pages
 
         private void Update()
         {
-            if (_isCompleted) return;
+            // 아직 입력 허용 상태가 아니거나, 이미 완료되었으면 리턴
+            if (_isCompleted || !_canAcceptInput) return;
 
             bool isServer = false;
             if (TcpManager.Instance) isServer = TcpManager.Instance.IsServer;
@@ -97,7 +100,6 @@ namespace My.Scripts._02_PlayTutorial.Pages
             }
         }
 
-        // 수정됨: 넘패드 입력을 제거하고 눌린 키(KeyCode)를 직접 반환함
         private KeyCode GetValidKey(bool isServer)
         {
             KeyCode[] keys = isServer 
@@ -130,6 +132,12 @@ namespace My.Scripts._02_PlayTutorial.Pages
             yield return CoroutineData.GetWaitForSeconds(waitBetweenFades);
 
             if (text2Canvas) yield return StartCoroutine(FadeCanvasGroupRoutine(text2Canvas, 0f, 1f, fadeDuration));
+
+            // 추가됨: 모든 텍스트/이미지 연출이 끝나고 0.5초 추가 대기
+            yield return CoroutineData.GetWaitForSeconds(0.5f);
+
+            // 대기가 끝나면 입력을 허용함
+            _canAcceptInput = true;
         }
 
         private IEnumerator FadeCanvasGroupRoutine(CanvasGroup target, float start, float end, float duration)

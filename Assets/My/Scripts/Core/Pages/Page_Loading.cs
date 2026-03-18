@@ -2,6 +2,8 @@ using System.Collections;
 using My.Scripts.Data;
 using UnityEngine;
 using UnityEngine.UI;
+using Wonjeong.UI;
+using Wonjeong.Utils;
 
 namespace My.Scripts.Core.Pages
 {
@@ -79,6 +81,11 @@ namespace My.Scripts.Core.Pages
                 StopCoroutine(_loadingCoroutine);
                 _loadingCoroutine = null;
             }
+
+            if (SoundManager.Instance)
+            {
+                SoundManager.Instance.StopSFX();
+            }
         }
 
         /// <summary>
@@ -111,8 +118,12 @@ namespace My.Scripts.Core.Pages
                 mainCg.alpha = 1f;
             }
 
+            if (SoundManager.Instance)
+            {
+                SoundManager.Instance.PlaySFX("레고_5");
+            }
             // 설정한 시간 대기
-            yield return new WaitForSeconds(waitTime);
+            yield return CoroutineData.GetWaitForSeconds(waitTime);
 
             CompletePage();
         }

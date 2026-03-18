@@ -4,6 +4,7 @@ using My.Scripts.Core;
 using UnityEngine;
 using UnityEngine.UI;
 using Wonjeong.Data;
+using Wonjeong.Utils;
 
 namespace My.Scripts._07_Ending.Pages
 {
@@ -83,7 +84,7 @@ namespace My.Scripts._07_Ending.Pages
             }
 
             // 2. 6초 대기
-            yield return new WaitForSeconds(firstWaitTime);
+            yield return CoroutineData.GetWaitForSeconds(firstWaitTime);
 
             // 3. 0.5초 동안 페이드 아웃
             if (mainCg)
@@ -118,7 +119,7 @@ namespace My.Scripts._07_Ending.Pages
             }
 
             // 6. 3초 대기
-            yield return new WaitForSeconds(secondWaitTime);
+            yield return CoroutineData.GetWaitForSeconds(secondWaitTime);
 
             // 7. 페이지 완료 처리
             CompletePage();

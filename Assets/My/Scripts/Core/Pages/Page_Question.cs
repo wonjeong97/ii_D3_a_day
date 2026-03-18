@@ -1,8 +1,11 @@
 using System.Collections;
 using My.Scripts.Data;
+using My.Scripts.Global;
 using My.Scripts.Network;
 using UnityEngine;
 using UnityEngine.UI;
+using Wonjeong.UI;
+using Wonjeong.Utils;
 
 namespace My.Scripts.Core.Pages
 {
@@ -54,10 +57,12 @@ namespace My.Scripts.Core.Pages
         private Page_Background _background;
         private string _progressText;
         
-        public int SelectedIndex
-        {
-            get { return _selectedIndex; }
-        }
+        // 연출 진행 상태를 추적하여 입력을 막기 위한 플래그
+        private bool _isAnimating = false;
+        // 추가됨: 진입 직후 1초간 일반 숫자키 입력을 막기 위한 플래그
+        private bool _canAcceptInput = false;
+        
+        public int SelectedIndex => _selectedIndex;
 
         public void SetSyncCommand(string command)
         {
@@ -96,11 +101,15 @@ namespace My.Scripts.Core.Pages
             _currentPhase = Phase.None;
             _isFirstSelectionDone = false;
             _selectedIndex = -1;
+            _isAnimating = false; 
+            _canAcceptInput = false; // 진입 시 입력 차단
 
             if (legoArrowCg) legoArrowCg.alpha = 0f;
 
-            // Why: ApplyDataToUI에서 SetUIText가 호출되며 JSON에 있는 폰트와 서식으로 다시 세팅해줌
             ApplyDataToUI();
+
+            // 진입 후 1초간 입력을 딜레이 시키는 코루틴 시작
+            StartCoroutine(InputDelayRoutine());
         }
 
         public override void OnExit()
@@ -139,7 +148,7 @@ namespace My.Scripts.Core.Pages
 
         private void Update()
         {
-            if (_currentPhase == Phase.Completed) return;
+            if (_currentPhase == Phase.Completed || _isAnimating) return;
 
             bool isServer = false;
             if (TcpManager.Instance) isServer = TcpManager.Instance.IsServer;
@@ -152,12 +161,22 @@ namespace My.Scripts.Core.Pages
 
             if (canSkip)
             {
-                if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Keypad1)) SelectAnswer(1);
-                else if (Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.Keypad2)) SelectAnswer(2);
-                else if (Input.GetKeyDown(KeyCode.Alpha3) || Input.GetKeyDown(KeyCode.Keypad3)) SelectAnswer(3);
-                else if (Input.GetKeyDown(KeyCode.Alpha4) || Input.GetKeyDown(KeyCode.Keypad4)) SelectAnswer(4);
-                else if (Input.GetKeyDown(KeyCode.Alpha5) || Input.GetKeyDown(KeyCode.Keypad5)) SelectAnswer(5);
+                if (_canAcceptInput)
+                {
+                    if (Input.GetKeyDown(KeyCode.Alpha1)) SelectAnswer(1);
+                    else if (Input.GetKeyDown(KeyCode.Alpha2)) SelectAnswer(2);
+                    else if (Input.GetKeyDown(KeyCode.Alpha3)) SelectAnswer(3);
+                    else if (Input.GetKeyDown(KeyCode.Alpha4)) SelectAnswer(4);
+                    else if (Input.GetKeyDown(KeyCode.Alpha5)) SelectAnswer(5);
+                }
             }
+        }
+
+        // 추가됨: 1초 대기 후 입력 플래그를 해제하는 코루틴
+        private IEnumerator InputDelayRoutine()
+        {
+            yield return CoroutineData.GetWaitForSeconds(1.0f);
+            _canAcceptInput = true;
         }
 
         private void SelectAnswer(int index)
@@ -172,7 +191,7 @@ namespace My.Scripts.Core.Pages
                 _sequenceCoroutine = StartCoroutine(InterruptedCountdownRoutine(index));
             }
             else
-            {
+            {   
                 _sequenceCoroutine = StartCoroutine(SelectionSequenceRoutine(index));
             }
         }
@@ -180,6 +199,9 @@ namespace My.Scripts.Core.Pages
         private IEnumerator SelectionSequenceRoutine(int index)
         {
             _currentPhase = Phase.Holding;
+            
+            _isAnimating = true; 
+            
             CanvasGroup qCg = GetOrAddCanvasGroup(textQuestion);
             
             GameObject[] cgObjects = new GameObject[] { cgA, cgB, cgC, cgD, cgE };
@@ -210,7 +232,6 @@ namespace My.Scripts.Core.Pages
                     yield return null;
                 }
 
-                // 텍스트 뿐만 아니라 선택 후의 서식 정보도 일괄 덮어씌움
                 SetUIText(textQuestion, _cachedData.textSelected);
 
                 for (int i = 0; i < 5; i++)
@@ -231,6 +252,11 @@ namespace My.Scripts.Core.Pages
                     if (qCg) qCg.alpha = Mathf.Lerp(0f, 1f, t);
                     if (targetCg) targetCg.alpha = Mathf.Lerp(0f, 1f, t);
                     yield return null;
+                }
+
+                if (SoundManager.Instance)
+                {
+                    SoundManager.Instance.PlaySFX("레고_3");
                 }
             }
             else
@@ -265,13 +291,19 @@ namespace My.Scripts.Core.Pages
                     if (targetCg) targetCg.alpha = Mathf.Lerp(0f, 1f, t);
                     yield return null;
                 }
+
+                if (SoundManager.Instance)
+                {
+                    SoundManager.Instance.PlaySFX("레고_3");
+                }
             }
 
-            yield return new WaitForSeconds(holdDuration);
+            _isAnimating = false; 
+
+            yield return CoroutineData.GetWaitForSeconds(holdDuration);
 
             _currentPhase = Phase.CountingDown;
 
-            // 대기 텍스트 서식 적용
             SetUIText(textDescription, _cachedData.textWait);
 
             if (textQuestion)
@@ -279,6 +311,14 @@ namespace My.Scripts.Core.Pages
                 if (countdownFont) textQuestion.font = countdownFont;
                 textQuestion.text = "5";
             }
+
+            if (SoundManager.Instance)
+            {
+                SoundManager.Instance.StopSFX();
+                SoundManager.Instance.PlaySFX("공통_10_5초");
+            }
+
+            _isAnimating = true;
 
             float fadeOutElapsed = 0f;
             float targetFinalStart = targetCg ? targetCg.alpha : 1f;
@@ -303,17 +343,19 @@ namespace My.Scripts.Core.Pages
                 yield return null;
             }
             if (legoArrowCg) legoArrowCg.alpha = 1f;
+            
+            _isAnimating = false;
 
             float totalFadeTime = fadeDuration * 2f;
             if (totalFadeTime < 1.0f)
             {
-                yield return new WaitForSeconds(1.0f - totalFadeTime);
+                yield return CoroutineData.GetWaitForSeconds(1.0f - totalFadeTime);
             }
 
             for (int i = 4; i >= 1; i--)
             {
                 if (textQuestion) textQuestion.text = i.ToString();
-                yield return new WaitForSeconds(1.0f);
+                yield return CoroutineData.GetWaitForSeconds(1.0f);
             }
 
             _currentPhase = Phase.Completed;
@@ -322,7 +364,7 @@ namespace My.Scripts.Core.Pages
 
         private IEnumerator InterruptedCountdownRoutine(int index)
         {
-            yield return new WaitForSeconds(1.0f);
+            yield return CoroutineData.GetWaitForSeconds(1.0f);
 
             GameObject[] cgObjects = new GameObject[] { cgA, cgB, cgC, cgD, cgE };
             for (int i = 0; i < 5; i++)
@@ -334,10 +376,16 @@ namespace My.Scripts.Core.Pages
 
             if (textQuestion && countdownFont) textQuestion.font = countdownFont;
 
+            if (SoundManager.Instance)
+            {
+                SoundManager.Instance.StopSFX();
+                SoundManager.Instance.PlaySFX("공통_10_5초");
+            }
+
             for (int i = 5; i >= 1; i--)
             {
                 if (textQuestion) textQuestion.text = i.ToString();
-                yield return new WaitForSeconds(1.0f);
+                yield return CoroutineData.GetWaitForSeconds(1.0f);
             }
 
             _currentPhase = Phase.Completed;

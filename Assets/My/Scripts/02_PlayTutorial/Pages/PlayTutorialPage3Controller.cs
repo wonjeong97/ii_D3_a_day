@@ -4,6 +4,8 @@ using My.Scripts.Core;
 using UnityEngine;
 using UnityEngine.UI;
 using Wonjeong.Data;
+using Wonjeong.UI;
+using Wonjeong.Utils;
 
 namespace My.Scripts._02_PlayTutorial.Pages
 {
@@ -86,10 +88,11 @@ namespace My.Scripts._02_PlayTutorial.Pages
                 }
 
                 mainGroupCanvas.alpha = 1f;
+                SoundManager.Instance?.PlaySFX("레고_3");
             }
 
             // Why: 상위 매니저의 isTransitioning 플래그가 안전하게 해제될 수 있도록 0.5초 대기 후 완료 신호를 쏨
-            yield return new WaitForSeconds(0.5f);
+            yield return CoroutineData.GetWaitForSeconds(0.5f);
 
             if (onStepComplete != null)
             {

@@ -4,6 +4,8 @@ using My.Scripts.Core;
 using UnityEngine;
 using UnityEngine.UI;
 using Wonjeong.Data;
+using Wonjeong.UI;
+using Wonjeong.Utils;
 
 namespace My.Scripts._01_Tutorial.Pages
 {   
@@ -62,7 +64,7 @@ namespace My.Scripts._01_Tutorial.Pages
             {
                 descriptionUI.text = !string.IsNullOrEmpty(cachedMessage) ? cachedMessage : "잠시만 기다려 주세요...";
             }
-
+            SoundManager.Instance?.PlaySFX("공통_6");
             // 지정된 시간 후 자동으로 다음 페이지로 넘어가기 위한 코루틴 실행
             transitionCoroutine = StartCoroutine(AutoTransitionRoutine());
         }
@@ -86,7 +88,7 @@ namespace My.Scripts._01_Tutorial.Pages
         /// </summary>
         private IEnumerator AutoTransitionRoutine()
         {
-            yield return new WaitForSeconds(autoTransitionDelay);
+            yield return CoroutineData.GetWaitForSeconds(autoTransitionDelay);
             
             if (onStepComplete != null)
             {

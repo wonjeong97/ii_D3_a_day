@@ -5,6 +5,7 @@ using My.Scripts.Network; // TCP 매니저 접근
 using UnityEngine;
 using UnityEngine.UI;
 using Wonjeong.Data;
+using Wonjeong.UI;
 
 namespace My.Scripts._01_Tutorial.Pages
 {   
@@ -126,6 +127,13 @@ namespace My.Scripts._01_Tutorial.Pages
         public override void OnExit()
         {
             base.OnExit();
+            
+            if (SoundManager.Instance) // BGM 재시작
+            {
+                SoundManager.Instance.StopBGM();
+                SoundManager.Instance?.PlayBGM("MainBGM");                
+            }
+            
             _isPageActive = false;
             
             if (_fadeCoroutine != null)

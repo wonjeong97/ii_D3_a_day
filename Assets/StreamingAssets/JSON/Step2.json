@@ -46,7 +46,7 @@
   "outroPage": {
     "textOutro": {
       "name": "Text_Outro",
-      "position": {"x": 0, "y": 121},
+      "position": {"x": 0, "y": 212},
       "scale": {"x": 1, "y": 1, "z": 1},
       "text": "이번에는 <b>표정 피규어</b>를 사용합니다.\n답변에 맞는 표정 피규어를 올려주세요.",
       "fontName": "font4",
