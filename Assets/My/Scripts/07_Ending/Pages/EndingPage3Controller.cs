@@ -4,6 +4,7 @@ using My.Scripts.Core;
 using UnityEngine;
 using UnityEngine.UI;
 using Wonjeong.Data;
+using Wonjeong.Utils;
 
 namespace My.Scripts._07_Ending.Pages
 {
@@ -117,7 +118,7 @@ namespace My.Scripts._07_Ending.Pages
             }
 
             // 3. 지정된 시간 동안 엔딩 문구 대기
-            yield return new WaitForSeconds(waitTime);
+            yield return CoroutineData.GetWaitForSeconds(waitTime);
 
             // 4. 완료 처리 후 다음 페이지로 넘김
             CompletePage();

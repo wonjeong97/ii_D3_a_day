@@ -4,6 +4,8 @@ using My.Scripts.Data;
 using My.Scripts.Network;
 using UnityEngine;
 using UnityEngine.UI;
+using Wonjeong.UI;
+using Wonjeong.Utils;
 
 namespace My.Scripts.Core.Pages
 {
@@ -43,6 +45,8 @@ namespace My.Scripts.Core.Pages
             ApplyCurrentDate();
 
             if (_autoTransitionCoroutine != null) StopCoroutine(_autoTransitionCoroutine);
+            
+            SoundManager.Instance?.PlaySFX("공통_13");
             _autoTransitionCoroutine = StartCoroutine(AutoTransitionRoutine());
         }
 
@@ -100,7 +104,7 @@ namespace My.Scripts.Core.Pages
 
         private IEnumerator AutoTransitionRoutine()
         {
-            yield return new WaitForSeconds(autoTransitionDelay);
+            yield return CoroutineData.GetWaitForSeconds(autoTransitionDelay);
             if (!_isCompleted) CompletePage();
         }
 

@@ -148,7 +148,7 @@ namespace My.Scripts.Network
         {
             while (_isRunning)
             {
-                yield return new WaitForSeconds(3.0f);
+                yield return CoroutineData.GetWaitForSeconds(3.0f);
                 
                 if (_isConnectionActive)
                 {

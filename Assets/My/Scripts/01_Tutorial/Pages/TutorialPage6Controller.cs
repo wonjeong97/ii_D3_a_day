@@ -5,7 +5,8 @@ using UnityEngine;
 using UnityEngine.UI;
 using Wonjeong.Data;
 using Wonjeong.Utils;
-using My.Scripts.Network; // TCP 통신 매니저 접근
+using My.Scripts.Network;
+using Wonjeong.UI; // TCP 통신 매니저 접근
 
 namespace My.Scripts._01_Tutorial.Pages
 {
@@ -147,7 +148,7 @@ namespace My.Scripts._01_Tutorial.Pages
         private IEnumerator AutoSelectRoutine()
         {
             // 화면에 요소들이 나타난 뒤 사용자가 인지할 수 있도록 짧게 대기함
-            yield return new WaitForSeconds(autoSelectDelay);
+            yield return CoroutineData.GetWaitForSeconds(autoSelectDelay);
             
             if (!_isCompleted)
             {
@@ -240,6 +241,7 @@ namespace My.Scripts._01_Tutorial.Pages
 
             if (canvasGroup) canvasGroup.alpha = targetAlpha;
             if (isSelected && rectTransform) rectTransform.anchoredPosition = _selectedTargetPos;
+            SoundManager.Instance?.PlaySFX("레고_2");
         }
 
         private void StopAllAnimationCoroutines()

@@ -5,6 +5,7 @@ using My.Scripts.Data;
 using My.Scripts.Network;
 using UnityEngine;
 using UnityEngine.UI;
+using Wonjeong.Utils;
 
 namespace My.Scripts.Core.Pages
 {
@@ -92,7 +93,7 @@ namespace My.Scripts.Core.Pages
         private IEnumerator SequenceRoutine()
         {
             if (mainCg) yield return StartCoroutine(FadeCanvasGroupRoutine(mainCg, 0f, 1f, fadeDuration));
-            yield return new WaitForSeconds(autoTransitionDelay);
+            yield return CoroutineData.GetWaitForSeconds(autoTransitionDelay);
             if (!_isCompleted) CompletePage();
         }
 
