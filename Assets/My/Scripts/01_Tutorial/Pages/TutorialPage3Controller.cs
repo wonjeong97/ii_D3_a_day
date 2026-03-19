@@ -74,10 +74,10 @@ namespace My.Scripts._01_Tutorial.Pages
 
                 // Why: 유니티 객체(싱글톤)의 존재 여부를 암시적으로 확인한 뒤 서버 역할을 판별함
                 bool isServer = false;
-                if (TcpManager.Instance)
-                {
-                    isServer = TcpManager.Instance.IsServer;
-                }
+                // if (TcpManager.Instance)
+                // {
+                //     isServer = TcpManager.Instance.IsServer;
+                // }
 
                 // Why: 서버면 A의 이름을, 클라이언트면 B의 이름을 할당함 (일반 C# 객체이므로 명시적 Null 검사 수행)
                 if (isServer)

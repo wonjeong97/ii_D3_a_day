@@ -1365,7 +1365,7 @@ Canvas:
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
   m_SortingOrder: 0
-  m_TargetDisplay: 2
+  m_TargetDisplay: 1
 --- !u!1001 &565492042
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2251,9 +2251,11 @@ MonoBehaviour:
   textAnswerCompleteCg: {fileID: 236104154}
   textMySceneCg: {fileID: 1203964719}
   imageCg: {fileID: 1463505358}
+  errorCg: {fileID: 0}
   textAnswerCompleteUI: {fileID: 236104152}
   textMySceneUI: {fileID: 1203964717}
-  savePhoto: 0
+  sharedFolderPath: 
+  savePhoto: 1
   questionId: Q1
   fadeDuration: 0.5
 --- !u!1001 &1040791686
@@ -5463,9 +5465,11 @@ MonoBehaviour:
   textAnswerCompleteCg: {fileID: 149919305}
   textMySceneCg: {fileID: 1545742206}
   imageCg: {fileID: 1180411636}
+  errorCg: {fileID: 0}
   textAnswerCompleteUI: {fileID: 149919306}
   textMySceneUI: {fileID: 1545742207}
-  savePhoto: 0
+  sharedFolderPath: 
+  savePhoto: 1
   questionId: Q1
   fadeDuration: 0.5
 --- !u!225 &2108178288

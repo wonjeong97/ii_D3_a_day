@@ -91,8 +91,9 @@ namespace My.Scripts._01_Tutorial.Pages
                 if (descriptionUI)
                 {
                     string rawText = string.Empty;
-                    bool isServer = TcpManager.Instance && TcpManager.Instance.IsServer;
-
+                    //bool isServer = TcpManager.Instance && TcpManager.Instance.IsServer;
+                    bool isServer = true;
+                    
                     // Why: 현재 PC가 서버(P1)이면 A 텍스트, 클라이언트(P2)이면 B 텍스트를 출력함
                     if (isServer && _cachedData.descriptionTextA != null)
                     {

@@ -33,6 +33,7 @@ namespace My.Scripts.Global
 
         private float currentInactivityTimer;
         private bool isTransitioning;
+        public string Step2ThemeKey { get; set; } = "Sea_1";
 
         // 플레이어 상태 정보
         public int firstTaggedPlayer = 0;

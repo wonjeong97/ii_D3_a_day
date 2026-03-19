@@ -67,10 +67,10 @@ namespace My.Scripts._01_Tutorial
             Debug.Log("[TutorialManager] 내 PC 튜토리얼 완료. 상대방을 기다립니다...");
 
             // 내 튜토리얼이 끝났음을 상대방 PC에 전송함
-            if (TcpManager.Instance)
-            {
-                TcpManager.Instance.SendMessageToTarget("TUTORIAL_COMPLETE");
-            }
+            // if (TcpManager.Instance)
+            // {
+            //     TcpManager.Instance.SendMessageToTarget("TUTORIAL_COMPLETE");
+            // }
             
             CheckSyncAndChangeScene();
         }
@@ -96,7 +96,7 @@ namespace My.Scripts._01_Tutorial
         private void CheckSyncAndChangeScene()
         {
             // Why: 양쪽 PC의 완료 플래그가 모두 true일 때만 씬을 전환하여 완벽한 타이밍 동기화를 이룸
-            if (_isLocalFinished && _isRemoteFinished)
+            if (_isLocalFinished /*&& _isRemoteFinished*/)
             {
                 // 중복 씬 전환을 막기 위해 이벤트 구독 즉시 해제
                 if (TcpManager.Instance)

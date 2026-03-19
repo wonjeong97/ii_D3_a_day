@@ -21,10 +21,10 @@ namespace My.Scripts._00_Title
             LoadSettings();
 
             // Why: 클라이언트가 서버의 씬 전환 명령을 수신하기 위해 이벤트 구독함
-            if (TcpManager.Instance)
-            {
-                TcpManager.Instance.onMessageReceived += OnNetworkMessageReceived;
-            }
+            // if (TcpManager.Instance)
+            // {
+            //     TcpManager.Instance.onMessageReceived += OnNetworkMessageReceived;
+            // }
         }
 
         private void LoadSettings()
@@ -50,7 +50,7 @@ namespace My.Scripts._00_Title
 
             // Why: 향후 외부 API가 마스터 PC(서버)에만 연결되므로, 서버에서만 키보드 입력을 처리함
             // # TODO: 추후 외부 API 연동 시 입력 감지부를 API 콜백 함수로 교체할 것
-            if (TcpManager.Instance && TcpManager.Instance.IsServer)
+            //if (TcpManager.Instance && TcpManager.Instance.IsServer)
             {
                 if (Input.GetKeyDown(KeyCode.Return))
                 {
@@ -65,10 +65,10 @@ namespace My.Scripts._00_Title
             _isTransitioning = true; 
 
             // 서버가 씬을 이동할 때 클라이언트도 함께 이동하도록 전환 신호를 전송함
-            if (TcpManager.Instance && TcpManager.Instance.IsServer)
-            {
-                TcpManager.Instance.SendMessageToTarget("CHANGE_SCENE", GameConstants.Scene.Tutorial);
-            }
+            // if (TcpManager.Instance && TcpManager.Instance.IsServer)
+            // {
+            //     TcpManager.Instance.SendMessageToTarget("CHANGE_SCENE", GameConstants.Scene.Tutorial);
+            // }
 
             SceneManager.LoadScene(GameConstants.Scene.Tutorial);
         }
