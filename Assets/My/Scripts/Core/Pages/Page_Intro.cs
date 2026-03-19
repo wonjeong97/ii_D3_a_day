@@ -113,10 +113,10 @@ namespace My.Scripts.Core.Pages
             if (_isCompleted) return;
             _isCompleted = true;
 
-            if (TcpManager.Instance && TcpManager.Instance.IsServer)
-            {
-                TcpManager.Instance.SendMessageToTarget(_syncCommand, "");
-            }
+            // if (TcpManager.Instance && TcpManager.Instance.IsServer)
+            // {
+            //     TcpManager.Instance.SendMessageToTarget(_syncCommand, "");
+            // }
 
             if (onStepComplete != null) onStepComplete.Invoke(0);
         }

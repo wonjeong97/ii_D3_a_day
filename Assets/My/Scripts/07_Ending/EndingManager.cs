@@ -65,10 +65,10 @@ namespace My.Scripts._07_Ending
             Debug.Log("[EndingManager] 내 PC 엔딩 완료. 상대방 대기 중...");
 
             // 상대방에게 내 엔딩이 끝났음을 알림
-            if (TcpManager.Instance)
-            {
-                TcpManager.Instance.SendMessageToTarget("ENDING_COMPLETE");
-            }
+            // if (TcpManager.Instance)
+            // {
+            //     TcpManager.Instance.SendMessageToTarget("ENDING_COMPLETE");
+            // }
 
             CheckSyncAndChangeScene();
         }
@@ -89,7 +89,7 @@ namespace My.Scripts._07_Ending
         /// </summary>
         private void CheckSyncAndChangeScene()
         {
-            if (_isLocalFinished && _isRemoteFinished)
+            if (_isLocalFinished /*&& _isRemoteFinished*/)
             {
                 // 씬 전환 전 이벤트 해제 (메모리 누수 방지)
                 if (TcpManager.Instance)
