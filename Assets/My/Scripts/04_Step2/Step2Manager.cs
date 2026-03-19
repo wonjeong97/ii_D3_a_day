@@ -63,16 +63,23 @@ namespace My.Scripts._04_Step2
         {
             base.TransitionToPage(index);
 
+            // Intro(0) 페이지 이후부터 처리함.
             if (index > 0 && index < pages.Count)
             {
-                // 예시 입력값에 따른 결과값:
-                // index 1(Q1) -> (1-1)/2 + 1 = 1
-                // index 2(C1) -> (2-1)/2 + 1 = 1
-                int questionNum = (index - 1) / 2 + 1; 
-                bool isCameraPage = pages[index] is Page_Camera; 
+                bool isQuestionPage = pages[index] is Page_Question;
+                bool isCameraPage = pages[index] is Page_Camera;
+                bool isOutroPage = pages[index] is Page_Outro;
 
-                // 수정됨: 로드와 페이드 순서를 동기화하기 위해 시퀀스 제어 함수 호출
-                ProcessBackgroundSequenceAsync(questionNum, isCameraPage).Forget();
+                // Why: 질문이나 카메라 페이지인 경우에만 실제 배경 데이터 로드가 필요함.
+                if (isQuestionPage || isCameraPage)
+                {
+                    int questionNum = (index - 1) / 2 + 1; 
+                    ProcessBackgroundSequenceAsync(questionNum, isCameraPage).Forget();
+                }
+                else if (isOutroPage)
+                {
+                    FadeSubCanvasBackgroundAsync(false).Forget();
+                }
             }
         }
 
@@ -145,13 +152,15 @@ namespace My.Scripts._04_Step2
             if (_currentBgQuestionNum == questionNum) return;
             _currentBgQuestionNum = questionNum;
 
-            string theme = "Sea_1";
+            string mainTheme = string.Empty;
+            int subTheme = 0;
             if (GameManager.Instance)
             {
-                theme = GameManager.Instance.Step2ThemeKey;
+                mainTheme = GameManager.Instance.Step2MainThemeKey;
+                subTheme = GameManager.Instance.Step2SubThemeKey;
             }
 
-            string bgKey = $"BG_Step2_{theme}_{questionNum}";
+            string bgKey = $"BG_Step2_{mainTheme}_{subTheme}_{questionNum}";
 
             if (_bgHandle.IsValid())
             {

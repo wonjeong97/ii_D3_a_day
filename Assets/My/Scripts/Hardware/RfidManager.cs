@@ -1,20 +1,54 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
 using System.Text;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
+using Wonjeong.Utils;
+using My.Scripts.Global; // GameConstants 사용을 위해 추가됨
 
 namespace My.Scripts.Hardware
 {
     /// <summary>
+    /// RFID 태그 응답 데이터를 담는 직렬화 클래스.
+    /// Why: 브릿지 프로그램에서 보내오는 JSON 문자열을 파싱하기 위함.
+    /// </summary>
+    [Serializable]
+    public class RfidResponse
+    {
+        public string command;
+        public string payload;
+    }
+
+    /// <summary>
+    /// 외부 JSON 파일과 매핑되는 데이터베이스 구조체.
+    /// Why: 하드코딩 없이 외부 파일만 수정하여 카드 UID 목록을 관리하기 위함.
+    /// </summary>
+    [Serializable]
+    public class RfidDatabase
+    {
+        public List<string> group1; // ㄱ 그룹
+        public List<string> group2; // ㄴ 그룹
+        public List<string> group3; // ㄷ 그룹
+        public List<string> group4; // ㄹ 그룹
+        public List<string> group5; // ㅁ 그룹
+    }
+
+    /// <summary>
     /// 32비트 브릿지 프로세스와의 Named Pipe 통신을 관리하는 매니저.
-    /// Why: 64비트 유니티 환경에서 32비트 전용 RFID DLL을 사용하기 위한 중계 계층 역할을 수행함.
     /// </summary>
     public class RfidManager : MonoBehaviour
-    {
-        private string _bridgeExePath;
+    {   
+        public static RfidManager Instance { get; private set; }
+        
+        /// <summary> 카드가 인식되었을 때 UID와 카테고리(1~5)를 외부 매니저로 전달하는 이벤트 </summary>
+        public Action<string, int> onCardRead;
+
+        private RfidDatabase _rfidDatabase; 
+
+        private string _bridgeExePath = string.Empty;
         private Process _bridgeProcess;
         private NamedPipeClientStream _pipeClient;
         
@@ -23,24 +57,55 @@ namespace My.Scripts.Hardware
 
         private void Awake() 
         {
-            // 경로: StreamingAssets/CR100Bridge/CR100Bridge.exe
+            if (!Instance)
+            {
+                Instance = this;
+                DontDestroyOnLoad(gameObject);
+            }
+            else
+            {
+                Destroy(gameObject);
+                return;
+            }
+            
             _bridgeExePath = Path.Combine(Application.streamingAssetsPath, "CR100Bridge", "CR100Bridge.exe");
         }
 
         private async UniTaskVoid Start()
         {
+            LoadRfidDatabase();
             await EnsureBridgeRunningAsync();
         }
 
         /// <summary>
-        /// 브릿지 프로세스의 생존 여부를 확인하고 필요 시 재기동 및 파이프 재연결을 수행함.
-        /// Why: _isInitializing 플래그로 1초 주기 호출 시 프로세스가 중복 실행되는 현상을 방지함.
+        /// RFIDValues.json 파일을 읽어와 내부 데이터베이스에 캐싱함.
+        /// Why: 매번 인식할 때마다 파일을 읽지 않고 메모리에서 빠르게 UID를 대조하기 위함.
         /// </summary>
+        private void LoadRfidDatabase()
+        {
+            // Why: GameConstants에 추가된 상수를 사용하여 경로 하드코딩을 제거함
+            _rfidDatabase = JsonLoader.Load<RfidDatabase>(GameConstants.Path.RfidValue);
+
+            if (_rfidDatabase == null)
+            {
+                UnityEngine.Debug.LogError($"[RFIDManager] {GameConstants.Path.RfidValue} 파일을 찾을 수 없어 빈 데이터로 초기화합니다.");
+                _rfidDatabase = new RfidDatabase 
+                {
+                    group1 = new List<string>(), group2 = new List<string>(), 
+                    group3 = new List<string>(), group4 = new List<string>(), 
+                    group5 = new List<string>()
+                };
+            }
+            else
+            {
+                UnityEngine.Debug.Log("[RFIDManager] RFID UID 데이터베이스 로드 완료.");
+            }
+        }
+
         private async UniTask<bool> EnsureBridgeRunningAsync()
         {
             if (_isInitializing) return false;
 
-            // 1. 프로세스 생존 확인
             if (_bridgeProcess == null || _bridgeProcess.HasExited)
             {
                 _isInitializing = true;
@@ -48,15 +113,12 @@ namespace My.Scripts.Hardware
                 {
                     CleanupPipe();
                     StartBridgeProcess();
-                    
-                    // Why: 브릿지가 실행되어 장치 초기화를 완료할 때까지의 대기 시간 확보
                     await UniTask.Delay(TimeSpan.FromSeconds(2.0f));
                     return await ConnectToPipeAsync();
                 }
                 finally { _isInitializing = false; }
             }
 
-            // 2. 파이프 연결 확인 (프로세스는 살아있으나 통신만 끊긴 경우)
             if (_pipeClient == null || !_pipeClient.IsConnected)
             {
                 _isInitializing = true;
@@ -76,14 +138,12 @@ namespace My.Scripts.Hardware
                 ProcessStartInfo startInfo = new ProcessStartInfo
                 {
                     FileName = _bridgeExePath,
-                    // Why: DLL을 찾지 못해 발생하는 크래시 방지를 위해 실행 파일 폴더를 작업 디렉토리로 지정
                     WorkingDirectory = Path.GetDirectoryName(_bridgeExePath),
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     WindowStyle = ProcessWindowStyle.Hidden
                 };
                 _bridgeProcess = Process.Start(startInfo);
-                UnityEngine.Debug.Log("[RFIDManager] 브릿지 프로세스 실행됨.");
             }
             catch (Exception e) { UnityEngine.Debug.LogError($"[RFIDManager] 프로세스 시작 실패: {e.Message}"); }
         }
@@ -94,13 +154,12 @@ namespace My.Scripts.Hardware
             _pipeClient = new NamedPipeClientStream(".", "CR100Pipe", PipeDirection.InOut, PipeOptions.Asynchronous);
             try
             {
-                // Why: 무한 대기를 방지하기 위해 3초의 연결 타임아웃 설정
                 await _pipeClient.ConnectAsync(3000).AsUniTask();
-                UnityEngine.Debug.Log("[RFIDManager] 파이프 연결 성공");
                 return true;
             }
-            catch
+            catch (Exception e)
             {
+                UnityEngine.Debug.LogWarning($"[RFIDManager] 파이프 연결 실패: {e.Message}");
                 CleanupPipe();
                 return false;
             }
@@ -111,10 +170,6 @@ namespace My.Scripts.Hardware
             if (Input.GetKeyDown(KeyCode.Space)) TryReadCard().Forget();
         }
 
-        /// <summary>
-        /// 카드 읽기 명령을 실행함.
-        /// Why: 이전 명령이 종료되지 않았다면 실행을 건너뛰어 동기화를 유지함.
-        /// </summary>
         public async UniTaskVoid TryReadCard()
         {
             if (_isProcessingCommand) return;
@@ -138,21 +193,19 @@ namespace My.Scripts.Hardware
                 await _pipeClient.WriteAsync(commandBytes, 0, commandBytes.Length).AsUniTask();
 
                 byte[] buffer = new byte[256];
-                // Why: 응답 지연 시 유니티 메인 루프가 멈추는 것을 방지하기 위해 1초 타임아웃 적용
                 int bytesRead = await _pipeClient.ReadAsync(buffer, 0, buffer.Length)
                                                 .AsUniTask()
                                                 .Timeout(TimeSpan.FromSeconds(1.0f));
 
                 if (bytesRead > 0)
                 {
-                    string response = Encoding.UTF8.GetString(buffer, 0, bytesRead);
-                    ProcessResponse(response);
+                    ProcessResponse(Encoding.UTF8.GetString(buffer, 0, bytesRead));
                 }
             }
             catch (Exception e)
             {
                 UnityEngine.Debug.LogWarning($"[RFIDManager] 통신 끊김 감지: {e.Message}");
-                CleanupPipe(); // 오류 시 파이프를 정리하여 다음 호출 때 재연결 유도
+                CleanupPipe(); 
             }
         }
 
@@ -165,21 +218,61 @@ namespace My.Scripts.Hardware
             }
         }
 
+        /// <summary>
+        /// JSON 데이터베이스와 대조하여 입력된 UID의 소속 그룹을 반환함.
+        /// </summary>
+        private int GetCategoryFromUid(string uid)
+        {
+            if (_rfidDatabase == null) return 0;
+
+            if (_rfidDatabase.group1 != null && _rfidDatabase.group1.Contains(uid)) return 1;
+            if (_rfidDatabase.group2 != null && _rfidDatabase.group2.Contains(uid)) return 2;
+            if (_rfidDatabase.group3 != null && _rfidDatabase.group3.Contains(uid)) return 3;
+            if (_rfidDatabase.group4 != null && _rfidDatabase.group4.Contains(uid)) return 4;
+            if (_rfidDatabase.group5 != null && _rfidDatabase.group5.Contains(uid)) return 5;
+
+            return 0; 
+        }
+
         private void ProcessResponse(string response)
         {
-            if (response.Contains("RFID_READ"))
+            try
             {
-                UnityEngine.Debug.Log($"<color=green>[RFID] 읽기 성공: {response}</color>");
+                RfidResponse res = JsonUtility.FromJson<RfidResponse>(response);
+                if (res != null && res.command == "RFID_READ")
+                {
+                    string uid = res.payload;
+                    int category = GetCategoryFromUid(uid);
+
+                    if (category > 0)
+                    {
+                        UnityEngine.Debug.Log($"<color=green>[RFID] 답변 {category}번 인식 완료 (UID: {uid})</color>");
+                    }
+                    else
+                    {
+                        UnityEngine.Debug.LogWarning($"<color=yellow>[RFID] 미등록 카드 태그됨: {uid}</color>");
+                    }
+
+                    onCardRead?.Invoke(uid, category);
+                }
+            }
+            catch (Exception e)
+            {
+                UnityEngine.Debug.LogWarning($"[RFIDManager] 응답 파싱 에러: {e.Message}");
             }
         }
 
         private void OnDestroy()
         {
-            CleanupPipe();
-            if (_bridgeProcess != null && !_bridgeProcess.HasExited)
+            if (Instance == this)
             {
-                _bridgeProcess.Kill();
-                _bridgeProcess.Dispose();
+                CleanupPipe();
+                if (_bridgeProcess != null && !_bridgeProcess.HasExited)
+                {
+                    _bridgeProcess.Kill();
+                    _bridgeProcess.Dispose();
+                }
+                Instance = null;
             }
         }
     }

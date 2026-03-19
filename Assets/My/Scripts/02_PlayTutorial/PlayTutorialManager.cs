@@ -24,11 +24,6 @@ namespace My.Scripts._02_PlayTutorial
         protected override void Start()
         {
             base.Start();
-            
-            if (TcpManager.Instance)
-            {
-                TcpManager.Instance.onMessageReceived += OnNetworkMessageReceived;
-            }
         }
 
         protected override void LoadSettings()
@@ -47,21 +42,22 @@ namespace My.Scripts._02_PlayTutorial
         }
 
         /// <summary>
-        /// 페이지 전환 시 Page1의 입력값을 Page2로 넘겨줍니다.
+        /// 페이지 전환 시 Page1의 입력값(RFID 카테고리)을 Page2로 넘겨줍니다.
+        /// Why: 2페이지가 시작되자마자 카운트다운을 진행하려면 1페이지에서 인식된 그룹 정보를 알아야 함.
         /// </summary>
         public override void TransitionToPage(int index)
         {
             if (pages != null && index >= 0 && index < pages.Count)
             {
-                if (index == 1) // Page 2로 전환될 때
+                if (index == 1) 
                 {
                     PlayTutorialPage1Controller page1 = pages[0] as PlayTutorialPage1Controller;
                     PlayTutorialPage2Controller page2 = pages[1] as PlayTutorialPage2Controller;
 
                     if (page1 && page2)
                     {
-                        // Page1에서 누른 키를 Page2에 전달
-                        page2.SetInitialKey(page1.PressedKey);
+                        // 1페이지에서 인식된 RFID 카테고리(1~5)를 2페이지의 초기값으로 세팅함
+                        page2.SetInitialCategory(page1.SelectedCategory);
                     }
                 }
             }
@@ -73,11 +69,6 @@ namespace My.Scripts._02_PlayTutorial
             _isLocalFinished = true;
             Debug.Log("[PlayTutorialManager] 내 PC 플레이 튜토리얼 완료. 상대방 대기 중...");
 
-            if (TcpManager.Instance)
-            {
-                TcpManager.Instance.SendMessageToTarget("PLAY_TUTORIAL_COMPLETE");
-            }
-
             CheckSyncAndChangeScene();
         }
 
@@ -86,25 +77,18 @@ namespace My.Scripts._02_PlayTutorial
             if (msg != null && msg.command == "PLAY_TUTORIAL_COMPLETE")
             {
                 _isRemoteFinished = true;
-                Debug.Log("[PlayTutorialManager] 상대방 PC 플레이 튜토리얼 완료 신호 수신.");
-                
                 CheckSyncAndChangeScene();
             }
         }
 
         private void CheckSyncAndChangeScene()
         {
-            if (_isLocalFinished && _isRemoteFinished)
+            if (_isLocalFinished)
             {
-                if (TcpManager.Instance)
-                {
-                    TcpManager.Instance.onMessageReceived -= OnNetworkMessageReceived;
-                }
-
                 if (GameManager.Instance)
                 {
                     Debug.Log("[PlayTutorialManager] 양방향 동기화 완료. Step1 씬으로 이동합니다.");
-                    GameManager.Instance.ChangeScene(GameConstants.Scene.Step1); 
+                    GameManager.Instance.ChangeScene(GameConstants.Scene.Step1, true); 
                 }
                 else
                 {
@@ -115,10 +99,6 @@ namespace My.Scripts._02_PlayTutorial
 
         private void OnDestroy()
         {
-            if (TcpManager.Instance)
-            {
-                TcpManager.Instance.onMessageReceived -= OnNetworkMessageReceived;
-            }
         }
     }
 }

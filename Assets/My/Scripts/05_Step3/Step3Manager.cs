@@ -157,7 +157,7 @@ namespace My.Scripts._05_Step3
 
             if (GameManager.Instance)
             {
-                GameManager.Instance.ChangeScene(GameConstants.Scene.PlayVideo);
+                GameManager.Instance.ChangeScene(GameConstants.Scene.PlayVideo, true);
             }
         }
     }

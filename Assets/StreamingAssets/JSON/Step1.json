@@ -97,6 +97,7 @@
   "questionSets": [
     {
       "questionSetting": {
+        "imageKey": "Lego_Cartridge_{API}",
         "textQuestion": {
           "name": "Text_Q1",
           "position": {"x": 0, "y": 5},
