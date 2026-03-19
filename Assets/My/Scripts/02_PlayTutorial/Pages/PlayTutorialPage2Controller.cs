@@ -1,21 +1,23 @@
 using System;
 using System.Collections;
 using My.Scripts.Core;
-using My.Scripts.Global; // 추가됨: SoundManager 접근용
-using My.Scripts.Network; 
+using My.Scripts.Global; 
+using My.Scripts.Hardware; 
 using UnityEngine;
 using UnityEngine.UI;
+using Cysharp.Threading.Tasks;
 using Wonjeong.UI;
 using Wonjeong.Utils;
 
 namespace My.Scripts._02_PlayTutorial.Pages
 {
     [Serializable]
-    public class PlayTutorialPage2Data
-    {
-        // # TODO: 제이슨 구조 확정 시 데이터 추가
-    }
+    public class PlayTutorialPage2Data { }
 
+    /// <summary>
+    /// 카운트다운(페널티) 대기 페이지 컨트롤러.
+    /// Why: RFID 스캔 루프를 유지하여 변경을 감지하되, 카운트가 1이 되면 입력을 차단하여 안정적으로 완료되게 함.
+    /// </summary>
     public class PlayTutorialPage2Controller : GamePage
     {
         [Header("UI Components")]
@@ -31,27 +33,19 @@ namespace My.Scripts._02_PlayTutorial.Pages
         
         private bool _isCompleted = false;
         private bool _isWaitingForReset = false;
-        private KeyCode _holdingKey = KeyCode.None;
+        private bool _canAcceptInput = false;
 
-        private readonly KeyCode[] _p1Keys = new KeyCode[] { 
-            KeyCode.Alpha1, KeyCode.Alpha2, KeyCode.Alpha3, KeyCode.Alpha4, KeyCode.Alpha5 
-        };
-        private readonly KeyCode[] _p2Keys = new KeyCode[] { 
-            KeyCode.Alpha6, KeyCode.Alpha7, KeyCode.Alpha8, KeyCode.Alpha9, KeyCode.Alpha0 
-        };
+        private int _holdingCategory = 0;
 
-        // Page1에서 누른 키를 초기값으로 셋팅
-        public void SetInitialKey(KeyCode key)
+        public void SetInitialCategory(int category)
         {
-            _holdingKey = key;
+            _holdingCategory = category;
         }
 
         public override void SetupData(object data)
         {
             PlayTutorialPage2Data pageData = data as PlayTutorialPage2Data;
-            
             if (pageData != null) _cachedData = pageData;
-            else Debug.LogWarning("[PlayTutorialPage2Controller] SetupData: 전달된 데이터가 null입니다.");
         }
 
         public override void OnEnter()
@@ -60,56 +54,91 @@ namespace My.Scripts._02_PlayTutorial.Pages
 
             _isCompleted = false;
             _isWaitingForReset = false;
+            _canAcceptInput = true;
 
             if (countdownUI) countdownUI.text = "5";
             if (mainGroupCanvas) mainGroupCanvas.alpha = 0f;
 
             _fadeCoroutine = StartCoroutine(FadeCanvasGroupRoutine(mainGroupCanvas, 0f, 1f, fadeDuration));
 
-            // Page1에서 전달받은 키가 있다면 화면에 들어오자마자 자동으로 카운트다운 시작
-            if (_holdingKey != KeyCode.None)
+            if (RfidManager.Instance)
+            {
+                RfidManager.Instance.onCardRead += OnCardRecognized;
+            }
+
+            if (_holdingCategory != 0)
             {
                 _countdownCoroutine = StartCoroutine(CountdownRoutine());
             }
+
+            StartAutoReadLoop().Forget();
         }
 
         public override void OnExit()
         {
             base.OnExit();
             
+            _canAcceptInput = false;
+
             if (_fadeCoroutine != null) StopCoroutine(_fadeCoroutine);
             if (_countdownCoroutine != null) StopCoroutine(_countdownCoroutine);
+
+            if (RfidManager.Instance)
+            {
+                RfidManager.Instance.onCardRead -= OnCardRecognized;
+            }
+        }
+
+        private async UniTaskVoid StartAutoReadLoop()
+        {
+            // Why: 루프는 유지하되, _canAcceptInput이 true일 때만 하드웨어에 Read 신호를 보냄
+            while (!_isCompleted && !this.GetCancellationTokenOnDestroy().IsCancellationRequested)
+            {
+                if (_canAcceptInput)
+                {
+                    if (RfidManager.Instance) RfidManager.Instance.TryReadCard().Forget();
+                }
+                await UniTask.Delay(TimeSpan.FromSeconds(1.0f), delayTiming: PlayerLoopTiming.Update);
+            }
+        }
+
+        private void OnCardRecognized(string uid, int category)
+        {
+            // 입력 차단 상태(_canAcceptInput == false)일 경우 수신된 신호 무시
+            if (_isCompleted || _isWaitingForReset || !_canAcceptInput || category == 0) return;
+            
+            ProcessInput(category);
         }
 
         private void Update()
         {
-            if (_isCompleted || _isWaitingForReset) return;
+            if (_isCompleted || _isWaitingForReset || !_canAcceptInput) return;
 
-            KeyCode newlyPressedKey = GetCurrentValidKeyDown();
-
-            // 새로 눌린 유효한 키가 있을 때만 판단 (손을 떼는 행위는 무시하므로 카운트는 계속 진행됨)
-            if (newlyPressedKey != KeyCode.None)
+            KeyCode pressed = GetCurrentValidKeyDown();
+            if (pressed != KeyCode.None)
             {
-                if (_holdingKey == KeyCode.None)
-                {
-                    _holdingKey = newlyPressedKey;
-                    _countdownCoroutine = StartCoroutine(CountdownRoutine());
-                }
-                else if (_holdingKey != newlyPressedKey)
-                {
-                    // 카운트 진행 중 '기존과 다른 키'를 누르면 페널티 부여
-                    InterruptCountdown(newlyPressedKey); 
-                }
+                int category = pressed - KeyCode.Alpha0;
+                UnityEngine.Debug.Log($"[PlayTutorialPage2] Debug: Injected Category {category}.");
+                ProcessInput(category);
+            }
+        }
+
+        private void ProcessInput(int category)
+        {
+            if (_holdingCategory == 0)
+            {
+                _holdingCategory = category;
+                _countdownCoroutine = StartCoroutine(CountdownRoutine());
+            }
+            else if (_holdingCategory != category)
+            {
+                InterruptCountdown(category);
             }
         }
 
         private KeyCode GetCurrentValidKeyDown()
         {
-            bool isServer = false;
-            if (TcpManager.Instance) isServer = TcpManager.Instance.IsServer;
-
-            KeyCode[] keysToCheck = isServer ? _p1Keys : _p2Keys;
-            
+            KeyCode[] keysToCheck = new KeyCode[] { KeyCode.Alpha1, KeyCode.Alpha2, KeyCode.Alpha3, KeyCode.Alpha4, KeyCode.Alpha5 };
             foreach (KeyCode key in keysToCheck)
             {
                 if (Input.GetKeyDown(key)) return key;
@@ -119,7 +148,6 @@ namespace My.Scripts._02_PlayTutorial.Pages
 
         private IEnumerator CountdownRoutine()
         {
-            // Why: 코루틴이 시작될 때마다(최초 및 1초 페널티 이후 리셋 시) 효과음을 재생함
             if (SoundManager.Instance)
             {   
                 SoundManager.Instance.StopSFX();
@@ -129,17 +157,21 @@ namespace My.Scripts._02_PlayTutorial.Pages
             for (int i = 5; i >= 1; i--)
             {
                 if (countdownUI) countdownUI.text = i.ToString();
+                
+                // Why: 카운트다운이 1이 되는 순간부터 RFID 스캔 및 입력을 완전히 차단함
+                if (i <= 1)
+                {
+                    _canAcceptInput = false;
+                }
+
                 yield return CoroutineData.GetWaitForSeconds(1.0f);
             }
 
             _isCompleted = true;
-            if (onStepComplete != null)
-            {
-                onStepComplete.Invoke(0);
-            }
+            if (onStepComplete != null) onStepComplete.Invoke(0);
         }
 
-        private void InterruptCountdown(KeyCode newKey)
+        private void InterruptCountdown(int newCategory)
         {
             if (_countdownCoroutine != null)
             {
@@ -147,23 +179,19 @@ namespace My.Scripts._02_PlayTutorial.Pages
                 _countdownCoroutine = null;
             }
 
-            // 새로운 키로 갱신 후 페널티 시작
-            _holdingKey = newKey; 
+            _holdingCategory = newCategory; 
             StartCoroutine(ResetWaitRoutine());
         }
 
         private IEnumerator ResetWaitRoutine()
         {
             _isWaitingForReset = true;
-            
-            // 페널티 1초 대기
-            yield return CoroutineData.GetWaitForSeconds(1.0f);
+            yield return CoroutineData.GetWaitForSeconds(1.0f); 
 
             if (countdownUI) countdownUI.text = "5"; 
             _isWaitingForReset = false;
 
-            // 페널티가 끝나면 방금 갱신된 새로운 키를 기준으로 카운트다운 자동 재시작
-            if (_holdingKey != KeyCode.None && !_isCompleted)
+            if (_holdingCategory != 0 && !_isCompleted)
             {
                 _countdownCoroutine = StartCoroutine(CountdownRoutine());
             }

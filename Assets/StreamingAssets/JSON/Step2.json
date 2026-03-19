@@ -106,6 +106,7 @@
   "questionSets": [
     {
       "questionSetting": {
+        "imageKey": "Lego_Cartridge_{API}",
         "textQuestion": {
           "name": "Text_Q1",
           "position": {"x": 0, "y": 5},
@@ -178,6 +179,7 @@
     },
     {
       "questionSetting": {
+        "imageKey": "Lego_Cartridge_{API}",
         "textQuestion": {
           "name": "Text_Q2",
           "position": {"x": 0, "y": 5},
@@ -250,6 +252,7 @@
     },
     {
       "questionSetting": {
+        "imageKey": "Lego_Cartridge_{API}",
         "textQuestion": {
           "name": "Text_Q3",
           "position": {"x": 0, "y": 5},
@@ -322,6 +325,7 @@
     },
     {
       "questionSetting": {
+        "imageKey": "Lego_Cartridge_{API}",
         "textQuestion": {
           "name": "Text_Q4",
           "position": {"x": 0, "y": 5},
@@ -394,6 +398,7 @@
     },
     {
       "questionSetting": {
+        "imageKey": "Lego_Cartridge_{API}",
         "textQuestion": {
           "name": "Text_Q5",
           "position": {"x": 0, "y": 5},
@@ -466,6 +471,7 @@
     },
     {
       "questionSetting": {
+        "imageKey": "Lego_Cartridge_{API}",
         "textQuestion": {
           "name": "Text_Q6",
           "position": {"x": 0, "y": 5},
@@ -538,6 +544,7 @@
     },
     {
       "questionSetting": {
+        "imageKey": "Lego_Cartridge_{API}",
         "textQuestion": {
           "name": "Text_Q7",
           "position": {"x": 0, "y": 5},
@@ -610,6 +617,7 @@
     },
     {
       "questionSetting": {
+        "imageKey": "Lego_Cartridge_{API}",
         "textQuestion": {
           "name": "Text_Q8",
           "position": {"x": 0, "y": 5},
@@ -682,6 +690,7 @@
     },
     {
       "questionSetting": {
+        "imageKey": "Lego_Cartridge_{API}",
         "textQuestion": {
           "name": "Text_Q9",
           "position": {"x": 0, "y": 5},
@@ -754,6 +763,7 @@
     },
     {
       "questionSetting": {
+        "imageKey": "Lego_Cartridge_{API}",
         "textQuestion": {
           "name": "Text_Q10",
           "position": {"x": 0, "y": 5},
@@ -826,6 +836,7 @@
     },
     {
       "questionSetting": {
+        "imageKey": "Lego_Cartridge_{API}",
         "textQuestion": {
           "name": "Text_Q11",
           "position": {"x": 0, "y": 5},
@@ -898,6 +909,7 @@
     },
     {
       "questionSetting": {
+        "imageKey": "Lego_Cartridge_{API}",
         "textQuestion": {
           "name": "Text_Q12",
           "position": {"x": 0, "y": 5},
@@ -970,6 +982,7 @@
     },
     {
       "questionSetting": {
+        "imageKey": "Lego_Cartridge_{API}",
         "textQuestion": {
           "name": "Text_Q13",
           "position": {"x": 0, "y": 5},
@@ -1042,6 +1055,7 @@
     },
     {
       "questionSetting": {
+        "imageKey": "Lego_Cartridge_{API}",
         "textQuestion": {
           "name": "Text_Q14",
           "position": {"x": 0, "y": 5},
@@ -1114,6 +1128,7 @@
     },
     {
       "questionSetting": {
+        "imageKey": "Lego_Cartridge_{API}",
         "textQuestion": {
           "name": "Text_Q15",
           "position": {"x": 0, "y": 5},

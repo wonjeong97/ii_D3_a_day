@@ -1,12 +1,13 @@
 using System;
 using System.Collections;
 using My.Scripts.Core;
+using My.Scripts.Global; // GameManager 접근을 위해 추가
 using UnityEngine;
 using UnityEngine.UI;
 using Wonjeong.Data;
 using Wonjeong.Utils;
 using My.Scripts.Network;
-using Wonjeong.UI; // TCP 통신 매니저 접근
+using Wonjeong.UI; 
 
 namespace My.Scripts._01_Tutorial.Pages
 {
@@ -22,7 +23,7 @@ namespace My.Scripts._01_Tutorial.Pages
 
     /// <summary>
     /// 여섯 번째 튜토리얼 페이지 컨트롤러.
-    /// 진입 후 자동으로 1번 카트리지를 선택하며, 내부 UI 페이드 아웃 연출 후 다음 단계로 넘어감.
+    /// Why: GameManager에 저장된 카트리지 키를 참조하여 동적으로 애니메이션 및 텍스트를 연출한 뒤 다음 단계로 넘어감.
     /// </summary>
     public class TutorialPage6Controller : GamePage
     {
@@ -30,8 +31,6 @@ namespace My.Scripts._01_Tutorial.Pages
         [SerializeField] private CanvasGroup pageCanvasGroup; 
         [SerializeField] private CanvasGroup cg1CanvasGroup;  
         [SerializeField] private Text descriptionUI; 
-
-        // Why: TCP 네트워크 상태에 따라 동적으로 판단하므로 isPlayer1 변수는 삭제함
 
         [Header("Cart A")]
         [SerializeField] private CanvasGroup cartACanvas; 
@@ -49,7 +48,7 @@ namespace My.Scripts._01_Tutorial.Pages
         [SerializeField] private Text cartCText; 
 
         [Header("Animation Settings")]
-        [SerializeField] private float autoSelectDelay = 1.5f; // 자동 선택 대기 시간
+        [SerializeField] private float autoSelectDelay = 1.5f; 
         [SerializeField] private float fadeDuration = 0.5f;
         [SerializeField] private float finalHoldTime = 3.0f;
 
@@ -72,7 +71,7 @@ namespace My.Scripts._01_Tutorial.Pages
             }
             else
             {
-                Debug.LogWarning("[TutorialPage6Controller] SetupData: 전달된 데이터가 null입니다.");
+                UnityEngine.Debug.LogWarning("[TutorialPage6Controller] SetupData: 전달된 데이터가 null입니다.");
             }
         }
 
@@ -91,10 +90,8 @@ namespace My.Scripts._01_Tutorial.Pages
                 if (descriptionUI)
                 {
                     string rawText = string.Empty;
-                    //bool isServer = TcpManager.Instance && TcpManager.Instance.IsServer;
                     bool isServer = true;
                     
-                    // Why: 현재 PC가 서버(P1)이면 A 텍스트, 클라이언트(P2)이면 B 텍스트를 출력함
                     if (isServer && _cachedData.descriptionTextA != null)
                     {
                         rawText = _cachedData.descriptionTextA.text;
@@ -108,12 +105,19 @@ namespace My.Scripts._01_Tutorial.Pages
                         Debug.LogWarning("[TutorialPage6Controller] descriptionText 데이터가 null입니다.");
                     }
 
+                    // Why: 현재 할당된 카트리지 키를 가져와 텍스트의 {cartridge} 치환자에 적용함
+                    string cartName = "A";
+                    if (GameManager.Instance && !string.IsNullOrEmpty(GameManager.Instance.CartridgeKey))
+                    {
+                        cartName = GameManager.Instance.CartridgeKey;
+                    }
+
                     if (!string.IsNullOrEmpty(rawText))
                     {
                         string processedText = rawText
                             .Replace("{nameA}", "사용자A")
                             .Replace("{nameB}", "사용자B")
-                            .Replace("{cartridge}", "A 카트리지"); 
+                            .Replace("{cartridge}", $"{cartName} 카트리지"); 
 
                         descriptionUI.text = processedText;
                     }
@@ -124,14 +128,12 @@ namespace My.Scripts._01_Tutorial.Pages
                 if (cartCText && _cachedData.cartNameC != null) cartCText.text = _cachedData.cartNameC.text;
             }
 
-            // Why: 외부 연동 전 임시로 일정 시간 대기 후 1번 카트리지를 자동 선택함
             if (_autoSelectCoroutine != null) StopCoroutine(_autoSelectCoroutine);
             _autoSelectCoroutine = StartCoroutine(AutoSelectRoutine());
         }
 
         public override void OnExit()
         {
-            // Why: 씬 전환 중 화면 암전 방지를 위해 base.OnExit() 생략
             StopAllAnimationCoroutines();
 
             if (_autoSelectCoroutine != null)
@@ -143,17 +145,31 @@ namespace My.Scripts._01_Tutorial.Pages
 
         private void Update()
         {
-            // Why: 자동으로 넘어가도록 수정되었으므로 기존의 키보드 입력 체크 로직은 비워둠
         }
 
         private IEnumerator AutoSelectRoutine()
         {
-            // 화면에 요소들이 나타난 뒤 사용자가 인지할 수 있도록 짧게 대기함
             yield return CoroutineData.GetWaitForSeconds(autoSelectDelay);
             
             if (!_isCompleted)
             {
-                SelectLegoCart(1);
+                int selectedIndex = 1; 
+
+                // Why: 게임 매니저의 카트리지 키에 따라 활성화할 인덱스를 결정함
+                if (GameManager.Instance)
+                {
+                    string key = GameManager.Instance.CartridgeKey;
+                    if (key == "A") selectedIndex = 1;
+                    else if (key == "B") selectedIndex = 2;
+                    else if (key == "C") selectedIndex = 3;
+                    else
+                    {
+                        UnityEngine.Debug.LogWarning($"[TutorialPage6] 알 수 없는 카트리지 키: {key}. 기본값 A(1)를 사용합니다.");
+                        selectedIndex = 1;
+                    }
+                }
+
+                SelectLegoCart(selectedIndex);
             }
         }
 
@@ -204,7 +220,7 @@ namespace My.Scripts._01_Tutorial.Pages
             }
         }
 
-        private void ManageCartAnimation(ref Coroutine currentRoutine, CanvasGroup canvasGroup, RectTransform rectTransform, bool isSelected)
+        private void ManageCartAnimation(ref Coroutine currentRoutine, CanvasGroup cg, RectTransform rectTransform, bool isSelected)
         {
             if (currentRoutine != null)
             {
@@ -212,16 +228,16 @@ namespace My.Scripts._01_Tutorial.Pages
                 currentRoutine = null;
             }
 
-            if (canvasGroup && rectTransform)
+            if (cg && rectTransform)
             {
-                currentRoutine = StartCoroutine(CartAnimationRoutine(canvasGroup, rectTransform, isSelected));
+                currentRoutine = StartCoroutine(CartAnimationRoutine(cg, rectTransform, isSelected));
             }
         }
 
-        private IEnumerator CartAnimationRoutine(CanvasGroup canvasGroup, RectTransform rectTransform, bool isSelected)
+        private IEnumerator CartAnimationRoutine(CanvasGroup cg, RectTransform rectTransform, bool isSelected)
         {
             float elapsed = 0f;
-            float startAlpha = canvasGroup.alpha;
+            float startAlpha = cg.alpha;
             float targetAlpha = isSelected ? 1f : 0f;
             Vector2 startPos = rectTransform.anchoredPosition;
 
@@ -230,7 +246,7 @@ namespace My.Scripts._01_Tutorial.Pages
                 elapsed += Time.deltaTime;
                 float t = elapsed / fadeDuration;
 
-                if (canvasGroup) canvasGroup.alpha = Mathf.Lerp(startAlpha, targetAlpha, t);
+                if (cg) cg.alpha = Mathf.Lerp(startAlpha, targetAlpha, t);
 
                 if (isSelected && rectTransform)
                 {
@@ -240,9 +256,12 @@ namespace My.Scripts._01_Tutorial.Pages
                 yield return null;
             }
 
-            if (canvasGroup) canvasGroup.alpha = targetAlpha;
+            if (cg) cg.alpha = targetAlpha;
             if (isSelected && rectTransform) rectTransform.anchoredPosition = _selectedTargetPos;
-            SoundManager.Instance?.PlaySFX("레고_2");
+            if (isSelected && SoundManager.Instance) 
+            {
+                SoundManager.Instance.PlaySFX("레고_2");
+            }
         }
 
         private void StopAllAnimationCoroutines()

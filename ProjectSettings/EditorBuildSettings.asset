@@ -20,6 +20,15 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/04_Step2.unity
     guid: 307d5435ff1632546a61c9bd78eac173
+  - enabled: 1
+    path: Assets/Scenes/05_Step3.unity
+    guid: 896e3736b0552284cbcb32c511afae1e
+  - enabled: 1
+    path: Assets/Scenes/06_Video.unity
+    guid: c741fb18ceb587a45851b03f5f87cc04
+  - enabled: 1
+    path: Assets/Scenes/07_Ending.unity
+    guid: cad516d323be14b45bd0d6e78ea11d8a
   m_configObjects:
     com.unity.addressableassets: {fileID: 11400000, guid: 9a3c0a65a67b8c5409f4f9b9c828e870,
       type: 2}

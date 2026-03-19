@@ -37,7 +37,7 @@ namespace My.Scripts._01_Tutorial.Pages
             if (!_isPageActive) return;
             
             // Why: 씬 동기화와 동일하게 외부 API 신호를 전담하는 서버에서만 넘김 입력을 처리함
-            if (TcpManager.Instance && TcpManager.Instance.IsServer)
+            //if (TcpManager.Instance && TcpManager.Instance.IsServer)
             {
                 if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
                 {
@@ -96,10 +96,10 @@ namespace My.Scripts._01_Tutorial.Pages
         private void OnConfirmInput()
         {
             // Why: 서버가 먼저 완료 신호를 보내 클라이언트도 함께 페이지를 넘기도록 유도함
-            if (TcpManager.Instance && TcpManager.Instance.IsServer)
-            {
-                TcpManager.Instance.SendMessageToTarget("PAGE1_COMPLETE", "");
-            }
+            // if (TcpManager.Instance && TcpManager.Instance.IsServer)
+            // {
+            //     TcpManager.Instance.SendMessageToTarget("PAGE1_COMPLETE", "");
+            // }
 
             CompletePage();
         }

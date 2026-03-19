@@ -1,9 +1,14 @@
+using System;
 using System.Collections;
 using My.Scripts.Data;
 using My.Scripts.Global;
 using My.Scripts.Network;
+using My.Scripts.Hardware; 
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.AddressableAssets;
+using UnityEngine.ResourceManagement.AsyncOperations;
+using Cysharp.Threading.Tasks; 
 using Wonjeong.UI;
 using Wonjeong.Utils;
 
@@ -11,13 +16,7 @@ namespace My.Scripts.Core.Pages
 {
     public class Page_Question : GamePage
     {
-        private enum Phase
-        {
-            None,
-            Holding,
-            CountingDown,
-            Completed
-        }
+        private enum Phase { None, Holding, CountingDown, Completed }
 
         [Header("Dynamic UI Components")]
         [SerializeField] private Text textQuestion;
@@ -36,6 +35,13 @@ namespace My.Scripts.Core.Pages
         [SerializeField] private GameObject cgC;
         [SerializeField] private GameObject cgD;
         [SerializeField] private GameObject cgE;
+
+        [Header("Answer Background Images")]
+        [SerializeField] private Image imgAnswer1;
+        [SerializeField] private Image imgAnswer2;
+        [SerializeField] private Image imgAnswer3;
+        [SerializeField] private Image imgAnswer4;
+        [SerializeField] private Image imgAnswer5;
         
         [Header("Next Phase UI")]
         [SerializeField] private CanvasGroup legoArrowCg;
@@ -57,10 +63,11 @@ namespace My.Scripts.Core.Pages
         private Page_Background _background;
         private string _progressText;
         
-        // 연출 진행 상태를 추적하여 입력을 막기 위한 플래그
         private bool _isAnimating = false;
-        // 추가됨: 진입 직후 1초간 일반 숫자키 입력을 막기 위한 플래그
         private bool _canAcceptInput = false;
+
+        // 어드레서블 메모리 관리를 위한 핸들 변수
+        private AsyncOperationHandle<Sprite> _spriteHandle;
         
         public int SelectedIndex => _selectedIndex;
 
@@ -72,21 +79,31 @@ namespace My.Scripts.Core.Pages
         public override void SetupData(object data)
         {
             CommonQuestionPageData pageData = data as CommonQuestionPageData;
-            
-            if (pageData != null)
-            {
-                _cachedData = pageData;
-            }
-            else
-            {
-                Debug.LogWarning("[Page_Question] SetupData: 전달된 데이터가 null이거나 형식이 잘못되었습니다.");
-            }
+            if (pageData != null) _cachedData = pageData;
         }
         
         public void SetProgressInfo(Page_Background bg, string progress)
         {
             _background = bg;
             _progressText = progress;
+        }
+
+        /// <summary>
+        /// 매니저에서 전달받은 새로운 스프라이트 배열로 5개의 보기 배경 이미지를 교체함.
+        /// </summary>
+        public void ChangeAnswerImages(Sprite[] newSprites)
+        {
+            if (newSprites == null) return;
+
+            Image[] targetImages = new Image[] { imgAnswer1, imgAnswer2, imgAnswer3, imgAnswer4, imgAnswer5 };
+            
+            for (int i = 0; i < 5; i++)
+            {
+                if (i < newSprites.Length && newSprites[i] && targetImages[i])
+                {
+                    targetImages[i].sprite = newSprites[i];
+                }
+            }
         }
 
         public override void OnEnter()
@@ -102,14 +119,22 @@ namespace My.Scripts.Core.Pages
             _isFirstSelectionDone = false;
             _selectedIndex = -1;
             _isAnimating = false; 
-            _canAcceptInput = false; // 진입 시 입력 차단
+            _canAcceptInput = false; 
 
             if (legoArrowCg) legoArrowCg.alpha = 0f;
 
             ApplyDataToUI();
 
-            // 진입 후 1초간 입력을 딜레이 시키는 코루틴 시작
+            // JSON 설정값에 따른 동적 이미지를 비동기로 불러와 씌움
+            LoadDynamicImageAsync().Forget();
+
+            if (RfidManager.Instance)
+            {
+                RfidManager.Instance.onCardRead += OnCardRecognized;
+            }
+
             StartCoroutine(InputDelayRoutine());
+            StartAutoReadLoop().Forget();
         }
 
         public override void OnExit()
@@ -121,6 +146,67 @@ namespace My.Scripts.Core.Pages
                 StopCoroutine(_sequenceCoroutine);
                 _sequenceCoroutine = null;
             }
+
+            if (RfidManager.Instance)
+            {
+                RfidManager.Instance.onCardRead -= OnCardRecognized;
+            }
+
+            // 페이지 전환 시 불필요한 메모리 해제
+            ReleaseDynamicImage();
+        }
+
+        /// <summary>
+        /// JSON에 등록된 imageKey를 확인하여, '{API}' 태그를 현재 유저의 아바타 값으로 치환 후 이미지를 로드함.
+        /// Why: 스크립트 수정 없이 JSON 설정만으로 유저 속성에 맞는 이미지를 동적으로 띄우기 위함.
+        /// </summary>
+        private async UniTaskVoid LoadDynamicImageAsync()
+        {
+            if (_cachedData == null || _cachedData.questionSetting == null) return;
+            
+            string key = _cachedData.questionSetting.imageKey;
+            
+            // imageKey가 지정되지 않은 경우(예: 매니저가 직접 넣어주는 Step1_Q2) 건너뜀
+            if (string.IsNullOrEmpty(key)) return; 
+
+            // '{API}' 치환 로직
+            if (key.Contains("{API}"))
+            {
+                string apiValue = GameManager.Instance ? GameManager.Instance.CartridgeKey : "A";
+                key = key.Replace("{API}", apiValue);
+            }
+
+            ReleaseDynamicImage(); 
+
+            try
+            {
+                _spriteHandle = Addressables.LoadAssetAsync<Sprite>(key);
+                Sprite loadedSprite = await _spriteHandle.ToUniTask();
+
+                if (loadedSprite)
+                {
+                    // 로드한 1장의 이미지를 5개의 모든 보기 버튼에 동일하게 적용함
+                    Sprite[] spritesToApply = new Sprite[] { loadedSprite, loadedSprite, loadedSprite, loadedSprite, loadedSprite };
+                    ChangeAnswerImages(spritesToApply);
+                    
+                    UnityEngine.Debug.Log($"[Page_Question] 동적 이미지 로드 성공 및 적용 완료 (Key: {key})");
+                }
+            }
+            catch (Exception e)
+            {
+                UnityEngine.Debug.LogWarning($"[Page_Question] 동적 이미지 로드 실패 (Key: {key}): {e.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 어드레서블 로드에 사용된 리소스를 안전하게 반환함.
+        /// </summary>
+        private void ReleaseDynamicImage()
+        {
+            if (_spriteHandle.IsValid())
+            {
+                Addressables.Release(_spriteHandle);
+            }
         }
 
         private void ApplyDataToUI()
@@ -128,7 +214,6 @@ namespace My.Scripts.Core.Pages
             if (_cachedData == null) return;
 
             QuestionSetting qSetting = _cachedData.questionSetting;
-            
             if (qSetting != null)
             {
                 SetUIText(textQuestion, qSetting.textQuestion);
@@ -138,72 +223,79 @@ namespace My.Scripts.Core.Pages
                 SetUIText(textAnswer4, qSetting.textAnswer4);
                 SetUIText(textAnswer5, qSetting.textAnswer5);
             }
-            else
-            {
-                Debug.LogWarning("[Page_Question] ApplyDataToUI: questionSetting 데이터가 없습니다.");
-            }
-
             SetUIText(textDescription, _cachedData.textDescription);
         }
 
-        private void Update()
+        private async UniTaskVoid StartAutoReadLoop()
         {
-            if (_currentPhase == Phase.Completed || _isAnimating) return;
-
-            bool isServer = false;
-            if (TcpManager.Instance) isServer = TcpManager.Instance.IsServer;
-
-            bool canSkip = isServer;
-
-#if UNITY_EDITOR
-            canSkip = true;
-#endif
-
-            if (canSkip)
+            while (_currentPhase != Phase.Completed && !this.GetCancellationTokenOnDestroy().IsCancellationRequested)
             {
-                if (_canAcceptInput)
+                if (_canAcceptInput && !_isAnimating)
                 {
-                    if (Input.GetKeyDown(KeyCode.Alpha1)) SelectAnswer(1);
-                    else if (Input.GetKeyDown(KeyCode.Alpha2)) SelectAnswer(2);
-                    else if (Input.GetKeyDown(KeyCode.Alpha3)) SelectAnswer(3);
-                    else if (Input.GetKeyDown(KeyCode.Alpha4)) SelectAnswer(4);
-                    else if (Input.GetKeyDown(KeyCode.Alpha5)) SelectAnswer(5);
+                    if (RfidManager.Instance) RfidManager.Instance.TryReadCard().Forget();
                 }
+                await UniTask.Delay(TimeSpan.FromSeconds(1.0f), delayTiming: PlayerLoopTiming.Update);
             }
         }
 
-        // 추가됨: 1초 대기 후 입력 플래그를 해제하는 코루틴
         private IEnumerator InputDelayRoutine()
         {
             yield return CoroutineData.GetWaitForSeconds(1.0f);
             _canAcceptInput = true;
         }
 
-        private void SelectAnswer(int index)
+        private void Update()
         {
-            if (_selectedIndex == index) return;
-            _selectedIndex = index;
+            if (_currentPhase == Phase.Completed || _isAnimating || !_canAcceptInput) return;
+
+            KeyCode pressed = GetCurrentValidKeyDown();
+            if (pressed != KeyCode.None)
+            {
+                int category = pressed - KeyCode.Alpha0;
+                ProcessInput(category);
+            }
+        }
+
+        private KeyCode GetCurrentValidKeyDown()
+        {
+            KeyCode[] keysToCheck = new KeyCode[] { KeyCode.Alpha1, KeyCode.Alpha2, KeyCode.Alpha3, KeyCode.Alpha4, KeyCode.Alpha5 };
+            foreach (KeyCode key in keysToCheck)
+            {
+                if (Input.GetKeyDown(key)) return key;
+            }
+            return KeyCode.None;
+        }
+
+        private void OnCardRecognized(string uid, int category)
+        {
+            if (_currentPhase == Phase.Completed || _isAnimating || !_canAcceptInput || category == 0) return;
+            ProcessInput(category);
+        }
+
+        private void ProcessInput(int category)
+        {
+            if (_selectedIndex == category) return; 
+
+            _selectedIndex = category;
 
             if (_sequenceCoroutine != null) StopCoroutine(_sequenceCoroutine);
 
             if (_currentPhase == Phase.CountingDown)
             {
-                _sequenceCoroutine = StartCoroutine(InterruptedCountdownRoutine(index));
+                _sequenceCoroutine = StartCoroutine(InterruptedCountdownRoutine(category));
             }
             else
             {   
-                _sequenceCoroutine = StartCoroutine(SelectionSequenceRoutine(index));
+                _sequenceCoroutine = StartCoroutine(SelectionSequenceRoutine(category));
             }
         }
 
         private IEnumerator SelectionSequenceRoutine(int index)
         {
             _currentPhase = Phase.Holding;
-            
             _isAnimating = true; 
             
             CanvasGroup qCg = GetOrAddCanvasGroup(textQuestion);
-            
             GameObject[] cgObjects = new GameObject[] { cgA, cgB, cgC, cgD, cgE };
             CanvasGroup[] cgs = new CanvasGroup[5];
             for (int i = 0; i < 5; i++) cgs[i] = GetOrAddCanvasGroup(cgObjects[i]);
@@ -254,10 +346,7 @@ namespace My.Scripts.Core.Pages
                     yield return null;
                 }
 
-                if (SoundManager.Instance)
-                {
-                    SoundManager.Instance.PlaySFX("레고_3");
-                }
+                if (SoundManager.Instance) SoundManager.Instance.PlaySFX("레고_3");
             }
             else
             {
@@ -292,10 +381,7 @@ namespace My.Scripts.Core.Pages
                     yield return null;
                 }
 
-                if (SoundManager.Instance)
-                {
-                    SoundManager.Instance.PlaySFX("레고_3");
-                }
+                if (SoundManager.Instance) SoundManager.Instance.PlaySFX("레고_3");
             }
 
             _isAnimating = false; 
@@ -355,6 +441,7 @@ namespace My.Scripts.Core.Pages
             for (int i = 4; i >= 1; i--)
             {
                 if (textQuestion) textQuestion.text = i.ToString();
+                if (i <= 1) _canAcceptInput = false;
                 yield return CoroutineData.GetWaitForSeconds(1.0f);
             }
 
@@ -364,14 +451,26 @@ namespace My.Scripts.Core.Pages
 
         private IEnumerator InterruptedCountdownRoutine(int index)
         {
-            yield return CoroutineData.GetWaitForSeconds(1.0f);
+            _isAnimating = true;
+            _currentPhase = Phase.Holding; 
+            
+            yield return CoroutineData.GetWaitForSeconds(1.0f); 
 
             GameObject[] cgObjects = new GameObject[] { cgA, cgB, cgC, cgD, cgE };
+            CanvasGroup[] cgs = new CanvasGroup[5];
+            for (int i = 0; i < 5; i++) cgs[i] = GetOrAddCanvasGroup(cgObjects[i]);
+            
             for (int i = 0; i < 5; i++)
             {
-                CanvasGroup cg = GetOrAddCanvasGroup(cgObjects[i]);
-                if (cg) cg.alpha = 0f;
+                if (cgs[i]) cgs[i].alpha = 0f;
             }
+
+            if (cgObjects[index - 1])
+            {
+                RectTransform rt = cgObjects[index - 1].GetComponent<RectTransform>();
+                if (rt) rt.anchoredPosition = _targetPosition;
+            }
+
             if (legoArrowCg) legoArrowCg.alpha = 1f;
 
             if (textQuestion && countdownFont) textQuestion.font = countdownFont;
@@ -382,9 +481,13 @@ namespace My.Scripts.Core.Pages
                 SoundManager.Instance.PlaySFX("공통_10_5초");
             }
 
+            _isAnimating = false;
+            _currentPhase = Phase.CountingDown; 
+
             for (int i = 5; i >= 1; i--)
             {
                 if (textQuestion) textQuestion.text = i.ToString();
+                if (i <= 1) _canAcceptInput = false;
                 yield return CoroutineData.GetWaitForSeconds(1.0f);
             }
 
@@ -394,11 +497,6 @@ namespace My.Scripts.Core.Pages
 
         private void CompletePage()
         {
-            if (TcpManager.Instance && TcpManager.Instance.IsServer)
-            {
-                TcpManager.Instance.SendMessageToTarget(_syncCommand, "");
-            }
-
             if (onStepComplete != null)
             {
                 onStepComplete.Invoke(0);

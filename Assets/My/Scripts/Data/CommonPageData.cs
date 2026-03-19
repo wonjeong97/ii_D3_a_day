@@ -26,7 +26,8 @@ namespace My.Scripts.Data
 
     [Serializable]
     public class QuestionSetting
-    {
+    {   
+        public string imageKey;
         public TextSetting textQuestion;
         public TextSetting textAnswer1;
         public TextSetting textAnswer2;
