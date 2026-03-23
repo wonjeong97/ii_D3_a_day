@@ -104,7 +104,7 @@ namespace My.Scripts._02_PlayTutorial
                 if (GameManager.Instance)
                 {
                     Debug.Log("[PlayTutorialManager] 양방향 동기화 완료. Step1 씬으로 이동합니다.");
-                    GameManager.Instance.ChangeScene(GameConstants.Scene.Step1); 
+                    GameManager.Instance.ChangeScene(GameConstants.Scene.Step1, true); 
                 }
                 else
                 {

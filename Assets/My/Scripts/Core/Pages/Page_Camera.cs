@@ -2,7 +2,7 @@ using System;
 using System.Collections;
 using System.IO;
 using Cysharp.Threading.Tasks;
-using My.Scripts.Data;
+using My.Scripts.Core.Data;
 using My.Scripts.Global;
 using My.Scripts.Network;
 using UnityEngine;

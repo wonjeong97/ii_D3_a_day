@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
-using My.Scripts.Data;
+using My.Scripts.Core.Data;
+using My.Scripts.Global; 
 using My.Scripts.Network;
 using UnityEngine;
 using UnityEngine.UI;
@@ -46,7 +47,7 @@ namespace My.Scripts.Core.Pages
 
             if (_autoTransitionCoroutine != null) StopCoroutine(_autoTransitionCoroutine);
             
-            SoundManager.Instance?.PlaySFX("공통_13");
+            if (SoundManager.Instance) SoundManager.Instance.PlaySFX("공통_13");
             _autoTransitionCoroutine = StartCoroutine(AutoTransitionRoutine());
         }
 
@@ -72,6 +73,19 @@ namespace My.Scripts.Core.Pages
 
                 // 서버(PC 1)면 nameA를, 클라이언트(PC 2)면 nameB의 위치와 서식을 적용
                 SetUIText(textName, isServer ? _cachedData.nameA : _cachedData.nameB);
+
+                // Why: SetUIText로 폰트, 색상 등 서식이 덮어씌워진 직후 실제 유저 이름으로 치환함
+                if (SessionManager.Instance)
+                {
+                    string nameA = !string.IsNullOrEmpty(SessionManager.Instance.PlayerAFirstName) 
+                        ? SessionManager.Instance.PlayerAFirstName 
+                        : "사용자A";
+                    string nameB = !string.IsNullOrEmpty(SessionManager.Instance.PlayerBFirstName) 
+                        ? SessionManager.Instance.PlayerBFirstName 
+                        : "사용자B";
+
+                    textName.text = textName.text.Replace("{nameA}", nameA).Replace("{nameB}", nameB);
+                }
             }
         }
 

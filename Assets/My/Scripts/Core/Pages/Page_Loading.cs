@@ -1,5 +1,5 @@
 using System.Collections;
-using My.Scripts.Data;
+using My.Scripts.Core.Data;
 using UnityEngine;
 using UnityEngine.UI;
 using Wonjeong.UI;

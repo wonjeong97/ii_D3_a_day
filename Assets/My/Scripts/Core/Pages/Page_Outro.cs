@@ -1,7 +1,7 @@
 using System;
 using System.Collections;
 using My.Scripts.Core;
-using My.Scripts.Data;
+using My.Scripts.Core.Data;
 using My.Scripts.Network;
 using UnityEngine;
 using UnityEngine.UI;

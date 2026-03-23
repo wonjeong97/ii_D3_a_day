@@ -2,8 +2,9 @@ using System;
 using System.Collections.Generic;
 using My.Scripts.Core;
 using My.Scripts.Core.Pages;
-using My.Scripts.Data;
 using My.Scripts.Global;
+using My.Scripts._06_PlayVideo;
+using My.Scripts.Core.Data; // 추가됨: StillcutManager 접근용
 using UnityEngine;
 using Wonjeong.Data;
 using Wonjeong.Utils;
@@ -38,6 +39,9 @@ namespace My.Scripts._05_Step3
 
         protected override void Start()
         {
+            // 1. 씬 진입 시점에 Step2 사진들을 영상으로 인코딩 시작
+            StillcutManager.GenerateVideoInBackground();
+
             skipFirstPageFade = true;
             base.Start();
         }
@@ -157,7 +161,7 @@ namespace My.Scripts._05_Step3
 
             if (GameManager.Instance)
             {
-                GameManager.Instance.ChangeScene(GameConstants.Scene.PlayVideo);
+                GameManager.Instance.ChangeScene(GameConstants.Scene.PlayVideo, true);
             }
         }
     }

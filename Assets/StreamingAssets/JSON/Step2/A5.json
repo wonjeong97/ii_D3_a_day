@@ -1,0 +1,1188 @@
+{
+  "background": {
+    "nameA": {
+      "name": "Text_NameA",
+      "position": {"x": 216, "y": -190},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "{nameA}",
+      "fontName": "font6",
+      "fontSize": 24,
+      "fontColor": {"r": 0.627451, "g": 0.627451, "b": 0.627451, "a": 1},
+      "alignment": 3
+    },
+    "nameB": {
+      "name": "Text_NameB",
+      "position": {"x": 216, "y": -190},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "{nameB}",
+      "fontName": "font6",
+      "fontSize": 24,
+      "fontColor": {"r": 0.627451, "g": 0.627451, "b": 0.627451, "a": 1},
+      "alignment": 3
+    }
+  },
+  "introPage": {
+    "nameA": {
+      "name": "Text_NameA",
+      "position": {"x": 216, "y": -190},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "{nameA}",
+      "fontName": "font6",
+      "fontSize": 24,
+      "fontColor": {"r": 1, "g": 1, "b": 1, "a": 1},
+      "alignment": 3
+    },
+    "nameB": {
+      "name": "Text_NameB",
+      "position": {"x": 216, "y": -190},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "{nameB}",
+      "fontName": "font6",
+      "fontSize": 24,
+      "fontColor": {"r": 1, "g": 1, "b": 1, "a": 1},
+      "alignment": 3
+    }
+  },
+  "outroPage": {
+    "textOutro": {
+      "name": "Text_Outro",
+      "position": {"x": 0, "y": 212},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "이번에는 <b>표정 피규어</b>를 사용합니다.\n답변에 맞는 표정 피규어를 올려주세요.",
+      "fontName": "font4",
+      "fontSize": 55,
+      "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1}
+    }
+  },
+  "commonQuestionUI": {
+    "textSelected": {
+      "name": "Text_Selected",
+      "position": {"x": 0, "y": 5},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "해당 답변을 선택하셨습니다.",
+      "fontName": "font4",
+      "fontSize": 55,
+      "fontColor": {"r": 0, "g": 0, "b": 0, "a": 1}
+    },
+    "textDescription": {
+      "name": "Text_Description",
+      "position": {"x": 0, "y": 96},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "<b><size=45>2번 화살표 자리</size></b>에 맞춰 올려 주세요.",
+      "fontName": "font6",
+      "fontSize": 38,
+      "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 1}
+    },
+    "textWait": {
+      "name": "Text_Wait",
+      "position": {"x": 0, "y": 96},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "확정하시려면, 잠시 기다려주세요.",
+      "fontName": "font6",
+      "fontSize": 38,
+      "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 1}
+    }
+  },
+  "commonResultUI": {
+    "textAnswerComplete": {
+      "name": "Text_AnswerComplete",
+      "position": {"x": 0, "y": 212},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "답변을 완료 하셨습니다.",
+      "fontName": "font4",
+      "fontSize": 55,
+      "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1}
+    },
+    "textPhotoSaved": {
+      "name": "Text_Saved",
+      "position": {"x": 0, "y": 212},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "사진이 기록되었습니다.",
+      "fontName": "font4",
+      "fontSize": 55,
+      "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1}
+    }
+  },
+  "questionSets": [
+    {
+      "questionSetting": {
+        "textQuestion": {
+          "name": "Text_Q1",
+          "position": {"x": 0, "y": 5},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "Q1. 지금 이곳에서 우리는",
+          "fontName": "font4",
+          "fontSize": 55,
+          "fontColor": {"r": 0, "g": 0, "b": 0, "a": 1}
+        },
+        "textAnswer1": {
+          "name": "Text_A1",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄱ. 즐기고 있어",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer2": {
+          "name": "Text_A2",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄴ. 꽤 진지해",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer3": {
+          "name": "Text_A3",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄷ. 집중하고 있어",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer4": {
+          "name": "Text_A4",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄹ. 서로\n의지하는 중이야",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer5": {
+          "name": "Text_A5",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㅁ. 좀 헤매고 있어",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        }
+      },
+      "textMyScene": {
+        "name": "Text_Take",
+        "position": {"x": 0, "y": 140},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "나의 장면 take3",
+        "fontName": "font4",
+        "fontSize": 38,
+        "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 1}
+      }
+    },
+    {
+      "questionSetting": {
+        "textQuestion": {
+          "name": "Text_Q2",
+          "position": {"x": 0, "y": 5},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "Q2. 너와 함께 있을 때 나는",
+          "fontName": "font4",
+          "fontSize": 55,
+          "fontColor": {"r": 0, "g": 0, "b": 0, "a": 1}
+        },
+        "textAnswer1": {
+          "name": "Text_A1",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄱ. 말이 없어도\n편안해",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer2": {
+          "name": "Text_A2",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄴ. 함께가\n자연스러워",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer3": {
+          "name": "Text_A3",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄷ. 가까워도\n조심스러워",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer4": {
+          "name": "Text_A4",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄹ. 서로를 살피느라\n긴장돼",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer5": {
+          "name": "Text_A5",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㅁ. 가끔은\n혼자 감당해",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        }
+      },
+      "textMyScene": {
+        "name": "Text_Take",
+        "position": {"x": 0, "y": 140},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "나의 장면 take4",
+        "fontName": "font4",
+        "fontSize": 38,
+        "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 1}
+      }
+    },
+    {
+      "questionSetting": {
+        "textQuestion": {
+          "name": "Text_Q3",
+          "position": {"x": 0, "y": 5},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "Q3. 우리 관계 속 나의 역할은",
+          "fontName": "font4",
+          "fontSize": 55,
+          "fontColor": {"r": 0, "g": 0, "b": 0, "a": 1}
+        },
+        "textAnswer1": {
+          "name": "Text_A1",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄱ. 균형을 잡아",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer2": {
+          "name": "Text_A2",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄴ. 분위기를\n이끌어",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer3": {
+          "name": "Text_A3",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄷ. 문제를 해결해",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer4": {
+          "name": "Text_A4",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄹ. 늘\n준비하는 편이야",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer5": {
+          "name": "Text_A5",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㅁ. 내가 더\n맞추는 편이야",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        }
+      },
+      "textMyScene": {
+        "name": "Text_Take",
+        "position": {"x": 0, "y": 140},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "나의 장면 take5",
+        "fontName": "font4",
+        "fontSize": 38,
+        "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 1}
+      }
+    },
+    {
+      "questionSetting": {
+        "textQuestion": {
+          "name": "Text_Q4",
+          "position": {"x": 0, "y": 5},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "Q4. 내가 행복해하면 너는",
+          "fontName": "font4",
+          "fontSize": 55,
+          "fontColor": {"r": 0, "g": 0, "b": 0, "a": 1}
+        },
+        "textAnswer1": {
+          "name": "Text_A1",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄱ. 같이 기뻐해",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer2": {
+          "name": "Text_A2",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄴ. 더 신나 보여",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer3": {
+          "name": "Text_A3",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄷ. 조용히 웃어",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer4": {
+          "name": "Text_A4",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄹ. 살짝 부러워 해",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer5": {
+          "name": "Text_A5",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㅁ. 반응이 늦어",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        }
+      },
+      "textMyScene": {
+        "name": "Text_Take",
+        "position": {"x": 0, "y": 140},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "나의 장면 take6",
+        "fontName": "font4",
+        "fontSize": 38,
+        "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 1}
+      }
+    },
+    {
+      "questionSetting": {
+        "textQuestion": {
+          "name": "Text_Q5",
+          "position": {"x": 0, "y": 5},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "Q5. 내가 힘들 때 너는",
+          "fontName": "font4",
+          "fontSize": 55,
+          "fontColor": {"r": 0, "g": 0, "b": 0, "a": 1}
+        },
+        "textAnswer1": {
+          "name": "Text_A1",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄱ. 항상 곁에 있어",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer2": {
+          "name": "Text_A2",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄴ. 나에게\n맞춰 기다려",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer3": {
+          "name": "Text_A3",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄷ. 늘 내 편이야",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer4": {
+          "name": "Text_A4",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄹ. 뼈 때리게 말해",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer5": {
+          "name": "Text_A5",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㅁ. 버틸 힘을 줘",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        }
+      },
+      "textMyScene": {
+        "name": "Text_Take",
+        "position": {"x": 0, "y": 140},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "나의 장면 take7",
+        "fontName": "font4",
+        "fontSize": 38,
+        "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 1}
+      }
+    },
+    {
+      "questionSetting": {
+        "textQuestion": {
+          "name": "Text_Q6",
+          "position": {"x": 0, "y": 5},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "Q6. 평소 우리 마음의 거리는",
+          "fontName": "font4",
+          "fontSize": 55,
+          "fontColor": {"r": 0, "g": 0, "b": 0, "a": 1}
+        },
+        "textAnswer1": {
+          "name": "Text_A1",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄱ. 딱\n좋은 것 같아",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer2": {
+          "name": "Text_A2",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄴ. 꽤\n가까운 편이야",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer3": {
+          "name": "Text_A3",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄷ. 가끔\n조절이 필요해",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer4": {
+          "name": "Text_A4",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄹ. 조금\n멀게 느껴져",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer5": {
+          "name": "Text_A5",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㅁ. 잘\n모르겠어",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        }
+      },
+      "textMyScene": {
+        "name": "Text_Take",
+        "position": {"x": 0, "y": 140},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "나의 장면 take8",
+        "fontName": "font4",
+        "fontSize": 38,
+        "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 1}
+      }
+    },
+    {
+      "questionSetting": {
+        "textQuestion": {
+          "name": "Text_Q7",
+          "position": {"x": 0, "y": 5},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "Q7. 내 생각에 너는 나와 있을 때",
+          "fontName": "font4",
+          "fontSize": 55,
+          "fontColor": {"r": 0, "g": 0, "b": 0, "a": 1}
+        },
+        "textAnswer1": {
+          "name": "Text_A1",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄱ. 더 밝아져",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer2": {
+          "name": "Text_A2",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄴ. 마음이\n편해 보여",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer3": {
+          "name": "Text_A3",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄷ. 솔직해져",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer4": {
+          "name": "Text_A4",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄹ. 꽤 진지해져",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer5": {
+          "name": "Text_A5",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㅁ. 눈치 안보고\n자유로워",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        }
+      },
+      "textMyScene": {
+        "name": "Text_Take",
+        "position": {"x": 0, "y": 140},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "나의 장면 take9",
+        "fontName": "font4",
+        "fontSize": 38,
+        "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 1}
+      }
+    },
+    {
+      "questionSetting": {
+        "textQuestion": {
+          "name": "Text_Q8",
+          "position": {"x": 0, "y": 5},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "Q8. 나에게 너라는 존재는",
+          "fontName": "font4",
+          "fontSize": 55,
+          "fontColor": {"r": 0, "g": 0, "b": 0, "a": 1}
+        },
+        "textAnswer1": {
+          "name": "Text_A1",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄱ. 나를 밝혀주는\n조명 같아",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer2": {
+          "name": "Text_A2",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄴ. 기댈 수 있는\n든든한 나무 같아",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer3": {
+          "name": "Text_A3",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄷ. 함께 쓰는\n우산 같아",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer4": {
+          "name": "Text_A4",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄹ. 지켜주고픈\n소중한 존재야",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer5": {
+          "name": "Text_A5",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㅁ. 서로 닮은\n소울메이트 같아",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        }
+      },
+      "textMyScene": {
+        "name": "Text_Take",
+        "position": {"x": 0, "y": 140},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "나의 장면 take10",
+        "fontName": "font4",
+        "fontSize": 38,
+        "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 1}
+      }
+    },
+    {
+      "questionSetting": {
+        "textQuestion": {
+          "name": "Text_Q9",
+          "position": {"x": 0, "y": 5},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "Q9. 너에게 좋은 일이 생기면",
+          "fontName": "font4",
+          "fontSize": 55,
+          "fontColor": {"r": 0, "g": 0, "b": 0, "a": 1}
+        },
+        "textAnswer1": {
+          "name": "Text_A1",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄱ. 제일 먼저\n축하해주고 싶어",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer2": {
+          "name": "Text_A2",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄴ. 내가 더\n자랑스러워져",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer3": {
+          "name": "Text_A3",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄷ. 앞으로도 더 잘\n될 거라고 응원해",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer4": {
+          "name": "Text_A4",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄹ. 나도 잘해내고\n싶단 생각이 들어",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer5": {
+          "name": "Text_A5",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㅁ. 어떻게 해주면\n좋을지 알려줄래?",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        }
+      },
+      "textMyScene": {
+        "name": "Text_Take",
+        "position": {"x": 0, "y": 140},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "나의 장면 take11",
+        "fontName": "font4",
+        "fontSize": 38,
+        "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 1}
+      }
+    },
+    {
+      "questionSetting": {
+        "textQuestion": {
+          "name": "Text_Q10",
+          "position": {"x": 0, "y": 5},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "Q10. 네가 속상해할 때면",
+          "fontName": "font4",
+          "fontSize": 55,
+          "fontColor": {"r": 0, "g": 0, "b": 0, "a": 1}
+        },
+        "textAnswer1": {
+          "name": "Text_A1",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄱ. 귀 기울여\n잘 들어줄게",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer2": {
+          "name": "Text_A2",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄴ. 뭘 해주면\n좋을지 생각해",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer3": {
+          "name": "Text_A3",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄷ. 최대한 네게\n맞춰보려고 해",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer4": {
+          "name": "Text_A4",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄹ. 곁에 있으면서\n믿어줄게",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer5": {
+          "name": "Text_A5",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㅁ. 이런 상황에\n서툴러서 미안해",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        }
+      },
+      "textMyScene": {
+        "name": "Text_Take",
+        "position": {"x": 0, "y": 140},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "나의 장면 take12",
+        "fontName": "font4",
+        "fontSize": 38,
+        "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 1}
+      }
+    },
+    {
+      "questionSetting": {
+        "textQuestion": {
+          "name": "Text_Q11",
+          "position": {"x": 0, "y": 5},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "Q11. 우리가 함께 있을 때의 느낌은",
+          "fontName": "font4",
+          "fontSize": 55,
+          "fontColor": {"r": 0, "g": 0, "b": 0, "a": 1}
+        },
+        "textAnswer1": {
+          "name": "Text_A1",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄱ. 너무 익숙해서\n애쓰지 않아도 돼",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer2": {
+          "name": "Text_A2",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄴ. 둘이가\n더 자연스러워",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer3": {
+          "name": "Text_A3",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄷ. 편안하고 안정돼",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer4": {
+          "name": "Text_A4",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄹ. 서로를 닮아가는\n느낌이야",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer5": {
+          "name": "Text_A5",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㅁ. 단단하게\n이어져 있어",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        }
+      },
+      "textMyScene": {
+        "name": "Text_Take",
+        "position": {"x": 0, "y": 140},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "나의 장면 take13",
+        "fontName": "font4",
+        "fontSize": 38,
+        "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 1}
+      }
+    },
+    {
+      "questionSetting": {
+        "textQuestion": {
+          "name": "Text_Q12",
+          "position": {"x": 0, "y": 5},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "Q12. 우리의 대화는 대체적으로",
+          "fontName": "font4",
+          "fontSize": 55,
+          "fontColor": {"r": 0, "g": 0, "b": 0, "a": 1}
+        },
+        "textAnswer1": {
+          "name": "Text_A1",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄱ. 자연스러워",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer2": {
+          "name": "Text_A2",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄴ. 솔직해",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer3": {
+          "name": "Text_A3",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄷ. 조심스러워",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer4": {
+          "name": "Text_A4",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄹ. 티격태격",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer5": {
+          "name": "Text_A5",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㅁ. 종종 엇갈려",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        }
+      },
+      "textMyScene": {
+        "name": "Text_Take",
+        "position": {"x": 0, "y": 140},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "나의 장면 take14",
+        "fontName": "font4",
+        "fontSize": 38,
+        "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 1}
+      }
+    },
+    {
+      "questionSetting": {
+        "textQuestion": {
+          "name": "Text_Q13",
+          "position": {"x": 0, "y": 5},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "Q13. 우리 사이에 갈등이 생긴다면",
+          "fontName": "font4",
+          "fontSize": 55,
+          "fontColor": {"r": 0, "g": 0, "b": 0, "a": 1}
+        },
+        "textAnswer1": {
+          "name": "Text_A1",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄱ. 서로 믿고\n조금 기다리기",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer2": {
+          "name": "Text_A2",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄴ. 불편해도\n솔직하게 말하기",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer3": {
+          "name": "Text_A3",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄷ. 상처 주는\n말은 하지 않기",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer4": {
+          "name": "Text_A4",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄹ. 예전 일은\n다시 꺼내지 않기",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer5": {
+          "name": "Text_A5",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㅁ. 감정 커지기\n전에 멈추기",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        }
+      },
+      "textMyScene": {
+        "name": "Text_Take",
+        "position": {"x": 0, "y": 140},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "나의 장면 take15",
+        "fontName": "font4",
+        "fontSize": 38,
+        "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 1}
+      }
+    },
+    {
+      "questionSetting": {
+        "textQuestion": {
+          "name": "Text_Q14",
+          "position": {"x": 0, "y": 5},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "Q14. 우리가 닮았다고 느끼는 순간",
+          "fontName": "font4",
+          "fontSize": 55,
+          "fontColor": {"r": 0, "g": 0, "b": 0, "a": 1}
+        },
+        "textAnswer1": {
+          "name": "Text_A1",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄱ. 말 없이도\n같은 생각일 때",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer2": {
+          "name": "Text_A2",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄴ. 사진 속에서\n닮은 표정일 때",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer3": {
+          "name": "Text_A3",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄷ. 유머 코드가\n맞을 때",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer4": {
+          "name": "Text_A4",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄹ. 서로의 말투가\n닮아갈 때",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer5": {
+          "name": "Text_A5",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㅁ. 급발진 버튼이\n비슷할 때",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        }
+      },
+      "textMyScene": {
+        "name": "Text_Take",
+        "position": {"x": 0, "y": 140},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "나의 장면 take16",
+        "fontName": "font4",
+        "fontSize": 38,
+        "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 1}
+      }
+    },
+    {
+      "questionSetting": {
+        "textQuestion": {
+          "name": "Text_Q15",
+          "position": {"x": 0, "y": 5},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "Q15. 지금 해주고 싶은 말",
+          "fontName": "font4",
+          "fontSize": 55,
+          "fontColor": {"r": 0, "g": 0, "b": 0, "a": 1}
+        },
+        "textAnswer1": {
+          "name": "Text_A1",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄱ. 고마워,\n항상",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer2": {
+          "name": "Text_A2",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄴ. 사랑해,\n변함없이",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer3": {
+          "name": "Text_A3",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄷ. 행복하자,\n언제나 함께",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer4": {
+          "name": "Text_A4",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㄹ. 걱정 마,\n혼자가 아니야",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        },
+        "textAnswer5": {
+          "name": "Text_A5",
+          "position": {"x": -125, "y": 176},
+          "scale": {"x": 1, "y": 1, "z": 1},
+          "text": "ㅁ. 지금처럼,\n우리답게",
+          "fontName": "font8",
+          "fontSize": 28,
+          "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
+          "alignment": 0
+        }
+      },
+      "textMyScene": {
+        "name": "Text_Take",
+        "position": {"x": 0, "y": 140},
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "text": "나의 장면 take17",
+        "fontName": "font4",
+        "fontSize": 38,
+        "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 1}
+      }
+    }
+  ]
+}

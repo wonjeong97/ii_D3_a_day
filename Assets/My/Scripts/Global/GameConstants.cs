@@ -12,6 +12,7 @@ namespace My.Scripts.Global
             public const string Step2 = "04_Step2";
             public const string Step3 = "05_Step3";
             public const string PlayVideo = "06_PlayVideo";
+            public const string Ending = "07_Ending"; 
         }
 
         public static class Path
@@ -25,6 +26,7 @@ namespace My.Scripts.Global
             public const string Step2 = "JSON/Step2";
             public const string Step3 = "JSON/Step3";
             public const string Ending = "JSON/Ending";
+            public const string ApiSetting = "JSON/Api";
         }
     }
 }

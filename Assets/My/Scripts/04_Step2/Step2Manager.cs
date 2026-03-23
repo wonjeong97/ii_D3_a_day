@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Threading;
 using My.Scripts.Core;
 using My.Scripts.Core.Pages;
-using My.Scripts.Data;
 using My.Scripts.Global;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using Cysharp.Threading.Tasks;
+using My.Scripts.Core.Data;
 using Wonjeong.Data;
 using Wonjeong.Utils;
 
@@ -30,7 +30,7 @@ namespace My.Scripts._04_Step2
 
     /// <summary>
     /// Step2 씬의 페이지 전환 흐름을 제어하는 매니저.
-    /// Why: 질문 번호에 맞춰 SubCanvas 배경을 교체하고, 카메라 페이지 진입/퇴장 시 페이드 연출을 수행함.
+    /// Why: 질문 번호에 맞춰 SubCanvas 배경을 교체하고, 단일 폴더 구조의 JSON 파일을 동적으로 로드함.
     /// </summary>
     public class Step2Manager : BaseFlowManager
     {
@@ -45,7 +45,6 @@ namespace My.Scripts._04_Step2
         private AsyncOperationHandle<Sprite> _bgHandle;
         private CancellationTokenSource _fadeCts;
         
-        // 중복 이미지 로드를 방지하기 위한 캐싱 변수
         private int _currentBgQuestionNum = -1; 
 
         protected override void Start()
@@ -65,32 +64,25 @@ namespace My.Scripts._04_Step2
 
             if (index > 0 && index < pages.Count)
             {
-                // 예시 입력값에 따른 결과값:
-                // index 1(Q1) -> (1-1)/2 + 1 = 1
-                // index 2(C1) -> (2-1)/2 + 1 = 1
                 int questionNum = (index - 1) / 2 + 1; 
                 bool isCameraPage = pages[index] is Page_Camera; 
 
-                // 수정됨: 로드와 페이드 순서를 동기화하기 위해 시퀀스 제어 함수 호출
                 ProcessBackgroundSequenceAsync(questionNum, isCameraPage).Forget();
             }
         }
 
         /// <summary>
         /// 페이드 연출과 배경 교체의 순서를 제어하는 비동기 함수.
-        /// Why: 캔버스 알파가 0일 때 이미지를 교체해야 화면이 튀는 현상을 방지할 수 있음.
         /// </summary>
         private async UniTaskVoid ProcessBackgroundSequenceAsync(int questionNum, bool isCameraPage)
         {
             if (isCameraPage)
             {
-                // 1. 카메라 페이지: 알파 0 상태에서 이미지 교체를 먼저 완료한 후 화면을 켬
                 await UpdateSubCanvasBackgroundAsync(questionNum);
                 await FadeSubCanvasBackgroundAsync(true);
             }
             else
             {
-                // 2. 질문 페이지 등: 화면을 먼저 완전히 끈(페이드 아웃) 뒤, 보이지 않는 상태에서 다음 이미지를 로드함
                 await FadeSubCanvasBackgroundAsync(false);
                 await UpdateSubCanvasBackgroundAsync(questionNum);
             }
@@ -103,7 +95,12 @@ namespace My.Scripts._04_Step2
         {
             if (!subCanvasBgCg) return;
 
-            _fadeCts?.Cancel();
+            if (_fadeCts != null)
+            {
+                _fadeCts.Cancel();
+                _fadeCts.Dispose();
+            }
+            
             _fadeCts = new CancellationTokenSource();
             CancellationToken token = _fadeCts.Token;
 
@@ -130,7 +127,6 @@ namespace My.Scripts._04_Step2
             }
             catch (OperationCanceledException)
             {
-                // 페이드 전환 취소 시 무시
             }
         }
 
@@ -141,7 +137,6 @@ namespace My.Scripts._04_Step2
         {
             if (!subCanvasBgImage) return;
 
-            // 질문 페이지와 카메라 페이지가 연속될 때 같은 이미지를 중복 로드하는 것을 방지함
             if (_currentBgQuestionNum == questionNum) return;
             _currentBgQuestionNum = questionNum;
 
@@ -174,13 +169,34 @@ namespace My.Scripts._04_Step2
             }
         }
 
+        /// <summary>
+        /// 세션에 저장된 타입과 동일한 이름의 단일 JSON 파일을 동적으로 로드함.
+        /// Why: Enum 이름을 그대로 파일명에 매핑하여 하위 폴더 접근이나 문자열 자르기 연산을 제거함.
+        /// </summary>
         protected override void LoadSettings()
         {
-            Step2Setting setting = JsonLoader.Load<Step2Setting>(GameConstants.Path.Step2);
+            if (!SessionManager.Instance)
+            {
+                Debug.LogError("[Step2Manager] SessionManager가 없습니다.");
+                return;
+            }
+
+            string typeStr = SessionManager.Instance.CurrentUserType.ToString();
+            
+            if (typeStr.Length < 2 || typeStr == "None")
+            {
+                Debug.LogError($"[Step2Manager] 유효하지 않은 UserType입니다: {typeStr}");
+                return;
+            }
+
+            // 예시 입력값: typeStr이 A1일 때 -> "JSON/Step2/A1"
+            string dynamicPath = $"JSON/Step2/{typeStr}";
+            
+            Step2Setting setting = JsonLoader.Load<Step2Setting>(dynamicPath);
 
             if (setting == null)
             {
-                Debug.LogWarning("[Step2Manager] JSON/Step2 로드 실패. 데이터를 확인할 수 없습니다.");
+                UnityEngine.Debug.LogWarning($"[Step2Manager] {dynamicPath} 로드 실패. 데이터를 확인할 수 없습니다.");
                 return;
             }
 
@@ -274,7 +290,7 @@ namespace My.Scripts._04_Step2
 
             if (GameManager.Instance)
             {
-                GameManager.Instance.ChangeScene(GameConstants.Scene.Step3);
+                GameManager.Instance.ChangeScene(GameConstants.Scene.Step3, true);
             }
         }
 
@@ -285,8 +301,11 @@ namespace My.Scripts._04_Step2
                 Addressables.Release(_bgHandle);
             }
             
-            _fadeCts?.Cancel();
-            _fadeCts?.Dispose();
+            if (_fadeCts != null)
+            {
+                _fadeCts.Cancel();
+                _fadeCts.Dispose();
+            }
         }
     }
 }

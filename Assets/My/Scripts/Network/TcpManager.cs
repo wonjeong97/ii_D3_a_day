@@ -30,12 +30,17 @@ namespace My.Scripts.Network
     /// <summary>
     /// TCP 통신을 관리하는 싱글톤 매니저.
     /// 3초 주기의 하트비트로 연결을 체크하며, 단절 시 백그라운드 재접속을 시도하고 10회 실패 시 타이틀로 복귀함.
+    /// PlaySolo 모드를 통해 에디터에서 단독 테스트가 가능함.
     /// </summary>
     public class TcpManager : MonoBehaviour
     {
         public static TcpManager Instance { get; private set; }
 
         public Action<TcpMessage> onMessageReceived;
+
+        [Header("Debug Options")]
+        [Tooltip("체크 시 실제 통신 없이 에코(Echo) 방식으로 단독 테스트를 진행합니다.")]
+        public bool playSolo = false;
 
         private TcpSetting _tcpSetting;
 
@@ -49,17 +54,18 @@ namespace My.Scripts.Network
 
         private ConcurrentQueue<TcpMessage> _messageQueue = new ConcurrentQueue<TcpMessage>();
         
-        private volatile bool _isRunning = false;
-        private volatile bool _isConnectionActive = false;
+        private volatile bool _isRunning;
+        private volatile bool _isConnectionActive;
         
-        private bool _needsToReturnToTitle = false;
-        private int _failedConnectionCount = 0;
+        private bool _needsToReturnToTitle;
+        private int _failedConnectionCount;
         private Coroutine _heartbeatCoroutine;
         
         public bool IsServer 
         {
             get 
             {
+                if (playSolo) return true; 
                 return _tcpSetting != null && _tcpSetting.isServer;
             }
         }
@@ -80,6 +86,14 @@ namespace My.Scripts.Network
 
         private void InitializeNetwork()
         {
+            if (playSolo)
+            {
+                Debug.Log("[TcpManager] PlaySolo 모드 활성화. 실제 네트워크 초기화 및 하트비트를 생략합니다.");
+                _isRunning = true;
+                _isConnectionActive = true; 
+                return;
+            }
+
             TcpSetting loadedSetting = JsonLoader.Load<TcpSetting>(GameConstants.Path.TcpSetting);
 
             if (loadedSetting != null)
@@ -100,12 +114,10 @@ namespace My.Scripts.Network
 
         private void Update()
         {
-            // 1. 10회 연속 연결 실패 시 타이틀 씬 복귀 처리
-            if (_needsToReturnToTitle)
+            if (_needsToReturnToTitle && !playSolo)
             {
                 _needsToReturnToTitle = false;
                 
-                // 현재 씬이 이미 타이틀 씬인지 확인하여 무한 재로드 방지
                 if (SceneManager.GetActiveScene().name != GameConstants.Scene.Title)
                 {
                     Debug.LogError("[TcpManager] 10회 연속 연결 실패. 타이틀로 강제 복귀합니다.");
@@ -125,12 +137,10 @@ namespace My.Scripts.Network
                 }
             }
 
-            // 2. 수신된 메시지 이벤트 방출
             while (_messageQueue.TryDequeue(out TcpMessage message))
             {
                 if (message != null)
                 {
-                    // 하트비트는 내부 연결 확인용이므로 외부 로직으로 넘기지 않음
                     if (message.command == "HEARTBEAT") continue;
 
                     if (onMessageReceived != null)
@@ -152,19 +162,17 @@ namespace My.Scripts.Network
                 
                 if (_isConnectionActive)
                 {
-                    // 정상 연결 상태이므로 하트비트를 전송하고 실패 카운트를 초기화함
                     _failedConnectionCount = 0;
                     SendMessageToTarget("HEARTBEAT", "");
                 }
                 else
                 {
-                    // 연결이 끊어진 상태면 즉시 튕기지 않고 실패 카운트를 누적시키며 대기함
                     _failedConnectionCount++;
                     Debug.LogWarning($"[TcpManager] 연결 대기 중... ({_failedConnectionCount}/10)");
 
                     if (_failedConnectionCount >= 10)
                     {
-                        _failedConnectionCount = 0; // 다시 카운트하기 위해 초기화
+                        _failedConnectionCount = 0; 
                         _needsToReturnToTitle = true;
                     }
                 }
@@ -185,12 +193,11 @@ namespace My.Scripts.Network
                 _serverListener = new TcpListener(IPAddress.Any, _tcpSetting.port);
                 _serverListener.Start();
 
-                // 스레드를 종료하지 않고 무한 루프를 돌며, 연결이 끊어지면 스스로 다시 접속을 대기함
                 while (_isRunning)
                 {
                     if (!_isConnectionActive)
                     {
-                        TcpClient incomingClient = _serverListener.AcceptTcpClient(); // 클라이언트 올 때까지 블로킹됨
+                        TcpClient incomingClient = _serverListener.AcceptTcpClient(); 
                         
                         if (incomingClient != null)
                         {
@@ -198,7 +205,7 @@ namespace My.Scripts.Network
                             _connectedClient = incomingClient;
                             _networkStream = _connectedClient.GetStream();
                             
-                            _failedConnectionCount = 0; // 연결 성공 시 즉각 리셋
+                            _failedConnectionCount = 0; 
                             _isConnectionActive = true;
 
                             _receiveThread = new Thread(ReceiveDataRoutine);
@@ -208,13 +215,12 @@ namespace My.Scripts.Network
                     }
                     else
                     {
-                        Thread.Sleep(1000); // 이미 연결된 상태면 리소스 낭비 방지를 위해 1초씩 휴식
+                        Thread.Sleep(1000); 
                     }
                 }
             }
             catch (SocketException)
             {
-                // 프로그램 종료 시 _serverListener.Stop() 에 의해 발생하는 정상적인 예외
             }
             catch (Exception e)
             {
@@ -251,13 +257,12 @@ namespace My.Scripts.Network
                     }
                     catch (Exception)
                     {
-                        // 접속 실패 시 유니티 멈춤을 방지하기 위해 백그라운드에서 3초 슬립 후 재시도
                         Thread.Sleep(3000);
                     }
                 }
                 else
                 {
-                    Thread.Sleep(1000); // 연결된 상태면 휴식
+                    Thread.Sleep(1000); 
                 }
             }
         }
@@ -284,7 +289,6 @@ namespace My.Scripts.Network
                     }
                     else
                     {
-                        // 읽은 바이트가 0이면 상대방이 연결을 끊었음을 의미함
                         HandleDisconnect();
                         break;
                     }
@@ -299,6 +303,15 @@ namespace My.Scripts.Network
 
         public void SendMessageToTarget(string command, string payload = "")
         {
+            if (playSolo)
+            {
+                Debug.Log($"[TcpManager-Solo] 가상 송신 및 에코: {command} / {payload}");
+                
+                // Why: 혼자 테스트할 때 상대방이 보낸 것처럼 즉시 에코(Echo) 처리하여 씬의 동기화 대기 상태를 해제함.
+                _messageQueue.Enqueue(new TcpMessage { command = command, payload = payload });
+                return;
+            }
+
             if (_isConnectionActive && _networkStream != null)
             {
                 TcpMessage msg = new TcpMessage 
@@ -327,12 +340,11 @@ namespace My.Scripts.Network
         /// </summary>
         private void HandleDisconnect()
         {
-            if (!_isConnectionActive) return; // 중복 실행 방지
+            if (!_isConnectionActive) return; 
             
             _isConnectionActive = false;
             Debug.LogWarning("[TcpManager] 통신 단절 감지. 백그라운드 재연결을 시도합니다.");
 
-            // 물리적 소켓을 정리해야 Listen/Connect 루틴에서 예외 없이 새 연결을 시도할 수 있음
             if (_networkStream != null) 
             {
                 _networkStream.Close();

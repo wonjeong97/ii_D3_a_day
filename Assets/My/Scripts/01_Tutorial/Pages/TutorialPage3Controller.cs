@@ -5,24 +5,22 @@ using UnityEngine;
 using UnityEngine.UI;
 using Wonjeong.Data;
 using My.Scripts.Network;
-using Wonjeong.Utils; // TCP 매니저에 접근하기 위한 네임스페이스 추가
+using Wonjeong.Utils; 
+using My.Scripts.Global;
 
 namespace My.Scripts._01_Tutorial.Pages
 {   
-    /// <summary>
-    /// JSON에서 로드되는 튜토리얼 3페이지 데이터 구조체.
-    /// </summary>
     [Serializable]
     public class TutorialPage3Data
     {
-        public TextSetting descriptionText; // 양쪽 공통 설명
-        public TextSetting playerNameA;     // 서버(P1)용 이름
-        public TextSetting playerNameB;     // 클라이언트(P2)용 이름
+        public TextSetting descriptionText; 
+        public TextSetting playerNameA;     
+        public TextSetting playerNameB;     
     }
     
     /// <summary>
     /// 세 번째 튜토리얼 페이지 컨트롤러.
-    /// 현재 PC의 네트워크 통신 역할(Server/Client)에 따라 이름을 자동으로 분기하여 출력함.
+    /// 네트워크 통신 역할(Server/Client)에 따라 세션에 저장된 이름과 색상 스프라이트를 동적으로 치환하여 출력함.
     /// </summary>
     public class TutorialPage3Controller : GamePage
     {
@@ -30,7 +28,9 @@ namespace My.Scripts._01_Tutorial.Pages
         [SerializeField] private Text descriptionUI;
         [SerializeField] private Text nameUI;
 
-        // Why: TCP 네트워크 상태에 따라 동적으로 이름을 할당하므로 기존 isPlayer1 인스펙터 변수를 삭제함
+        [Header("Player Color")]
+        [Tooltip("유저의 색상 스프라이트(컬러 볼)를 표시할 이미지 컴포넌트")]
+        [SerializeField] private Image playerColorIcon;
 
         private readonly float _autoTransitionDelay = 10.0f;
         private TutorialPage3Data _cachedData;
@@ -68,34 +68,66 @@ namespace My.Scripts._01_Tutorial.Pages
                     : "설명 데이터가 없습니다.";
             }
 
+            bool isServer = false;
+            
+            if (TcpManager.Instance)
+            {
+                isServer = TcpManager.Instance.IsServer;
+            }
+
             if (nameUI)
             {
-                string targetName = "이름 정보 없음";
+                string rawText = "이름 정보 없음";
 
-                // Why: 유니티 객체(싱글톤)의 존재 여부를 암시적으로 확인한 뒤 서버 역할을 판별함
-                bool isServer = false;
-                // if (TcpManager.Instance)
-                // {
-                //     isServer = TcpManager.Instance.IsServer;
-                // }
-
-                // Why: 서버면 A의 이름을, 클라이언트면 B의 이름을 할당함 (일반 C# 객체이므로 명시적 Null 검사 수행)
                 if (isServer)
                 {
                     if (_cachedData.playerNameA != null)
                     {
-                        targetName = _cachedData.playerNameA.text;
+                        rawText = _cachedData.playerNameA.text;
                     }
                 }
                 else
                 {
                     if (_cachedData.playerNameB != null)
                     {
-                        targetName = _cachedData.playerNameB.text;
+                        rawText = _cachedData.playerNameB.text;
                     }
                 }
 
-                nameUI.text = targetName;
+                string processedName = rawText;
+                
+                if (SessionManager.Instance)
+                {
+                    string nameA = !string.IsNullOrEmpty(SessionManager.Instance.PlayerAFirstName) 
+                        ? SessionManager.Instance.PlayerAFirstName 
+                        : "사용자A";
+                        
+                    string nameB = !string.IsNullOrEmpty(SessionManager.Instance.PlayerBFirstName) 
+                        ? SessionManager.Instance.PlayerBFirstName 
+                        : "사용자B";
+
+                    processedName = rawText.Replace("{nameA}", nameA).Replace("{nameB}", nameB);
+                }
+                
+                nameUI.text = processedName;
+            }
+
+            // Why: SessionManager에 등록된 현재 플레이어의 색상값을 읽어와 GameManager의 스프라이트 배열과 매칭하여 이미지를 교체함.
+            if (playerColorIcon && SessionManager.Instance && GameManager.Instance)
+            {
+                ColorData myColor = isServer ? SessionManager.Instance.PlayerAColor : SessionManager.Instance.PlayerBColor;
+                Sprite colorSprite = GameManager.Instance.GetColorSprite(myColor);
+
+                if (colorSprite)
+                {
+                    playerColorIcon.sprite = colorSprite;
+                    playerColorIcon.gameObject.SetActive(true);
+                }
+                else
+                {
+                    // 설정된 색상이 없거나 배열 매칭 실패 시 이미지를 숨김 처리
+                    playerColorIcon.gameObject.SetActive(false);
+                }
             }
 
             if (_autoTransitionCoroutine != null)
