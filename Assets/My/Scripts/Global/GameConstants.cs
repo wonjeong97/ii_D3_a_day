@@ -1,6 +1,5 @@
 namespace My.Scripts.Global
 {
-    /// <summary> 게임 전역 상수 관리 클래스 </summary>
     public static class GameConstants
     {
         public static class Scene
@@ -26,7 +25,7 @@ namespace My.Scripts.Global
             public const string Step2 = "JSON/Step2";
             public const string Step3 = "JSON/Step3";
             public const string Ending = "JSON/Ending";
-            public const string ApiSetting = "JSON/Api";
+            public const string ApiSetting = "JSON/API";
         }
     }
 }

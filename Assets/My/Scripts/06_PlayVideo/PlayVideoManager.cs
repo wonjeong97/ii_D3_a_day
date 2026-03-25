@@ -3,57 +3,68 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using My.Scripts.Network;
+using My.Scripts.Global;
 using UnityEngine;
 using UnityEngine.UI;
 using Cysharp.Threading.Tasks; 
 
 namespace My.Scripts._06_PlayVideo
 {
-    /// <summary>
-    /// 좌우로 분리된 메인 뷰와 스틸컷 배열을 최적화된 그룹 방식으로 슬라이드 재생하는 매니저.
-    /// Why: 오른쪽 영역에 배치된 모든 이미지를 일괄 반전시키고, 메인 뷰(인덱스 0 시작)와 모자이크(그룹화 갱신)의 렌더링을 제어함.
-    /// </summary>
     public class PlayVideoManager : MonoBehaviour
-    {
+    {   
+        public static PlayVideoManager Instance;
+        
         [Header("Main View Components")]
         [SerializeField] private Image leftMainImage;
         [SerializeField] private Image rightMainImage;
 
-        [Header("Overlay UI")]
-        [SerializeField] private CanvasGroup middleLineCg;
-
         [Header("Animation Settings")]
-        [SerializeField] private float waitDuration = 3.0f;
-        [SerializeField] private float fadeDuration = 1.0f;
+        [SerializeField] private float appearanceInterval = 0.05f;
+        [SerializeField] private float photoChangeInterval = 0.5f;
 
         [Header("Mosaic Images (Still Cuts)")]
         [SerializeField] private Image[] leftTargetImages;
         [SerializeField] private Image[] rightTargetImages;
-        [SerializeField] private float appearanceInterval = 0.05f;
-        [SerializeField] private float photoChangeInterval = 0.5f;
         [SerializeField] private int totalPhotos = 15;
 
-        private List<Sprite> _loadedSprites = new List<Sprite>();
+        [Header("UI Animator")]
+        [SerializeField] private Animator uiAnimator;
 
-        /// <summary>
-        /// 씬 진입 시 초기화를 수행하고 비동기 로드 및 슬라이드 시퀀스를 시작함.
-        /// </summary>
-        private void Start()
+        private readonly List<Sprite> _myLoadedSprites = new List<Sprite>();
+        private readonly List<Sprite> _otherLoadedSprites = new List<Sprite>();
+        private readonly static int FilmTrigger = Animator.StringToHash("Film");
+        private bool _isAnimationStarted;
+        
+        // 동기화를 위한 변수 추가
+        private bool _isLocalVideoFinished = false;
+        private bool _isRemoteVideoFinished = false;
+
+        private void Awake()
         {
-            SetupImagesUI();
-            SetupMiddleLineUI();
-            InitializeAndPlayAsync().Forget();
+            if (!Instance) Instance = this;
+            else if (Instance != this) Destroy(gameObject);
         }
 
-        /// <summary>
-        /// 오른쪽 메인 이미지 및 모자이크 배열의 좌우 반전을 설정함.
-        /// Why: 오른쪽 화면용 이미지들은 X축 스케일을 -1로 설정하여 렌더링 시점에 뒤집혀 보이도록 함.
-        /// </summary>
+        private void Start()
+        {
+            if (uiAnimator) uiAnimator.enabled = false;
+
+            if (TcpManager.Instance)
+            {
+                TcpManager.Instance.onMessageReceived += OnNetworkMessageReceived;
+            }
+
+            SetupImagesUI();
+            LoadAndPrepareAsync().Forget();
+        }
+
         private void SetupImagesUI()
         {
             if (rightMainImage)
             {
-                rightMainImage.rectTransform.localScale = new Vector3(-1f, 1f, 1f);
+                Vector3 scale = rightMainImage.rectTransform.localScale;
+                scale.x = -Mathf.Abs(scale.x);
+                rightMainImage.rectTransform.localScale = scale;
             }
 
             if (rightTargetImages != null)
@@ -61,131 +72,224 @@ namespace My.Scripts._06_PlayVideo
                 for (int i = 0; i < rightTargetImages.Length; i++)
                 {
                     Image img = rightTargetImages[i];
-                    if (img) img.rectTransform.localScale = new Vector3(-1f, 1f, 1f);
+                    if (img)
+                    {
+                        Vector3 scale = img.rectTransform.localScale;
+                        scale.x = -Mathf.Abs(scale.x);
+                        img.rectTransform.localScale = scale;
+                    }
                 }
             }
         }
 
-        /// <summary>
-        /// 동기화가 필요한 로드 작업을 먼저 수행한 뒤 메인 이미지와 모자이크 연출을 병렬로 시작함.
-        /// </summary>
-        private async UniTaskVoid InitializeAndPlayAsync()
+        private async UniTaskVoid LoadAndPrepareAsync()
         {
             await LoadPhotosAsSpritesAsync();
-            
-            CancellationToken token = this.GetCancellationTokenOnDestroy();
+            AssignInitialSprites();
 
-            UpdateMainImagesAsync(token).Forget(); 
-            PlayMosaicSequence(token); 
-            FadeOutMiddleLineSequenceAsync().Forget();
+            if (uiAnimator)
+            {
+                uiAnimator.enabled = true;
+                uiAnimator.SetTrigger(FilmTrigger);
+            }
         }
 
-        /// <summary>
-        /// 로컬에 저장된 사진을 읽어 메모리에 캐싱함.
-        /// </summary>
         private async UniTask LoadPhotosAsSpritesAsync()
         {
-            string role = (TcpManager.Instance && TcpManager.Instance.IsServer) ? "Server" : "Client";
-            string dateFolder = DateTime.Now.ToString("yy-MM-dd");
-            string rootPath = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
-            string sourceFolderPath = Path.Combine(rootPath, dateFolder, role);
+            bool isServer = false;
+            if (TcpManager.Instance) isServer = TcpManager.Instance.IsServer;
 
+            string myRole = isServer ? "Server" : "Client";
+            string otherRole = isServer ? "Client" : "Server";
+            
+            string userIdx = SessionManager.Instance ? SessionManager.Instance.CurrentUserId.ToString() : "0";
+            
+            // FileTransferManager 전용 상대 경로 생성
+            string myRelativePath = $"{userIdx}/{myRole}";
+            string otherRelativePath = $"{userIdx}/{otherRole}";
+
+            await LoadRolePhotosAsync(myRole, myRelativePath, _myLoadedSprites);
+            await LoadRolePhotosAsync(otherRole, otherRelativePath, _otherLoadedSprites);
+        }
+
+        private async UniTask LoadRolePhotosAsync(string role, string relativeFolder, List<Sprite> targetList)
+        {
             for (int i = 1; i <= totalPhotos; i++)
             {
                 string fileName = $"0_{role}_Q{i}.png"; 
-                string fullPath = Path.Combine(sourceFolderPath, fileName);
+                string fileRelativePath = $"{relativeFolder}/{fileName}";
 
-                if (File.Exists(fullPath))
+                if (FileTransferManager.Instance)
                 {
-                    byte[] fileData = await File.ReadAllBytesAsync(fullPath);
-                    Texture2D tex = new Texture2D(2, 2);
-                    if (tex.LoadImage(fileData))
+                    // 로컬이든 외부든 매니저가 알아서 판단하여 이미지를 가져옴
+                    byte[] fileData = await FileTransferManager.Instance.DownloadPhotoAsync(fileRelativePath);
+                    
+                    if (fileData != null)
                     {
-                        Sprite sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
-                        _loadedSprites.Add(sprite);
+                        Texture2D tex = new Texture2D(2, 2);
+                        if (tex.LoadImage(fileData))
+                        {
+                            Sprite sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
+                            targetList.Add(sprite);
+                        }
                     }
                 }
                 else
                 {
-                    Debug.LogWarning($"[PlayVideoManager] 파일을 찾을 수 없음: {fullPath}");
+                    UnityEngine.Debug.LogWarning("[PlayVideoManager] FileTransferManager가 없습니다.");
                 }
             }
         }
 
+        private void AssignInitialSprites()
+        {
+            if (_myLoadedSprites.Count > 0)
+            {
+                if (leftMainImage) leftMainImage.sprite = _myLoadedSprites[0];
+                AssignSpritesToTargets(leftTargetImages, _myLoadedSprites);
+            }
+
+            if (_otherLoadedSprites.Count > 0)
+            {
+                if (rightMainImage) rightMainImage.sprite = _otherLoadedSprites[0];
+                AssignSpritesToTargets(rightTargetImages, _otherLoadedSprites);
+            }
+        }
+
+        private void AssignSpritesToTargets(Image[] targetImages, List<Sprite> sprites)
+        {
+            if (targetImages == null || sprites.Count == 0) return;
+
+            int spriteCount = sprites.Count;
+            int[] currentIndices = new int[3];
+            currentIndices[0] = 2 % spriteCount;
+            currentIndices[1] = 7 % spriteCount;
+            currentIndices[2] = 12 % spriteCount;
+
+            int globalIndex = 0;
+
+            for (int i = 0; i < targetImages.Length; i++)
+            {
+                Image img = targetImages[i];
+                if (img) img.sprite = sprites[currentIndices[globalIndex % 3]];
+                globalIndex++;
+            }
+        }
+
+        public void StartVideoAnimation()
+        {
+            if (_isAnimationStarted) return;
+            if (_myLoadedSprites.Count == 0 && _otherLoadedSprites.Count == 0) return;
+
+            _isAnimationStarted = true;
+            CancellationToken token = this.GetCancellationTokenOnDestroy();
+
+            UpdateMainImagesAsync(token).Forget(); 
+            PlayMosaicSequence(token); 
+        }
+
         /// <summary>
-        /// 0번째 인덱스부터 시작하여 좌, 우 메인 이미지의 Sprite를 동일하게 주기적으로 갱신함.
-        /// Why: 동일한 인덱스를 사용하여 양쪽 메인 뷰가 완벽하게 동기화된 상태로 사진을 순환하도록 함.
+        /// 애니메이션 타임라인 종료 시 호출되며, 양쪽 PC의 종료를 동기화함.
         /// </summary>
+        public void MoveToEndingScene()
+        {
+            _isLocalVideoFinished = true;
+            
+            if (TcpManager.Instance)
+            {
+                TcpManager.Instance.SendMessageToTarget("PLAYVIDEO_COMPLETE", "");
+            }
+            
+            CheckSyncAndChangeScene();
+        }
+
+        private void OnNetworkMessageReceived(TcpMessage msg)
+        {
+            if (msg != null && msg.command == "PLAYVIDEO_COMPLETE")
+            {
+                _isRemoteVideoFinished = true;
+                CheckSyncAndChangeScene();
+            }
+        }
+
+        private void CheckSyncAndChangeScene()
+        {
+            if (_isLocalVideoFinished && _isRemoteVideoFinished)
+            {
+                if (TcpManager.Instance)
+                {
+                    TcpManager.Instance.onMessageReceived -= OnNetworkMessageReceived;
+                }
+
+                if (GameManager.Instance)
+                {
+                    GameManager.Instance.ChangeScene(GameConstants.Scene.Ending, true);
+                }
+            }
+        }
+
         private async UniTaskVoid UpdateMainImagesAsync(CancellationToken token)
         {
-            if ((!leftMainImage && !rightMainImage) || _loadedSprites.Count == 0) return;
+            if (!leftMainImage && !rightMainImage) return;
 
-            int currentIndex = 0;
+            int myCurrentIndex = 0;
+            int otherCurrentIndex = 0;
 
             while (!token.IsCancellationRequested)
             {
-                Sprite currentSprite = _loadedSprites[currentIndex];
+                if (_myLoadedSprites.Count > 0 && leftMainImage)
+                {
+                    leftMainImage.sprite = _myLoadedSprites[myCurrentIndex];
+                    myCurrentIndex = (myCurrentIndex + 1) % _myLoadedSprites.Count;
+                }
 
-                if (leftMainImage) leftMainImage.sprite = currentSprite;
-                if (rightMainImage) rightMainImage.sprite = currentSprite;
+                if (_otherLoadedSprites.Count > 0 && rightMainImage)
+                {
+                    rightMainImage.sprite = _otherLoadedSprites[otherCurrentIndex];
+                    otherCurrentIndex = (otherCurrentIndex + 1) % _otherLoadedSprites.Count;
+                }
                 
-                currentIndex = (currentIndex + 1) % _loadedSprites.Count;
-
                 bool isCanceled = await UniTask.Delay(TimeSpan.FromSeconds(photoChangeInterval), cancellationToken: token).SuppressCancellationThrow();
                 if (isCanceled) break;
             }
         }
 
-        /// <summary>
-        /// 좌우 스틸컷 이미지를 3그룹으로 묶어 단일 루프에서 일괄 갱신할 수 있도록 준비함.
-        /// </summary>
         private void PlayMosaicSequence(CancellationToken token)
         {
-            if (_loadedSprites.Count == 0) return;
+            List<Image>[] leftImageGroups = new List<Image>[3];
+            List<Image>[] rightImageGroups = new List<Image>[3];
 
-            List<Image>[] imageGroups = new List<Image>[3];
             for (int i = 0; i < 3; i++)
             {
-                imageGroups[i] = new List<Image>();
+                leftImageGroups[i] = new List<Image>();
+                rightImageGroups[i] = new List<Image>();
             }
 
-            int globalIndex = 0;
-
-            if (leftTargetImages != null)
-            {
-                for (int i = 0; i < leftTargetImages.Length; i++)
-                {
-                    Image img = leftTargetImages[i];
-                    if (!img) continue;
-
-                    img.color = new Color(img.color.r, img.color.g, img.color.b, 0f);
-                    
-                    // 예시 입력값: globalIndex=4 -> 4 % 3 = 그룹 1에 할당
-                    imageGroups[globalIndex % 3].Add(img);
-                    globalIndex++;
-                }
-            }
-
-            if (rightTargetImages != null)
-            {
-                for (int i = 0; i < rightTargetImages.Length; i++)
-                {
-                    Image img = rightTargetImages[i];
-                    if (!img) continue;
-
-                    img.color = new Color(img.color.r, img.color.g, img.color.b, 0f);
-                    imageGroups[globalIndex % 3].Add(img);
-                    globalIndex++;
-                }
-            }
+            PrepareMosaicGroups(leftTargetImages, leftImageGroups);
+            PrepareMosaicGroups(rightTargetImages, rightImageGroups);
 
             TurnOnImagesSequentiallyAsync(token).Forget();
-            UpdateMosaicSpritesAsync(imageGroups, token).Forget();
+
+            if (_myLoadedSprites.Count > 0) UpdateMosaicSpritesAsync(leftImageGroups, _myLoadedSprites, token).Forget();
+            if (_otherLoadedSprites.Count > 0) UpdateMosaicSpritesAsync(rightImageGroups, _otherLoadedSprites, token).Forget();
         }
 
-        /// <summary>
-        /// 좌, 우 배열의 모든 이미지를 하나로 합쳐 지정된 간격으로 순차적으로 화면에 표시함.
-        /// </summary>
+        private void PrepareMosaicGroups(Image[] targetImages, List<Image>[] groups)
+        {
+            if (targetImages == null) return;
+
+            int globalIndex = 0;
+            for (int i = 0; i < targetImages.Length; i++)
+            {
+                Image img = targetImages[i];
+                if (!img) continue;
+
+                img.color = new Color(img.color.r, img.color.g, img.color.b, 0f);
+                groups[globalIndex % 3].Add(img);
+                globalIndex++;
+            }
+        }
+
         private async UniTaskVoid TurnOnImagesSequentiallyAsync(CancellationToken token)
         {
             List<Image> allTargets = new List<Image>();
@@ -207,13 +311,11 @@ namespace My.Scripts._06_PlayVideo
             }
         }
 
-        /// <summary>
-        /// 시작 인덱스가 2, 7, 12로 고정된 3개의 그룹을 주기적으로 갱신함.
-        /// </summary>
-        private async UniTaskVoid UpdateMosaicSpritesAsync(List<Image>[] imageGroups, CancellationToken token)
+        private async UniTaskVoid UpdateMosaicSpritesAsync(List<Image>[] imageGroups, List<Sprite> sprites, CancellationToken token)
         {
-            int spriteCount = _loadedSprites.Count;
-            
+            if (sprites.Count == 0) return;
+
+            int spriteCount = sprites.Count;
             int[] currentIndices = new int[3];
             currentIndices[0] = 2 % spriteCount;
             currentIndices[1] = 7 % spriteCount;
@@ -223,64 +325,32 @@ namespace My.Scripts._06_PlayVideo
             {
                 for (int g = 0; g < 3; g++)
                 {
-                    Sprite targetSprite = _loadedSprites[currentIndices[g]];
+                    Sprite targetSprite = sprites[currentIndices[g]];
                     List<Image> group = imageGroups[g];
 
                     for (int i = 0; i < group.Count; i++)
                     {
                         Image img = group[i];
-                        if (img && img.color.a > 0f)
-                        {
-                            img.sprite = targetSprite;
-                        }
+                        if (img) img.sprite = targetSprite;
                     }
-
                     currentIndices[g] = (currentIndices[g] + 1) % spriteCount;
                 }
-
-                // # TODO: 만약 이미지 개수가 더 많아져 프레임 드랍이 발생하면, Graphic.CrossFadeAlpha 최적화 혹은 배칭 구조 검토
                 bool isCanceled = await UniTask.Delay(TimeSpan.FromSeconds(photoChangeInterval), cancellationToken: token).SuppressCancellationThrow();
                 if (isCanceled) break;
             }
         }
 
-        /// <summary>
-        /// 중간 라인 UI의 초기 상태를 설정함.
-        /// </summary>
-        private void SetupMiddleLineUI()
-        {
-            if (!middleLineCg) return;
-
-            middleLineCg.alpha = 1f;
-            middleLineCg.gameObject.SetActive(true);
-        }
-
-        /// <summary>
-        /// 설정된 대기시간이 지나면 중간 라인 캔버스 그룹을 투명하게 만듦.
-        /// </summary>
-        private async UniTaskVoid FadeOutMiddleLineSequenceAsync()
-        {
-            if (!middleLineCg) return;
-
-            await UniTask.Delay(TimeSpan.FromSeconds(waitDuration), delayTiming: PlayerLoopTiming.Update);
-
-            float elapsed = 0f;
-            while (elapsed < fadeDuration)
-            {
-                elapsed += Time.deltaTime;
-                float t = elapsed / fadeDuration;
-
-                middleLineCg.alpha = Mathf.Lerp(1f, 0f, t);
-                await UniTask.Yield(PlayerLoopTiming.Update); 
-            }
-
-            middleLineCg.alpha = 0f;
-            middleLineCg.gameObject.SetActive(false);
-        }
-
         private void OnDestroy()
         {
-            foreach (Sprite sprite in _loadedSprites)
+            if (TcpManager.Instance) TcpManager.Instance.onMessageReceived -= OnNetworkMessageReceived;
+
+            ClearSprites(_myLoadedSprites);
+            ClearSprites(_otherLoadedSprites);
+        }
+
+        private void ClearSprites(List<Sprite> sprites)
+        {
+            foreach (Sprite sprite in sprites)
             {
                 if (sprite && sprite.texture)
                 {
@@ -288,7 +358,7 @@ namespace My.Scripts._06_PlayVideo
                     Destroy(sprite);
                 }
             }
-            _loadedSprites.Clear();
+            sprites.Clear();
         }
     }
 }

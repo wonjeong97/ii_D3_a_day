@@ -1,5 +1,5 @@
 {
   "isServer": true,
-  "serverIP": "127.0.0.1",
+  "serverIP": "192.168.0.168",
   "port": 7777
 }

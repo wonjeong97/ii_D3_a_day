@@ -11,11 +11,7 @@ using Wonjeong.Utils;
 
 namespace My.Scripts.Core
 {
-    public enum ColorData
-    {   
-        NotSet = -1,
-        Cyan = 0, Pink = 1, Orange = 2, Green = 3, Red = 4, Yellow = 5
-    }
+    public enum ColorData { NotSet = -1, Cyan = 0, Pink = 1, Orange = 2, Green = 3, Red = 4, Yellow = 5 }
     
     public struct UserData
     {
@@ -50,28 +46,38 @@ namespace My.Scripts.Core
     {
         private string userUid;
 
-        [Header("API Retry Settings")]
-        [SerializeField] private int maxRetries = 10;
-        [SerializeField] private float retryDelay = 1.0f;
-
-        public void FetchData(string uid)
-        {
-            FetchDataAsync(uid).Forget();
-        }
+        public void FetchData(string uid) { FetchDataAsync(uid).Forget(); }
         
         [ContextMenu("Fetch API Data")]
         public async UniTask<bool> FetchDataAsync(string uid)
         {
+#if UNITY_EDITOR
+            if (SessionManager.Instance)
+            {
+                // SessionManager의 에디터 테스트 데이터 사용이 꺼져있을 경우에만 기본값을 강제 세팅함
+                if (!SessionManager.Instance.useEditorTestData)
+                {
+                    SessionManager.Instance.CurrentUserId = -1;
+                    SessionManager.Instance.PlayerAUid = "TEST_A";
+                    SessionManager.Instance.PlayerBUid = "TEST_B";
+                    SessionManager.Instance.PlayerAFirstName = "에디터";
+                    SessionManager.Instance.PlayerBFirstName = "테스터";
+                    SessionManager.Instance.Cartridge = "A";
+                    SessionManager.Instance.CurrentUserType = UserType.A1;
+                }
+                SessionManager.Instance.IsOtherCartridgeContentsCleared = true; 
+            }
+            Debug.Log("[APIManager] 에디터 모드: 유저 데이터 통신을 생략하고 가상 세션을 생성/유지했습니다.");
+            return true;
+#endif
+
             userUid = uid;
             ApiSettings config = GameManager.Instance ? GameManager.Instance.ApiConfig : null;
 
             if (config == null)
             {
                 config = JsonLoader.Load<ApiSettings>(GameConstants.Path.ApiSetting);
-                if (GameManager.Instance && config != null) 
-                {
-                    GameManager.Instance.ApiConfig = config;
-                }
+                if (GameManager.Instance && config != null) GameManager.Instance.ApiConfig = config;
             }
 
             if (config == null)
@@ -81,30 +87,30 @@ namespace My.Scripts.Core
             }
 
             string requestUrl = $"{config.GetUserUrl}?uid={userUid}";
-
-            for (int attempt = 0; attempt < maxRetries; attempt++)
+            int maxRetries = 10;
+            
+            for (int i = 0; i < maxRetries; i++)
             {
                 using (UnityWebRequest webRequest = UnityWebRequest.Get(requestUrl))
                 {
                     webRequest.timeout = 10; 
-                    await webRequest.SendWebRequest().ToUniTask();
+                    
+                    try
+                    {
+                        await webRequest.SendWebRequest().ToUniTask();
 
-                    if (webRequest.result == UnityWebRequest.Result.Success)
-                    {
-                        return await ParseAndProcessDataAsync(webRequest.downloadHandler.text);
+                        if (webRequest.result == UnityWebRequest.Result.Success)
+                            return await ParseAndProcessDataAsync(webRequest.downloadHandler.text);
                     }
-
-                    if (attempt < maxRetries - 1)
+                    catch (Exception e)
                     {
-                        Debug.LogWarning($"[APIManager] 유저 데이터 조회 실패 ({attempt + 1}/{maxRetries}): {webRequest.error}. {retryDelay}초 후 재시도");
-                        await UniTask.Delay(TimeSpan.FromSeconds(retryDelay));
+                        Debug.LogWarning($"[APIManager] FetchDataAsync 통신 예외 발생 ({i + 1}/{maxRetries}): {e.Message}");
                     }
-                    else
-                    {
-                        Debug.LogError($"[APIManager] 유저 데이터 조회 최종 실패: {webRequest.error}");
-                    }
+                    
+                    if (i < maxRetries - 1) await UniTask.Delay(TimeSpan.FromSeconds(1f));
                 }
             }
+            
             return false;
         }
 
@@ -136,14 +142,6 @@ namespace My.Scripts.Core
                     userData.COLOR_LEFT = ParseColorSafe(colMap, firstRow, "COLOR_LEFT");
                     userData.COLOR_RIGHT = ParseColorSafe(colMap, firstRow, "COLOR_RIGHT");
 
-                    Debug.Log($"[APIManager] 유저 데이터 로드 완료\n" +
-                              $"- 유저 인덱스(IDX_USER): {userData.IDX_USER}\n" +
-                              $"- 이름 (L/R): {userData.RESERVATION_FIRST_NAME_LEFT} / {userData.RESERVATION_FIRST_NAME_RIGHT}\n" +
-                              $"- UID (L/R): {userData.UID_LEFT} / {userData.UID_RIGHT}\n" +
-                              $"- 컬러 (L/R): {userData.COLOR_LEFT} / {userData.COLOR_RIGHT}\n" +
-                              $"- 언어/관계: {userData.LANG} / {userData.RELATION}\n" +
-                              $"- 카트리지: {userData.CARTRIDGE}");
-
                     if (SessionManager.Instance)
                     {   
                         SessionManager.Instance.CurrentUserId = userData.IDX_USER;
@@ -162,60 +160,67 @@ namespace My.Scripts.Core
                         SessionManager.Instance.PlayerAColor = userData.COLOR_LEFT;
                         SessionManager.Instance.PlayerBColor = userData.COLOR_RIGHT;
 
-                        // =========================================================================
-                        // 카트리지(A~D)와 관계(1~6) 조합 로직
-                        // =========================================================================
-                        string cartridgeStr = string.IsNullOrWhiteSpace(userData.CARTRIDGE) ? "A" : userData.CARTRIDGE.Trim().ToUpper();
-                        int relationNum = userData.RELATION;
-                        if (relationNum < 1 || relationNum > 6) relationNum = 1; // 안전 장치
+                        string cartridgeStr = string.IsNullOrEmpty(userData.CARTRIDGE) ? "A" : userData.CARTRIDGE.Trim().ToUpper();
+                        int relationInt = userData.RELATION;
+                        string typeStr = $"{cartridgeStr}{relationInt}";
 
-                        string combinedTypeStr = $"{cartridgeStr}{relationNum}"; // 예: "A1", "C4"
-                        
-                        if (Enum.TryParse(combinedTypeStr, out UserType parsedType))
+                        if (Enum.TryParse(typeStr, out UserType parsedType))
                         {
                             SessionManager.Instance.CurrentUserType = parsedType;
                         }
                         else
                         {
-                            Debug.LogWarning($"[APIManager] 알 수 없는 타입 조합({combinedTypeStr})입니다. 기본값(A1)으로 설정합니다.");
                             SessionManager.Instance.CurrentUserType = UserType.A1;
                         }
-                        // =========================================================================
 
-                        int endCount = 0;
-                        string currentModuleEnd = $"END_D3"; 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                        Debug.Log($"[APIManager] 유저 데이터 로드 완료!\n" +
+                                  $"- 유저 인덱스(IDX_USER): {userData.IDX_USER}\n" +
+                                  $"- 이름 (L/R): {userData.RESERVATION_FIRST_NAME_LEFT} / {userData.RESERVATION_FIRST_NAME_RIGHT}\n" +
+                                  $"- 유저 타입 (카트리지+관계): {typeStr}\n" +
+                                  $"- 컬러 (L/R): {userData.COLOR_LEFT} / {userData.COLOR_RIGHT}");
+#else
+                        Debug.Log($"[APIManager] 유저 데이터 로드 완료! (Masked)\n" +
+                                  $"- 컬러 (L/R): {userData.COLOR_LEFT} / {userData.COLOR_RIGHT}\n" +
+                                  $"- 언어/관계: {userData.LANG} / {userData.RELATION}\n" +
+                                  $"- 카트리지: {userData.CARTRIDGE}");
+#endif
+                        
+                        userData.PIECE_A1 = ParseIntSafe(colMap, firstRow, "PIECE_A1");
+                        userData.PIECE_A2 = ParseIntSafe(colMap, firstRow, "PIECE_A2");
+                        userData.PIECE_A3 = ParseIntSafe(colMap, firstRow, "PIECE_A3");
+                        userData.PIECE_B1 = ParseIntSafe(colMap, firstRow, "PIECE_B1");
+                        userData.PIECE_B2 = ParseIntSafe(colMap, firstRow, "PIECE_B2");
+                        userData.PIECE_B3 = ParseIntSafe(colMap, firstRow, "PIECE_B3");
+                        userData.PIECE_C1 = ParseIntSafe(colMap, firstRow, "PIECE_C1");
+                        userData.PIECE_C2 = ParseIntSafe(colMap, firstRow, "PIECE_C2");
+                        userData.PIECE_C3 = ParseIntSafe(colMap, firstRow, "PIECE_C3");
+                        userData.PIECE_D1 = ParseIntSafe(colMap, firstRow, "PIECE_D1");
+                        userData.PIECE_D2 = ParseIntSafe(colMap, firstRow, "PIECE_D2");
+                        userData.PIECE_D3 = ParseIntSafe(colMap, firstRow, "PIECE_D3");
+                        
+                        SessionManager.Instance.PieceA1 = Mathf.Max(0, userData.PIECE_A1);
+                        SessionManager.Instance.PieceA2 = Mathf.Max(0, userData.PIECE_A2);
+                        SessionManager.Instance.PieceA3 = Mathf.Max(0, userData.PIECE_A3);
+                        SessionManager.Instance.PieceB1 = Mathf.Max(0, userData.PIECE_B1);
+                        SessionManager.Instance.PieceB2 = Mathf.Max(0, userData.PIECE_B2);
+                        SessionManager.Instance.PieceB3 = Mathf.Max(0, userData.PIECE_B3);
+                        SessionManager.Instance.PieceC1 = Mathf.Max(0, userData.PIECE_C1);
+                        SessionManager.Instance.PieceC2 = Mathf.Max(0, userData.PIECE_C2);
+                        SessionManager.Instance.PieceC3 = Mathf.Max(0, userData.PIECE_C3);
+                        SessionManager.Instance.PieceD1 = Mathf.Max(0, userData.PIECE_D1);
+                        SessionManager.Instance.PieceD2 = Mathf.Max(0, userData.PIECE_D2);
+                        SessionManager.Instance.PieceD3 = Mathf.Max(0, userData.PIECE_D3);
 
-                        foreach (string colName in response.COLUMNS)
-                        {
-                            if (colName.StartsWith("END_"))
-                            {
-                                if (colName.Equals(currentModuleEnd, StringComparison.OrdinalIgnoreCase) ||
-                                    colName.StartsWith("END_Z", StringComparison.OrdinalIgnoreCase))
-                                {
-                                    continue;
-                                }
-
-                                string endValue = ParseStringSafe(colMap, firstRow, colName);
-                                
-                                if (!string.IsNullOrWhiteSpace(endValue) && !endValue.Equals("null", StringComparison.OrdinalIgnoreCase))
-                                {
-                                    endCount++;
-                                }
-                            }
-                        }
-
-                        SessionManager.Instance.ClearedEndCount = endCount;
-                        SessionManager.Instance.IsOtherCartridgeContentsCleared = (endCount >= 3);
-                        Debug.Log($"[APIManager] 타 콘텐츠 완료 개수: {endCount}개 (Z계열 제외, 3개 이상 완료 판정: {SessionManager.Instance.IsOtherCartridgeContentsCleared})");
+                        SessionManager.Instance.IsOtherCartridgeContentsCleared = ParseOtherCartridgeClearState(response, firstRow);
 
                         return true; 
                     }
                 }
                 return false;
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                Debug.LogError($"[APIManager] JSON 파싱 중 에러 발생: {e.Message}");
                 return false;
             }
         }
@@ -248,6 +253,34 @@ namespace My.Scripts.Core
                 }
             }
             return ColorData.NotSet; 
+        }
+
+        private bool ParseOtherCartridgeClearState(ApiTableResponse resp, List<object> row)
+        {   
+            Dictionary<string, int> map = new Dictionary<string, int>();
+            for (int i = 0; i < resp.COLUMNS.Count; i++) map[resp.COLUMNS[i]] = i;
+            
+            int clearCount = 0;
+            string currentCode = SessionManager.Instance ? SessionManager.Instance.CurrentModuleCode.ToUpper() : "D3";
+
+            foreach (string colName in resp.COLUMNS)
+            {
+                if (colName.StartsWith("END_", StringComparison.OrdinalIgnoreCase))
+                {
+                    string code = colName.Substring(4).ToUpper(); 
+                    
+                    if (code == currentCode || code.StartsWith("Z")) 
+                        continue;
+                    
+                    string val = ParseStringSafe(map, row, colName);
+                    if (!string.IsNullOrWhiteSpace(val) && !val.Equals("null", StringComparison.OrdinalIgnoreCase)) 
+                    {
+                        clearCount++;
+                    }
+                }
+            }
+            
+            return clearCount >= 3;
         }
     }
 }

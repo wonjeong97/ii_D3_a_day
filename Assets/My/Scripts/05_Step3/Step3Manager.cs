@@ -4,7 +4,7 @@ using My.Scripts.Core;
 using My.Scripts.Core.Pages;
 using My.Scripts.Global;
 using My.Scripts._06_PlayVideo;
-using My.Scripts.Core.Data; // 추가됨: StillcutManager 접근용
+using My.Scripts.Core.Data; 
 using UnityEngine;
 using Wonjeong.Data;
 using Wonjeong.Utils;
@@ -17,7 +17,6 @@ namespace My.Scripts._05_Step3
         public CommonBackgroundData background;
         public CommonIntroData introPage;
         
-        // 추가됨: 아웃트로 전에 나올 로딩 화면 데이터
         public CommonLoadingData loadingPage; 
         
         public CommonOutroData outroPage;
@@ -52,7 +51,7 @@ namespace My.Scripts._05_Step3
 
             if (setting == null)
             {
-                Debug.LogWarning("[Step3Manager] JSON/Step3 로드 실패. 데이터를 확인할 수 없습니다.");
+                UnityEngine.Debug.LogWarning("[Step3Manager] JSON/Step3 로드 실패. 데이터를 확인할 수 없습니다.");
                 return;
             }
 
@@ -137,7 +136,8 @@ namespace My.Scripts._05_Step3
                 Page_Loading loading = pages[pageIndex] as Page_Loading;
                 if (loading)
                 {
-                    // 로딩 페이지는 스스로 5초 뒤에 다음으로 넘어가므로 별도의 동기화 커맨드가 필요 없습니다.
+                    // Why: 로딩 페이지에서 양쪽 PC가 모인 뒤 3초 후 다음 페이지로 넘어가도록 동기화 설정함
+                    loading.SetSyncCommands("STEP3_LOADING_READY", "STEP3_LOADING_COMPLETE");
                 }
                 pages[pageIndex].SetupData(setting.loadingPage);
                 pageIndex++;
@@ -157,7 +157,7 @@ namespace My.Scripts._05_Step3
 
         protected override void OnAllFinished()
         {
-            Debug.Log("[Step3Manager] 내 PC Step3 완료. Video 씬으로 즉시 이동합니다.");
+            UnityEngine.Debug.Log("[Step3Manager] 내 PC Step3 완료. Video 씬으로 즉시 이동합니다.");
 
             if (GameManager.Instance)
             {

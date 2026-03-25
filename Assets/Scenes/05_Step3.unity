@@ -649,11 +649,23 @@ PrefabInstance:
       propertyPath: m_Text
       value: EXP
       objectReference: {fileID: 0}
+    - target: {fileID: 1098854637874073024, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
+        type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 21300000, guid: 3471723264587934d910fe7e0c83deba,
+        type: 3}
     - target: {fileID: 1717264603220094605, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
         type: 3}
       propertyPath: m_Text
       value: "\u3134. \uD654\uB0A8"
       objectReference: {fileID: 0}
+    - target: {fileID: 1921818383618921948, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
+        type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 21300000, guid: 1d2a8f218ac86124b8bcb3b4d6e57ff1,
+        type: 3}
     - target: {fileID: 2499834759690138754, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
         type: 3}
       propertyPath: m_IsActive
@@ -664,6 +676,12 @@ PrefabInstance:
       propertyPath: m_Text
       value: EXP
       objectReference: {fileID: 0}
+    - target: {fileID: 3196383231178860580, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
+        type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 21300000, guid: 5b4daa06f8683744d9554b14ba07296d,
+        type: 3}
     - target: {fileID: 4523638256239534635, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
         type: 3}
       propertyPath: m_Text
@@ -674,16 +692,28 @@ PrefabInstance:
       propertyPath: m_Text
       value: EXP
       objectReference: {fileID: 0}
+    - target: {fileID: 4665809109021626941, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
+        type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 21300000, guid: 1a3eba50bc625da4f8337d082b383431,
+        type: 3}
     - target: {fileID: 4778347472037620327, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
         type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5602214087466871148, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
         type: 3}
       propertyPath: m_Text
       value: "\u3139. \uBB34\uD45C\uC815"
       objectReference: {fileID: 0}
+    - target: {fileID: 5799778662287445657, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
+        type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 21300000, guid: 036997d652f5d0446963dd0d0582af09,
+        type: 3}
     - target: {fileID: 6353261706802327920, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
         type: 3}
       propertyPath: m_Text
@@ -1353,7 +1383,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1036292019
 RectTransform:
   m_ObjectHideFlags: 0

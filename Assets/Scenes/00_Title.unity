@@ -563,8 +563,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c7e12ab71370e6d45bcda57b772eb3bd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxRetries: 10
-  retryDelay: 1
 --- !u!4 &782751129
 Transform:
   m_ObjectHideFlags: 0
@@ -796,6 +794,53 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1058050804}
   m_CullTransparentMesh: 1
+--- !u!1 &1100383465
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1100383467}
+  - component: {fileID: 1100383466}
+  m_Layer: 0
+  m_Name: FileTransfer
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1100383466
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1100383465}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b9d2b25142d560c45be19fc5e7bbd242, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  serverIp: 127.0.0.1
+  port: 8080
+  localSaveRoot: C:\UnitySharedPicture
+--- !u!4 &1100383467
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1100383465}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1551080505
 GameObject:
   m_ObjectHideFlags: 0
@@ -994,7 +1039,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a5ec9dfc1f159984baa7e3426eac560d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  playSolo: 1
 --- !u!4 &1608457130
 Transform:
   m_ObjectHideFlags: 0
@@ -1170,13 +1214,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1173d1d4dac74964589f16c781715017, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  networkSharedRootPath: \\192.168.0.44\SharedPicture
   useEditorTestData: 1
   testNameA: AAA
   testNameB: BBB
   testColorA: 2
   testColorB: 1
-  testCartridge: B
-  testRelation: 1
+  testCartridge: A
+  testRelation: 3
 --- !u!4 &1868562763
 Transform:
   m_ObjectHideFlags: 0
@@ -1327,3 +1372,4 @@ SceneRoots:
   - {fileID: 894297359}
   - {fileID: 1868562763}
   - {fileID: 782751129}
+  - {fileID: 1100383467}

@@ -1,7 +1,7 @@
 using System;
 using System.Collections;
 using My.Scripts.Core;
-using My.Scripts.Network; // TCP 매니저 접근
+using My.Scripts.Network;
 using UnityEngine;
 using UnityEngine.UI;
 using Wonjeong.Data;
@@ -9,6 +9,9 @@ using Wonjeong.UI;
 
 namespace My.Scripts._01_Tutorial.Pages
 {   
+    /// <summary>
+    /// JSON에서 로드되는 튜토리얼 1페이지 데이터 구조체.
+    /// </summary>
     [Serializable]
     public class TutorialPage1Data
     {
@@ -17,7 +20,7 @@ namespace My.Scripts._01_Tutorial.Pages
     
     /// <summary>
     /// 첫 번째 튜토리얼 페이지 컨트롤러.
-    /// 서버(P1)에서 확인 입력을 받으면 클라이언트(P2)에 TCP 신호를 보내 동시에 다음 페이지로 넘어감.
+    /// 서버에서 확인 입력을 받으면 클라이언트에 TCP 신호를 보내 동시에 다음 페이지로 넘어갑니다.
     /// </summary>
     public class TutorialPage1Controller : GamePage
     {
@@ -36,12 +39,15 @@ namespace My.Scripts._01_Tutorial.Pages
         {   
             if (!_isPageActive) return;
             
-            // Why: 씬 동기화와 동일하게 외부 API 신호를 전담하는 서버에서만 넘김 입력을 처리함
-            if (TcpManager.Instance && TcpManager.Instance.IsServer)
+            // Why: 씬 동기화와 동일하게 권한을 서버가 전담하여 넘김 입력을 처리함
+            if (TcpManager.Instance)
             {
-                if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+                if (TcpManager.Instance.IsServer)
                 {
-                    OnConfirmInput();
+                    if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+                    {
+                        OnConfirmInput();
+                    }
                 }
             }
         }
@@ -75,9 +81,14 @@ namespace My.Scripts._01_Tutorial.Pages
             
             if (descriptionText)
             {
-                descriptionText.text = !string.IsNullOrEmpty(_cachedMessage) 
-                    ? _cachedMessage 
-                    : "엔터 키를 눌러 진행하세요.";
+                if (!string.IsNullOrEmpty(_cachedMessage))
+                {
+                    descriptionText.text = _cachedMessage;
+                }
+                else
+                {
+                    Debug.LogWarning("[TutorialPage1Controller] _cachedMessage가 비어있습니다. 텍스트를 갱신하지 않습니다.");
+                }
             }
 
             if (textCanvasGroup)
@@ -95,10 +106,13 @@ namespace My.Scripts._01_Tutorial.Pages
 
         private void OnConfirmInput()
         {
-            // Why: 서버가 먼저 완료 신호를 보내 클라이언트도 함께 페이지를 넘기도록 유도함
-            if (TcpManager.Instance && TcpManager.Instance.IsServer)
+            // Why: 서버가 완료 신호를 보내 클라이언트도 함께 페이지를 넘기도록 유도함
+            if (TcpManager.Instance)
             {
-                TcpManager.Instance.SendMessageToTarget("PAGE1_COMPLETE", "");
+                if (TcpManager.Instance.IsServer)
+                {
+                    TcpManager.Instance.SendMessageToTarget("PAGE1_COMPLETE", "");
+                }
             }
 
             CompletePage();
@@ -112,7 +126,9 @@ namespace My.Scripts._01_Tutorial.Pages
             }
         }
 
-        /// <summary> 완료 신호를 발생시켜 매니저의 TransitionToNext()를 트리거함. </summary>
+        /// <summary>
+        /// 완료 신호를 발생시켜 매니저의 TransitionToNext를 트리거합니다.
+        /// </summary>
         private void CompletePage()
         {
             if (!_isPageActive) return; 
@@ -128,10 +144,10 @@ namespace My.Scripts._01_Tutorial.Pages
         {
             base.OnExit();
             
-            if (SoundManager.Instance) // BGM 재시작
+            if (SoundManager.Instance)
             {
                 SoundManager.Instance.StopBGM();
-                SoundManager.Instance?.PlayBGM("MainBGM");                
+                SoundManager.Instance.PlayBGM("MainBGM");                
             }
             
             _isPageActive = false;
@@ -142,7 +158,6 @@ namespace My.Scripts._01_Tutorial.Pages
                 _fadeCoroutine = null;
             }
 
-            // Why: 이벤트 중복 구독을 막기 위해 페이지 종료 시 안전하게 해제함
             if (TcpManager.Instance)
             {
                 TcpManager.Instance.onMessageReceived -= OnNetworkMessageReceived;

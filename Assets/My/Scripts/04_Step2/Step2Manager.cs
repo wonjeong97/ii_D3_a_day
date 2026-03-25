@@ -28,10 +28,6 @@ namespace My.Scripts._04_Step2
         public List<QuestionSetItem> questionSets;
     }
 
-    /// <summary>
-    /// Step2 씬의 페이지 전환 흐름을 제어하는 매니저.
-    /// Why: 질문 번호에 맞춰 SubCanvas 배경을 교체하고, 단일 폴더 구조의 JSON 파일을 동적으로 로드함.
-    /// </summary>
     public class Step2Manager : BaseFlowManager
     {
         [Header("Background Setup")]
@@ -71,9 +67,6 @@ namespace My.Scripts._04_Step2
             }
         }
 
-        /// <summary>
-        /// 페이드 연출과 배경 교체의 순서를 제어하는 비동기 함수.
-        /// </summary>
         private async UniTaskVoid ProcessBackgroundSequenceAsync(int questionNum, bool isCameraPage)
         {
             if (isCameraPage)
@@ -88,9 +81,6 @@ namespace My.Scripts._04_Step2
             }
         }
 
-        /// <summary>
-        /// SubCanvas 배경 이미지를 서서히 나타나거나 사라지게 함.
-        /// </summary>
         private async UniTask FadeSubCanvasBackgroundAsync(bool fadeIn)
         {
             if (!subCanvasBgCg) return;
@@ -130,23 +120,26 @@ namespace My.Scripts._04_Step2
             }
         }
 
-        /// <summary>
-        /// 테마와 질문 번호에 맞는 배경 이미지를 Addressables로 로드함.
-        /// </summary>
         private async UniTask UpdateSubCanvasBackgroundAsync(int questionNum)
         {
             if (!subCanvasBgImage) return;
 
+            // Why: 질문 개수(15개)를 초과하는 인덱스(예: Outro 진입 시 계산되는 16)에 대한 배경 로드 시도를 차단하여 에러를 방지함.
+            if (questionNum > 15) return;
+
             if (_currentBgQuestionNum == questionNum) return;
             _currentBgQuestionNum = questionNum;
 
-            string theme = "Sea_1";
-            if (GameManager.Instance)
+            string mainTheme = "Sea";
+            int subTheme = 1;
+
+            if (SessionManager.Instance)
             {
-                theme = GameManager.Instance.Step2ThemeKey;
+                mainTheme = SessionManager.Instance.Step2MainTheme;
+                subTheme = SessionManager.Instance.Step2SubTheme;
             }
 
-            string bgKey = $"BG_Step2_{theme}_{questionNum}";
+            string bgKey = $"BG_Step2_{mainTheme}_{subTheme}_{questionNum}";
 
             if (_bgHandle.IsValid())
             {
@@ -169,10 +162,6 @@ namespace My.Scripts._04_Step2
             }
         }
 
-        /// <summary>
-        /// 세션에 저장된 타입과 동일한 이름의 단일 JSON 파일을 동적으로 로드함.
-        /// Why: Enum 이름을 그대로 파일명에 매핑하여 하위 폴더 접근이나 문자열 자르기 연산을 제거함.
-        /// </summary>
         protected override void LoadSettings()
         {
             if (!SessionManager.Instance)
@@ -189,14 +178,13 @@ namespace My.Scripts._04_Step2
                 return;
             }
 
-            // 예시 입력값: typeStr이 A1일 때 -> "JSON/Step2/A1"
             string dynamicPath = $"JSON/Step2/{typeStr}";
             
             Step2Setting setting = JsonLoader.Load<Step2Setting>(dynamicPath);
 
             if (setting == null)
             {
-                UnityEngine.Debug.LogWarning($"[Step2Manager] {dynamicPath} 로드 실패. 데이터를 확인할 수 없습니다.");
+                Debug.LogWarning($"[Step2Manager] {dynamicPath} 로드 실패. 데이터를 확인할 수 없습니다.");
                 return;
             }
 
@@ -286,8 +274,6 @@ namespace My.Scripts._04_Step2
 
         protected override void OnAllFinished()
         {
-            Debug.Log("[Step2Manager] 내 PC Step2 완료. Step3로 즉시 이동합니다.");
-
             if (GameManager.Instance)
             {
                 GameManager.Instance.ChangeScene(GameConstants.Scene.Step3, true);

@@ -6,8 +6,8 @@ using UnityEngine.UI;
 using Wonjeong.Data;
 using Wonjeong.Utils;
 using My.Scripts.Network;
-using Wonjeong.UI; 
 using My.Scripts.Global;
+using Wonjeong.UI;
 
 namespace My.Scripts._01_Tutorial.Pages
 {
@@ -22,8 +22,7 @@ namespace My.Scripts._01_Tutorial.Pages
     }
 
     /// <summary>
-    /// 여섯 번째 튜토리얼 페이지 컨트롤러.
-    /// 세션에 저장된 카트리지 데이터를 기반으로 애니메이션을 재생하고 다음 단계로 넘어감.
+    /// 카트리지 선택 연출이 진행되는 튜토리얼 6페이지 컨트롤러.
     /// </summary>
     public class TutorialPage6Controller : GamePage
     {
@@ -65,14 +64,7 @@ namespace My.Scripts._01_Tutorial.Pages
         public override void SetupData(object data)
         {
             TutorialPage6Data pageData = data as TutorialPage6Data;
-            if (pageData != null)
-            {
-                _cachedData = pageData;
-            }
-            else
-            {
-                Debug.LogWarning("[TutorialPage6Controller] SetupData: 전달된 데이터가 null입니다.");
-            }
+            if (pageData != null) _cachedData = pageData;
         }
 
         public override void OnEnter()
@@ -90,31 +82,20 @@ namespace My.Scripts._01_Tutorial.Pages
                 if (descriptionUI)
                 {
                     string rawText = string.Empty;
-                    bool isServer = true;
+                    bool isServer = false;
+                    
+                    // Why: 로컬 네트워크 상태를 확인하여 클라이언트일 경우 B 텍스트를 불러오도록 수정함
+                    if (TcpManager.Instance) isServer = TcpManager.Instance.IsServer;
                     
                     if (isServer && _cachedData.descriptionTextA != null)
-                    {
                         rawText = _cachedData.descriptionTextA.text;
-                    }
                     else if (!isServer && _cachedData.descriptionTextB != null)
-                    {
                         rawText = _cachedData.descriptionTextB.text;
-                    }
-                    else
-                    {
-                        Debug.LogWarning("[TutorialPage6Controller] descriptionText 데이터가 null입니다.");
-                    }
 
                     if (!string.IsNullOrEmpty(rawText))
                     {
-                        string nameA = SessionManager.Instance && !string.IsNullOrEmpty(SessionManager.Instance.PlayerAFirstName) ? SessionManager.Instance.PlayerAFirstName : "사용자A";
-                        string nameB = SessionManager.Instance && !string.IsNullOrEmpty(SessionManager.Instance.PlayerBFirstName) ? SessionManager.Instance.PlayerBFirstName : "사용자B";
                         string cart = SessionManager.Instance && !string.IsNullOrEmpty(SessionManager.Instance.Cartridge) ? SessionManager.Instance.Cartridge : "A";
-
-                        // Why: 세션 데이터를 읽어와 하드코딩되었던 텍스트 치환을 동적으로 처리함
-                        string processedText = rawText
-                            .Replace("{nameA}", nameA)
-                            .Replace("{nameB}", nameB)
+                        string processedText = My.Scripts.UI.UIUtils.ReplacePlayerNamePlaceholders(rawText)
                             .Replace("{cartridge}", $"{cart} 카트리지"); 
 
                         descriptionUI.text = processedText;
@@ -147,15 +128,22 @@ namespace My.Scripts._01_Tutorial.Pages
             
             if (!_isCompleted)
             {
-                int targetCartIndex = 1; // 기본값 A
+                int targetCartIndex = 1; 
 
-                // Why: SessionManager에 등록된 유저의 카트리지 데이터에 따라 연출 인덱스를 분기함
                 if (SessionManager.Instance)
                 {
                     string cart = SessionManager.Instance.Cartridge;
-                    if (cart == "B") targetCartIndex = 2;
-                    else if (cart == "C") targetCartIndex = 3;
-                    // # TODO: D 카트리지 UI가 튜토리얼에 추가될 경우 targetCartIndex = 4 로직 대응 필요
+                    if (!string.IsNullOrEmpty(cart))
+                    {
+                        switch (cart.ToUpper())
+                        {
+                            case "A": targetCartIndex = 1; break;
+                            case "B": targetCartIndex = 2; break;
+                            case "C": targetCartIndex = 3; break;
+                            case "D": targetCartIndex = 4; break;
+                            default: targetCartIndex = 1; break;
+                        }
+                    }
                 }
 
                 SelectLegoCart(targetCartIndex);
@@ -185,28 +173,14 @@ namespace My.Scripts._01_Tutorial.Pages
                 elapsed += Time.deltaTime;
                 float t = elapsed / fadeDuration;
 
-                if (cg1CanvasGroup) 
-                {
-                    cg1CanvasGroup.alpha = Mathf.Lerp(startAlpha, 0f, t);
-                }
-
+                if (cg1CanvasGroup) cg1CanvasGroup.alpha = Mathf.Lerp(startAlpha, 0f, t);
                 yield return null;
             }
 
-            if (cg1CanvasGroup) 
-            {
-                cg1CanvasGroup.alpha = 0f;
-            }
+            if (cg1CanvasGroup) cg1CanvasGroup.alpha = 0f;
+            if (pageCanvasGroup) pageCanvasGroup.alpha = 1f;
 
-            if (pageCanvasGroup)
-            {
-                pageCanvasGroup.alpha = 1f;
-            }
-
-            if (onStepComplete != null)
-            {
-                onStepComplete.Invoke(0);
-            }
+            if (onStepComplete != null) onStepComplete.Invoke(0);
         }
 
         private void ManageCartAnimation(ref Coroutine currentRoutine, CanvasGroup cg, RectTransform rectTransform, bool isSelected)
@@ -247,7 +221,8 @@ namespace My.Scripts._01_Tutorial.Pages
 
             if (cg) cg.alpha = targetAlpha;
             if (isSelected && rectTransform) rectTransform.anchoredPosition = _selectedTargetPos;
-            SoundManager.Instance?.PlaySFX("레고_2");
+            
+            if (SoundManager.Instance) SoundManager.Instance.PlaySFX("레고_2");
         }
 
         private void StopAllAnimationCoroutines()
@@ -255,10 +230,6 @@ namespace My.Scripts._01_Tutorial.Pages
             if (_animationCoroutineA != null) StopCoroutine(_animationCoroutineA);
             if (_animationCoroutineB != null) StopCoroutine(_animationCoroutineB);
             if (_animationCoroutineC != null) StopCoroutine(_animationCoroutineC);
-
-            _animationCoroutineA = null;
-            _animationCoroutineB = null;
-            _animationCoroutineC = null;
         }
     }
 }

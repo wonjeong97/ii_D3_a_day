@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 using Cysharp.Threading.Tasks;
 using My.Scripts.Core.Data;
 using My.Scripts.Global;
@@ -55,7 +56,6 @@ namespace My.Scripts.Core.Pages
         [SerializeField] private Font countdownFont;
         
         private CommonQuestionPageData _cachedData; 
-        private string _syncCommand = "DEFAULT_QUESTION_COMPLETE";
         private Phase _currentPhase = Phase.None;
         private int _selectedIndex = -1;
         private bool _isFirstSelectionDone;
@@ -66,26 +66,21 @@ namespace My.Scripts.Core.Pages
         
         private bool _isAnimating;
         private bool _canAcceptInput;
+        private bool _hasCompleted;
 
-        // 비동기 로드 핸들들을 관리하는 리스트. 페이지를 나갈 때 메모리를 해제하기 위함.
         private readonly List<AsyncOperationHandle<Sprite>> _loadedImageHandles = new List<AsyncOperationHandle<Sprite>>();
-        
-        // Step1Manager 등 외부에서 특정 이미지를 로드하라고 요청했을 때 기본 카트리지 로드를 건너뛰기 위한 플래그.
         private bool _skipDefaultCartridgeLoad;
+        private CancellationTokenSource _cts;
 
         public int SelectedIndex => _selectedIndex;
 
-        public void SetSyncCommand(string command)
-        {
-            _syncCommand = command;
-        }
+        // 매니저 호환용 더미 메서드 (더 이상 동기화하지 않음)
+        public void SetSyncCommand(string command) { }
 
         public override void SetupData(object data)
         {
             CommonQuestionPageData pageData = data as CommonQuestionPageData;
-            
             if (pageData != null) _cachedData = pageData;
-            else Debug.LogWarning("[Page_Question] SetupData: 전달된 데이터가 null이거나 형식이 잘못되었습니다.");
         }
 
         public void SetProgressInfo(Page_Background bg, string progress)
@@ -105,15 +100,22 @@ namespace My.Scripts.Core.Pages
             _selectedIndex = -1;
             _isAnimating = false; 
             _canAcceptInput = false; 
+            _hasCompleted = false;
 
             if (legoArrowCg) legoArrowCg.alpha = 0f;
 
             ApplyDataToUI();
 
-            // Why: 외부 매니저(Step1 등)에서 특정 이미지를 미리 로드하라고 지시하지 않은 경우에만 현재 카트리지 기반 기본 이미지를 로드함.
+            if (_cts != null)
+            {
+                _cts.Cancel();
+                _cts.Dispose();
+            }
+            _cts = new CancellationTokenSource();
+
             if (!_skipDefaultCartridgeLoad)
             {
-                LoadAndSetCartridgeImagesAsync().Forget();
+                LoadAndSetCartridgeImagesAsync(_cts.Token).Forget();
             }
 
             StartCoroutine(InputDelayRoutine());
@@ -123,10 +125,14 @@ namespace My.Scripts.Core.Pages
         {
             base.OnExit();
 
-            // 페이지를 나갈 때 비동기 로드 중인 연산을 취소하고 메모리를 해제함.
+            if (_cts != null)
+            {
+                _cts.Cancel();
+                _cts.Dispose();
+                _cts = null;
+            }
+
             ReleaseLoadedImages();
-            
-            // 플래그 초기화
             _skipDefaultCartridgeLoad = false;
 
             if (_sequenceCoroutine != null)
@@ -136,62 +142,51 @@ namespace My.Scripts.Core.Pages
             }
         }
 
-        /// <summary>
-        /// 현재 세션에 저장된 카트리지 정보를 기반으로 어드레서블에서 5개의 기본 보기를 비동기로 로드하여 세팅함.
-        /// </summary>
-        private async UniTaskVoid LoadAndSetCartridgeImagesAsync()
+        private async UniTaskVoid LoadAndSetCartridgeImagesAsync(CancellationToken token)
         {
             if (!SessionManager.Instance || string.IsNullOrEmpty(SessionManager.Instance.Cartridge)) return;
 
             string cartridge = SessionManager.Instance.Cartridge.ToLower();
-            string legoCartKey = $"Lego_cart_{cartridge}"; // 예: Lego_cart_a
-
-            // 어드레서블에서 한 장의 이미지를 여러 버튼에 복사해서 쓰는 구조로 가정함.
+            string legoCartKey = $"Lego_cart_{cartridge}"; 
             string[] keys = new string[] { legoCartKey, legoCartKey, legoCartKey, legoCartKey, legoCartKey };
             
-            await LoadAndSetImagesInternalAsync(keys);
+            await LoadAndSetImagesInternalAsync(keys, token);
         }
 
-        /// <summary>
-        /// 외부(Step1Manager)에서 5개의 구체적인 어드레서블 키 배열을 넘겨받아 이미지를 비동기로 교체함.
-        /// Why: Step1 Q1 답변에 따른 Q2 예외 이미지를 로드하기 위해 호출됨.
-        /// </summary>
         public async UniTask LoadAndSetSpecificImagesAsync(string[] addressableKeys)
         {
             if (addressableKeys == null || addressableKeys.Length < 5) return;
             
-            // 기본 카트리지 로드 로직을 건너뛰도록 플래그를 설정함.
             _skipDefaultCartridgeLoad = true;
             
-            await LoadAndSetImagesInternalAsync(addressableKeys);
+            if (_cts != null)
+            {
+                _cts.Cancel();
+                _cts.Dispose();
+            }
+            _cts = new CancellationTokenSource();
+
+            await LoadAndSetImagesInternalAsync(addressableKeys, _cts.Token);
         }
 
-        /// <summary>
-        /// 키 배열을 받아 이전 메모리를 해제하고 실제 비동기 로드 및 UI 세팅을 수행함.
-        /// </summary>
-        private async UniTask LoadAndSetImagesInternalAsync(string[] keys)
+        private async UniTask LoadAndSetImagesInternalAsync(string[] keys, CancellationToken token)
         {
-            // 새로운 로드를 시작하기 전에 이전 페이지 등에서 로드했던 핸들들을 정리함.
             ReleaseLoadedImages();
 
-            // 5개의 비동기 작업을 담을 배열 생성
             UniTask<Sprite>[] loadTasks = new UniTask<Sprite>[5];
 
             for (int i = 0; i < 5; i++)
             {
                 AsyncOperationHandle<Sprite> handle = Addressables.LoadAssetAsync<Sprite>(keys[i]);
-                _loadedImageHandles.Add(handle); // 메모리 관리 리스트에 추적 등록
-                
-                // Why: 배열 전체에 ToUniTask()를 적용할 수 없고 확장 패키지 누락 시 에러가 발생하므로, 네이티브 Task를 AsUniTask()로 안전하게 변환함.
+                _loadedImageHandles.Add(handle);
                 loadTasks[i] = handle.Task.AsUniTask();
             }
 
             try
             {
-                // 5개의 로드가 모두 완료될 때까지 병렬로 대기함.
                 Sprite[] results = await UniTask.WhenAll(loadTasks);
+                if (token.IsCancellationRequested) return;
 
-                // 로드된 스프라이트를 UI에 할당함.
                 if (imgAnswer1 && results[0]) imgAnswer1.sprite = results[0];
                 if (imgAnswer2 && results[1]) imgAnswer2.sprite = results[1];
                 if (imgAnswer3 && results[2]) imgAnswer3.sprite = results[2];
@@ -200,15 +195,14 @@ namespace My.Scripts.Core.Pages
             }
             catch (System.Exception e)
             {
-                // 로드 실패 시 에러 내용을 출력하고 핸들을 정리함.
-                Debug.LogError($"[Page_Question] 어드레서블 로드 실패. 키: {string.Join(", ", keys)}, 에러: {e.Message}");
-                ReleaseLoadedImages();
+                if (!token.IsCancellationRequested)
+                {
+                    Debug.LogError($"[Page_Question] 어드레서블 로드 실패. 키: {string.Join(", ", keys)}, 에러: {e.Message}");
+                    ReleaseLoadedImages();
+                }
             }
         }
 
-        /// <summary>
-        /// 현재 페이지에서 로드하여 추적 중인 모든 어드레서블 핸들의 메모리를 해제함.
-        /// </summary>
         private void ReleaseLoadedImages()
         {
             if (_loadedImageHandles == null || _loadedImageHandles.Count == 0) return;
@@ -223,7 +217,6 @@ namespace My.Scripts.Core.Pages
         private void ApplyDataToUI()
         {
             if (_cachedData == null) return;
-
             QuestionSetting qSetting = _cachedData.questionSetting;
             
             if (qSetting != null)
@@ -235,7 +228,6 @@ namespace My.Scripts.Core.Pages
                 SetUIText(textAnswer4, qSetting.textAnswer4);
                 SetUIText(textAnswer5, qSetting.textAnswer5);
             }
-
             SetUIText(textDescription, _cachedData.textDescription);
         }
 
@@ -246,21 +238,25 @@ namespace My.Scripts.Core.Pages
             bool isServer = false;
             if (TcpManager.Instance) isServer = TcpManager.Instance.IsServer;
 
-            bool canSkip = isServer;
-
-#if UNITY_EDITOR
-            canSkip = true;
-#endif
-
-            if (canSkip)
+            if (_canAcceptInput)
             {
-                if (_canAcceptInput)
+                if (isServer)
                 {
+                    // 서버는 1~5번 키 사용
                     if (Input.GetKeyDown(KeyCode.Alpha1)) SelectAnswer(1);
                     else if (Input.GetKeyDown(KeyCode.Alpha2)) SelectAnswer(2);
                     else if (Input.GetKeyDown(KeyCode.Alpha3)) SelectAnswer(3);
                     else if (Input.GetKeyDown(KeyCode.Alpha4)) SelectAnswer(4);
                     else if (Input.GetKeyDown(KeyCode.Alpha5)) SelectAnswer(5);
+                }
+                else
+                {
+                    // 클라이언트는 6~0번 키 사용하도록 수정
+                    if (Input.GetKeyDown(KeyCode.Alpha6)) SelectAnswer(1);
+                    else if (Input.GetKeyDown(KeyCode.Alpha7)) SelectAnswer(2);
+                    else if (Input.GetKeyDown(KeyCode.Alpha8)) SelectAnswer(3);
+                    else if (Input.GetKeyDown(KeyCode.Alpha9)) SelectAnswer(4);
+                    else if (Input.GetKeyDown(KeyCode.Alpha0)) SelectAnswer(5);
                 }
             }
         }
@@ -288,7 +284,6 @@ namespace My.Scripts.Core.Pages
             _isAnimating = true; 
             
             CanvasGroup qCg = GetOrAddCanvasGroup(textQuestion);
-            
             GameObject[] cgObjects = new GameObject[] { cgA, cgB, cgC, cgD, cgE };
             CanvasGroup[] cgs = new CanvasGroup[5];
             for (int i = 0; i < 5; i++) cgs[i] = GetOrAddCanvasGroup(cgObjects[i]);
@@ -298,7 +293,6 @@ namespace My.Scripts.Core.Pages
             if (!_isFirstSelectionDone)
             {
                 _isFirstSelectionDone = true;
-
                 float elapsed = 0f;
                 float qStart = qCg ? qCg.alpha : 1f;
                 float[] startAlphas = new float[5];
@@ -311,14 +305,12 @@ namespace My.Scripts.Core.Pages
 
                     if (qCg) qCg.alpha = Mathf.Lerp(qStart, 0f, t);
                     for (int i = 0; i < 5; i++)
-                    {
                         if (cgs[i]) cgs[i].alpha = Mathf.Lerp(startAlphas[i], 0f, t);
-                    }
+                    
                     yield return null;
                 }
 
                 SetUIText(textQuestion, _cachedData.textSelected);
-
                 for (int i = 0; i < 5; i++)
                 {
                     if (cgObjects[i])
@@ -353,9 +345,8 @@ namespace My.Scripts.Core.Pages
                     float t = elapsed / 0.5f;
 
                     for (int i = 0; i < 5; i++)
-                    {
                         if (cgs[i]) cgs[i].alpha = Mathf.Lerp(startAlphas[i], 0f, t);
-                    }
+                    
                     yield return null;
                 }
 
@@ -375,9 +366,7 @@ namespace My.Scripts.Core.Pages
             }
 
             _isAnimating = false; 
-
             yield return CoroutineData.GetWaitForSeconds(3.0f);
-
             _currentPhase = Phase.CountingDown;
 
             SetUIText(textDescription, _cachedData.textWait);
@@ -395,7 +384,6 @@ namespace My.Scripts.Core.Pages
             }
 
             _isAnimating = true;
-
             float fadeOutElapsed = 0f;
             float targetFinalStart = targetCg ? targetCg.alpha : 1f;
 
@@ -429,7 +417,7 @@ namespace My.Scripts.Core.Pages
             }
 
             _currentPhase = Phase.Completed;
-            CompletePage();
+            CompleteOnce();
         }
 
         private IEnumerator InterruptedCountdownRoutine(int index)
@@ -459,12 +447,15 @@ namespace My.Scripts.Core.Pages
             }
 
             _currentPhase = Phase.Completed;
-            CompletePage();
+            CompleteOnce();
         }
 
-        private void CompletePage()
+        private void CompleteOnce()
         {
-            if (TcpManager.Instance && TcpManager.Instance.IsServer) TcpManager.Instance.SendMessageToTarget(_syncCommand, "");
+            if (_hasCompleted) return;
+            _hasCompleted = true;
+
+            // 상대방 신호를 기다리거나 보내지 않고 독립적으로 씬 이동
             if (onStepComplete != null) onStepComplete.Invoke(0);
         }
 
@@ -482,25 +473,6 @@ namespace My.Scripts.Core.Pages
             CanvasGroup cg = obj.GetComponent<CanvasGroup>();
             if (!cg) cg = obj.AddComponent<CanvasGroup>();
             return cg;
-        }
-
-        private void OnEnable()
-        {
-            if (TcpManager.Instance) TcpManager.Instance.onMessageReceived += OnNetworkMessageReceived;
-        }
-
-        private void OnDisable()
-        {
-            if (TcpManager.Instance) TcpManager.Instance.onMessageReceived -= OnNetworkMessageReceived;
-        }
-
-        private void OnNetworkMessageReceived(TcpMessage msg)
-        {
-            if (msg != null && msg.command == _syncCommand && _currentPhase != Phase.Completed)
-            {
-                _currentPhase = Phase.Completed;
-                if (onStepComplete != null) onStepComplete.Invoke(0);
-            }
         }
     }
 }

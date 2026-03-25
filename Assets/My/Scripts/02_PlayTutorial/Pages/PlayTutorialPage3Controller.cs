@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using My.Scripts.Core;
+using My.Scripts.Global;
 using UnityEngine;
 using UnityEngine.UI;
 using Wonjeong.Data;
@@ -18,7 +19,7 @@ namespace My.Scripts._02_PlayTutorial.Pages
 
     /// <summary>
     /// 상대 플레이어를 기다리는 마지막 대기 페이지 컨트롤러.
-    /// 연출이 끝나면 스스로 단계 완료를 호출하여 매니저의 동기화 로직을 발동시킴.
+    /// Why: 입장 후 3초 대기 후 완료 신호를 발송하여 동기화를 요청함.
     /// </summary>
     public class PlayTutorialPage3Controller : GamePage
     {
@@ -52,48 +53,33 @@ namespace My.Scripts._02_PlayTutorial.Pages
             
             ApplyDataToUI();
 
-            if (mainGroupCanvas) mainGroupCanvas.alpha = 0f;
+            if (mainGroupCanvas) mainGroupCanvas.alpha = 1f;
             StartCoroutine(SequenceRoutine());
         }
 
-        /// <summary>
-        /// 페이지가 완료되고 매니저에 의해 전환 처리가 일어날 때 호출됨.
-        /// Why: 부모 클래스(GamePage)의 OnExit에 있는 gameObject.SetActive(false)가 
-        /// 실행되는 것을 막기 위해 의도적으로 base.OnExit() 호출을 생략함.
-        /// </summary>
         public override void OnExit()
         {
-            // 의도적으로 비워둠 (화면이 꺼지지 않고 유지됨)
         }
 
         private void ApplyDataToUI()
         {
             if (_cachedData == null) return;
 
-            // 수정됨: 텍스트 내용뿐만 아니라 JSON에 설정된 위치, 정렬, 폰트 등을 일괄 적용
             SetUIText(descriptionUI, _cachedData.descriptionText);
             SetUIText(waitUI, _cachedData.waitText);
         }
 
         private IEnumerator SequenceRoutine()
-        {
-            if (mainGroupCanvas)
+        {   
+            if (SoundManager.Instance)
             {
-                float elapsed = 0f;
-                while (elapsed < localFadeDuration)
-                {
-                    elapsed += Time.deltaTime;
-                    mainGroupCanvas.alpha = elapsed / localFadeDuration;
-                    yield return null;
-                }
-
-                mainGroupCanvas.alpha = 1f;
-                SoundManager.Instance?.PlaySFX("레고_3");
+                SoundManager.Instance.PlaySFX("레고_3");
             }
-
-            // 3초 대기 연출 후 완료
+            
+            // Why: 입장 후 3초 대기
             yield return CoroutineData.GetWaitForSeconds(3.0f);
 
+            // Why: 3초 대기 후 매니저에게 완료 신호 발송
             if (onStepComplete != null)
             {
                 onStepComplete.Invoke(0);
