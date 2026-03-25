@@ -77,6 +77,13 @@
       "dependencies": {},
       "url": "https://packages.unity.com"
     },
+    "com.unity.nuget.newtonsoft-json": {
+      "version": "3.2.2",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {},
+      "url": "https://packages.unity.com"
+    },
     "com.unity.render-pipelines.core": {
       "version": "14.0.12",
       "depth": 1,
@@ -187,7 +194,7 @@
       "depth": 0,
       "source": "git",
       "dependencies": {},
-      "hash": "8db9c2f8e56081acb8f48c953b37054496079155"
+      "hash": "ec831e0f2354dbad60fe927c15fe1951c578ddff"
     },
     "com.unity.modules.ai": {
       "version": "1.0.0",

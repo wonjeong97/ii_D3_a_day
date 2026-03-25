@@ -1,0 +1,12 @@
+{
+  "baseUrl": "http://192.168.0.252:8500/api",
+  "getUser": "/getUser.cfm",
+  "updateTime": "/updateTime.cfm",
+  "updateValue": "/updateValue.cfm",
+  "updatePiece": "/updatePiece.cfm",
+  "checkRoomState": "/checkRoomState.cfm",
+  "getCurrentRoomUser": "/getCurrentRoomUser.cfm",
+  "uploadFile": "/uploadFile.cfm",
+  "exitRoom": "/exitRoom.cfm",
+  "resetStart": "/resetStart.cfm"  
+}

@@ -1,58 +1,62 @@
+using System;
 using System.Collections;
+using Cysharp.Threading.Tasks; 
+using My.Scripts.Core;
+using My.Scripts.Core.Data;
 using UnityEngine;
+using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
+using Wonjeong.Data;
 using Wonjeong.Reporter;
+using Wonjeong.UI;
+using Wonjeong.Utils;
 
 namespace My.Scripts.Global
 { 
-    /// <summary>
-    /// 사용자 유형을 정의하는 열거형.
-    /// </summary>
-    public enum UserType
-    {
-        A, // 커플 표준형
-        B, // 친구
-        C, // 동료
-        D, // 부모-성인자녀
-        E, // 부모-사춘기자녀 (추후)
-        F  // 부부사이 (추후)
-    }
-
-    /// <summary>
-    /// 게임의 전반적인 상태, 씬 전환 및 멀티 디스플레이를 관리하는 매니저 클래스.
-    /// </summary>
     public class GameManager : MonoBehaviour
     {
         public static GameManager Instance;
 
         [SerializeField] private Reporter reporter;
 
-        [Header("Settings")]
-        [SerializeField] private float inactivityLimit = 60f;
-        [SerializeField] private float fadeTime = 1.0f;
+        public bool isDebugMode;
+        
+        private bool _isTransitioning;
+        private float _fadeTime = 1.0f;
+        private bool _isQuitting;
+        private bool _isQuitSafe;
 
-        private float currentInactivityTimer;
-        private bool isTransitioning;
-        public string Step2ThemeKey { get; set; } = "Sea_1";
+        public ApiSettings ApiConfig { get; set; }
 
-        // 플레이어 상태 정보
-        public int firstTaggedPlayer = 0;
-        public UserType currentUserType = UserType.A;
+        public int firstTaggedPlayer;
 
         [Header("Player Color Sprites")]
-        [Tooltip("0:Cyan, 1:Pink, 2:Orange, 3:Green, 4:Red, 5:Yellow")]
         public Sprite[] playerColorSprites;
 
-        /// <summary>
-        /// 싱글톤을 초기화하고 독립된 두 번째 디스플레이를 활성화함.
-        /// </summary>
+        [Header("API Retry Settings")]
+        [SerializeField] private int maxRetries = 10;
+        [SerializeField] private float retryDelay = 1.0f;
+
         private void Awake()
         {
+            Debug.unityLogger.logHandler = new TimestampLogHandler(Debug.unityLogger.logHandler);
+
             if (!Instance)
             {
                 Instance = this;
                 DontDestroyOnLoad(gameObject);
                 
+                if (!SessionManager.Instance)
+                {
+                    SessionManager existingSession = FindFirstObjectByType<SessionManager>();
+                    if (!existingSession)
+                    {
+                        GameObject sessionObj = new GameObject("SessionManager");
+                        sessionObj.AddComponent<SessionManager>();
+                    }
+                }
+
+                Application.wantsToQuit += WantsToQuit;
                 ActivateSecondaryDisplay();
             }
             else
@@ -63,23 +67,47 @@ namespace My.Scripts.Global
 
         private void Start()
         {
-            // 키오스크 환경을 위해 커서 숨김
             Cursor.visible = false;
             Application.runInBackground = true;
+            
+            LoadSettings();
+            
             if (reporter && reporter.show) reporter.show = false;
         }
 
-        /// <summary>
-        /// OS에서 인식된 두 번째 모니터가 있을 경우 이를 활성화함.
-        /// </summary>
+        private void OnDestroy()
+        {
+            if (Instance == this)
+            {
+                Application.wantsToQuit -= WantsToQuit;
+            }
+        }
+
         private void ActivateSecondaryDisplay()
         {
-            // Unity는 기본적으로 첫 번째 디스플레이만 활성화하므로 수동 활성화가 필요함
             if (Display.displays.Length > 1)
             {
                 Display.displays[1].Activate();
-                Debug.Log("GameManager: Secondary display (Display 2) activated.");
             }
+        }
+
+        public Sprite GetColorSprite(ColorData color)
+        {
+            int index = (int)color;
+            if (index >= 0 && playerColorSprites != null && index < playerColorSprites.Length)
+            {
+                return playerColorSprites[index];
+            }
+            return null;
+        }
+
+        private void LoadSettings()
+        {
+            Settings settings = JsonLoader.Load<Settings>(GameConstants.Path.JsonSetting);
+            if (settings != null) _fadeTime = settings.fadeTime;
+            else _fadeTime = 1.0f;
+
+            ApiConfig = JsonLoader.Load<ApiSettings>(GameConstants.Path.ApiSetting);
         }
 
         private void Update()
@@ -89,90 +117,181 @@ namespace My.Scripts.Global
                 reporter.showGameManagerControl = !reporter.showGameManagerControl;
                 if (reporter.show) reporter.show = false;
             }
-            else if (Input.GetKeyDown(KeyCode.M)) Cursor.visible = !Cursor.visible;
-
-            if (isTransitioning)
+            else if (Input.GetKeyDown(KeyCode.M)) 
             {
-                return;
+                Cursor.visible = !Cursor.visible;
             }
-
-            HandleInactivity();
         }
 
-        /// <summary>
-        /// 타이틀 씬이 아닐 때 사용자 입력이 없으면 타이틀로 복귀시킴.
-        /// </summary>
-        private void HandleInactivity()
+        public void ChangeScene(string sceneName, bool doFade = false)
         {
-            // 타이틀 화면에서는 자동 복귀 로직을 수행하지 않음
-            if (SceneManager.GetActiveScene().name == GameConstants.Scene.Title)
+            if (_isTransitioning) return;
+            _isTransitioning = true;
+            StartCoroutine(ChangeSceneRoutine(sceneName, doFade));
+        }
+
+        private IEnumerator ChangeSceneRoutine(string sceneName, bool doFade)
+        {
+            if (doFade && FadeManager.Instance)
             {
-                currentInactivityTimer = 0f;
-                return;
+                bool fadeDone = false;
+                FadeManager.Instance.FadeOut(_fadeTime, () => fadeDone = true);
+                while (!fadeDone) yield return null;
             }
 
-            if (Input.anyKey || Input.touchCount > 0)
+            AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(sceneName);
+            while (asyncLoad != null && !asyncLoad.isDone) yield return null;
+
+            yield return CoroutineData.GetWaitForSeconds(0.2f);
+
+            if (doFade && FadeManager.Instance)
             {
-                currentInactivityTimer = 0f;
+                bool fadeInDone = false;
+                FadeManager.Instance.FadeIn(_fadeTime, () => fadeInDone = true);
+                while (!fadeInDone) yield return null;
             }
-            else
+
+            _isTransitioning = false;
+        }
+
+        public void ReturnToTitle()
+        {
+            if (_isTransitioning) return;
+            _isTransitioning = true;
+            StartCoroutine(ReturnToTitleRoutine());
+        }
+
+        private IEnumerator ReturnToTitleRoutine()
+        {
+            Debug.Log("[GameManager] 타이틀로 돌아감");
+
+            if (SessionManager.Instance && SessionManager.Instance.CurrentUserId != 0 && ApiConfig != null)
             {
-                currentInactivityTimer += Time.deltaTime;
-                if (currentInactivityTimer >= inactivityLimit)
+                int uid = SessionManager.Instance.CurrentUserId;
+                string resetUrl = $"{ApiConfig.ResetStartUrl}?idx_user={uid}&code=d3";
+                yield return StartCoroutine(SendGetRequestRoutine(resetUrl));
+
+                string exitUrl = $"{ApiConfig.ExitRoomUrl}?code=d3&idx_user={uid}";
+                yield return StartCoroutine(SendGetRequestRoutine(exitUrl));
+            }
+
+            firstTaggedPlayer = 0;
+            if (SessionManager.Instance) SessionManager.Instance.ClearSession();
+
+            _isTransitioning = false; 
+            ChangeScene(GameConstants.Scene.Title);
+        }
+
+        #region API 호출 로직
+
+        private IEnumerator SendGetRequestRoutine(string url)
+        {
+#if UNITY_EDITOR
+            Debug.Log($"<color=orange>[GameManager] 에디터 모드 방지: 라이브 서버 API 갱신을 생략합니다. ({url})</color>");
+            yield break;
+#endif
+            for (int attempt = 0; attempt < maxRetries; attempt++)
+            {
+                using (UnityWebRequest req = UnityWebRequest.Get(url))
                 {
-                    ReturnToTitle();
+                    req.timeout = 10; 
+                    yield return req.SendWebRequest();
+
+                    if (req.result == UnityWebRequest.Result.Success) yield break;
+
+                    if (attempt < maxRetries - 1)
+                        yield return CoroutineData.GetWaitForSeconds(retryDelay);
                 }
             }
         }
 
-        /// <summary>
-        /// 지정된 씬으로 전환을 시작함.
-        /// </summary>
-        /// <param name="sceneName">이동할 씬의 이름.</param>
-        public void ChangeScene(string sceneName)
+        public void SendResetStartAPI()
         {
-            if (isTransitioning)
+            if (!SessionManager.Instance || SessionManager.Instance.CurrentUserId == 0 || ApiConfig == null) return;
+            string url = $"{ApiConfig.ResetStartUrl}?idx_user={SessionManager.Instance.CurrentUserId}&code=d3";
+            StartCoroutine(SendGetRequestRoutine(url));
+        }
+
+        public void SendExitRoomAPI()
+        {
+            if (!SessionManager.Instance || SessionManager.Instance.CurrentUserId == 0 || ApiConfig == null) return;
+            string url = $"{ApiConfig.ExitRoomUrl}?code=d3&idx_user={SessionManager.Instance.CurrentUserId}";
+            StartCoroutine(SendGetRequestRoutine(url));
+        }
+
+        public void SendTimeUpdateAPI()
+        {
+            if (!SessionManager.Instance || SessionManager.Instance.CurrentUserId == 0 || ApiConfig == null) return;
+            string url = $"{ApiConfig.UpdateTimeUrl}?idx_user={SessionManager.Instance.CurrentUserId}&option=end&code=d3";
+            StartCoroutine(SendGetRequestRoutine(url));
+        }
+
+        public void SendValueUpdateAPI(int qNo, string side, int value)
+        {
+            if (!SessionManager.Instance || SessionManager.Instance.CurrentUserId == 0 || ApiConfig == null) return;
+            string url = $"{ApiConfig.UpdateValueUrl}?idx_user={SessionManager.Instance.CurrentUserId}&q_no={qNo}&side={side}&code=d3&value={value}";
+            StartCoroutine(SendGetRequestRoutine(url));
+        }
+
+        public void SendPieceUpdateAPI(int value)
+        {
+            if (value < 0 || !SessionManager.Instance || SessionManager.Instance.CurrentUserId == 0 || ApiConfig == null) return;
+            string url = $"{ApiConfig.UpdatePieceUrl}?idx_user={SessionManager.Instance.CurrentUserId}&code=d3&value={value}";
+            StartCoroutine(SendGetRequestRoutine(url));
+        }
+
+        #endregion
+
+        #region 프로그램 강제 종료 시 예외 처리
+
+        private bool WantsToQuit()
+        {
+            if (_isQuitSafe) return true;
+
+            if (!_isQuitting)
             {
-                return;
+                _isQuitting = true;
+                StartCoroutine(QuitRoutine());
             }
-            if (string.IsNullOrWhiteSpace(sceneName) || !Application.CanStreamedLevelBeLoaded(sceneName))
+
+            return false;
+        }
+
+        private IEnumerator QuitRoutine()
+        {
+#if !UNITY_EDITOR
+            if (SessionManager.Instance && SessionManager.Instance.CurrentUserId != 0 && ApiConfig != null)
             {
-                Debug.LogError($"[GameManager] ChangeScene 실패: 유효하지 않은 씬 이름 '{sceneName}'");
-                return;
+                int uid = SessionManager.Instance.CurrentUserId;
+                string resetUrl = $"{ApiConfig.ResetStartUrl}?idx_user={uid}&code=d3";
+                yield return StartCoroutine(SendGetRequestRoutine(resetUrl));
+
+                string exitUrl = $"{ApiConfig.ExitRoomUrl}?code=d3&idx_user={uid}";
+                yield return StartCoroutine(SendGetRequestRoutine(exitUrl));
             }
+#else
+            Debug.Log("<color=orange>[GameManager] 에디터 모드 방지: 강제 종료 시 실제 유저의 세션(Reset, Exit) 폭파 방지됨</color>");
+#endif
+
+            _isQuitSafe = true;
+
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
+#endif
             
-            isTransitioning = true;
-            StartCoroutine(ChangeSceneRoutine(sceneName));
+            yield break;
         }
 
-        /// <summary>
-        /// 페이드 연출을 포함하여 비동기적으로 씬을 로드함.
-        /// </summary>
-        private IEnumerator ChangeSceneRoutine(string sceneName)
+#if UNITY_EDITOR
+        private void OnApplicationQuit()
         {
-            AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(sceneName);
-            while (asyncLoad != null && !asyncLoad.isDone)
-            {
-                yield return null;
-            }
-
-            isTransitioning = false;
+            if (_isQuitSafe) return; 
+            _isQuitSafe = true;
         }
+#endif
 
-        /// <summary>
-        /// 게임 상태를 초기화하고 타이틀 화면으로 돌아감.
-        /// </summary>
-        public void ReturnToTitle()
-        {
-            if (isTransitioning)
-            {
-                return;
-            }
-            
-            firstTaggedPlayer = 0; 
-            currentInactivityTimer = 0f;
-
-            ChangeScene(GameConstants.Scene.Title);
-        }
+        #endregion
     }
 }

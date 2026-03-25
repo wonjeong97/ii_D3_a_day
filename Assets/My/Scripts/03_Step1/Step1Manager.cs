@@ -1,12 +1,13 @@
 using System;
 using System.Collections.Generic; 
 using My.Scripts.Core;
+using My.Scripts.Core.Data;
 using My.Scripts.Global;
-using My.Scripts.Core.Pages; 
-using My.Scripts.Data; 
+using My.Scripts.Core.Pages;
 using UnityEngine;
 using Wonjeong.Data;
 using Wonjeong.Utils;
+using Cysharp.Threading.Tasks;
 
 namespace My.Scripts._03_Step1
 {
@@ -42,6 +43,8 @@ namespace My.Scripts._03_Step1
         private Page_Question _q2Page;
         private CommonQuestionPageData _q2Data;
         private List<DynamicAnswerSet> _q2DynamicAnswers;
+        
+        private readonly string[] _q1KeywordMap = new string[] { "Sea", "Mt", "River", "Sky", "Forest" };
 
         protected override void Start()
         {
@@ -51,55 +54,52 @@ namespace My.Scripts._03_Step1
 
         protected override void LoadSettings()
         {
-            Step1Setting setting = JsonLoader.Load<Step1Setting>(GameConstants.Path.Step1);
+            Step1Setting settings = JsonLoader.Load<Step1Setting>(GameConstants.Path.Step1);
 
-            if (setting == null)
+            if (settings == null)
             {
                 Debug.LogError("[Step1Manager] JSON 로드 실패.");
                 return;
             }
 
-            _q2DynamicAnswers = setting.q2DynamicAnswers;
+            _q2DynamicAnswers = settings.q2DynamicAnswers;
 
             if (backgroundPage)
             {
-                backgroundPage.SetupData(setting.background);
+                backgroundPage.SetupData(settings.background);
                 backgroundPage.OnEnter();
             }
 
             if (pages.Count > 0 && pages[0])
             {
                 Page_Intro intro = pages[0] as Page_Intro;
-                if (intro)
-                {
-                    intro.SetSyncCommand("STEP1_INTRO_COMPLETE");
-                }
-                pages[0].SetupData(setting.introPage);
+                if (intro) intro.SetSyncCommand("STEP1_INTRO_COMPLETE");
+                pages[0].SetupData(settings.introPage);
             }
 
             int pageIndex = 1; 
 
-            if (setting.questionSets != null)
+            if (settings.questionSets != null)
             {
-                int totalQuestions = setting.questionSets.Count;
+                int totalQuestions = settings.questionSets.Count;
 
                 for (int i = 0; i < totalQuestions; i++)
                 {
                     string progressString = $"{i + 1}/{totalQuestions}";
                     
-                    bool hasOverrideDesc = setting.questionSets[i].textDescription != null && 
-                                           !string.IsNullOrEmpty(setting.questionSets[i].textDescription.text);
+                    bool hasOverrideDesc = settings.questionSets[i].textDescription != null && 
+                                           !string.IsNullOrEmpty(settings.questionSets[i].textDescription.text);
 
                     TextSetting targetDescription = hasOverrideDesc 
-                        ? setting.questionSets[i].textDescription 
-                        : setting.commonQuestionUI.textDescription;
+                        ? settings.questionSets[i].textDescription 
+                        : settings.commonQuestionUI.textDescription;
 
                     CommonQuestionPageData qData = new CommonQuestionPageData 
                     {
-                        questionSetting = setting.questionSets[i].questionSetting,
-                        textSelected = setting.commonQuestionUI.textSelected,
+                        questionSetting = settings.questionSets[i].questionSetting,
+                        textSelected = settings.commonQuestionUI.textSelected,
                         textDescription = targetDescription,
-                        textWait = setting.commonQuestionUI.textWait
+                        textWait = settings.commonQuestionUI.textWait
                     };
 
                     if (pageIndex < pages.Count && pages[pageIndex])
@@ -123,18 +123,15 @@ namespace My.Scripts._03_Step1
 
                     CommonResultPageData rData = new CommonResultPageData 
                     {
-                        textAnswerComplete = setting.commonResultUI.textAnswerComplete,
-                        textMyScene = setting.questionSets[i].textMyScene,
-                        textPhotoSaved = setting.commonResultUI.textPhotoSaved
+                        textAnswerComplete = settings.commonResultUI.textAnswerComplete,
+                        textMyScene = settings.questionSets[i].textMyScene,
+                        textPhotoSaved = settings.commonResultUI.textPhotoSaved
                     };
 
                     if (pageIndex < pages.Count && pages[pageIndex])
                     {
                         Page_Camera rPage = pages[pageIndex] as Page_Camera;
-                        if (rPage)
-                        {
-                            rPage.SetSyncCommand($"STEP1_R_{i}_COMPLETE");
-                        }
+                        if (rPage) rPage.SetSyncCommand($"STEP1_R_{i}_COMPLETE");
                         pages[pageIndex].SetupData(rData);
                     }
                     pageIndex++;
@@ -147,7 +144,7 @@ namespace My.Scripts._03_Step1
                 if (outro)
                 {
                     outro.SetSyncCommand("STEP1_OUTRO_COMPLETE");
-                    outro.SetupData(setting.outroPage);
+                    outro.SetupData(settings.outroPage);
                 }
             }
         }
@@ -158,48 +155,68 @@ namespace My.Scripts._03_Step1
             {
                 if (_q2Page && _q1Page && pages[index] == _q2Page)
                 {
-                    int answerIndex = _q1Page.SelectedIndex - 1; 
+                    int q1AnsIdx = _q1Page.SelectedIndex - 1; 
                     
-                    if (_q2DynamicAnswers != null && answerIndex >= 0 && answerIndex < _q2DynamicAnswers.Count)
-                    {
-                        DynamicAnswerSet dynamicSet = _q2DynamicAnswers[answerIndex];
-                        
-                        if (dynamicSet != null)
-                        {
-                            if (_q2Data != null && _q2Data.questionSetting != null)
-                            {
-                                _q2Data.questionSetting.textAnswer1 = dynamicSet.textAnswer1;
-                                _q2Data.questionSetting.textAnswer2 = dynamicSet.textAnswer2;
-                                _q2Data.questionSetting.textAnswer3 = dynamicSet.textAnswer3;
-                                _q2Data.questionSetting.textAnswer4 = dynamicSet.textAnswer4;
-                                _q2Data.questionSetting.textAnswer5 = dynamicSet.textAnswer5;
-                                
-                                _q2Page.SetupData(_q2Data);
-                            }
-                        }
-                        else
-                        {
-                            Debug.LogWarning("[Step1Manager] 매칭되는 DynamicAnswerSet 객체가 null입니다.");
-                        }
-                    }
-                    else
-                    {
-                        Debug.LogWarning("[Step1Manager] 매칭되는 dynamicAnswerSets 인덱스가 없습니다.");
-                    }
+                    ApplyDynamicQ2Text(q1AnsIdx);
+                    ApplyDynamicQ2ImagesAsync(q1AnsIdx).Forget();
                 }
             }
             
             base.TransitionToPage(index);
         }
 
+        private void ApplyDynamicQ2Text(int q1AnsIdx)
+        {
+            if (_q2DynamicAnswers != null && q1AnsIdx >= 0 && q1AnsIdx < _q2DynamicAnswers.Count)
+            {
+                DynamicAnswerSet dynamicSet = _q2DynamicAnswers[q1AnsIdx];
+                if (dynamicSet != null && _q2Data != null && _q2Data.questionSetting != null)
+                {
+                    _q2Data.questionSetting.textAnswer1 = dynamicSet.textAnswer1;
+                    _q2Data.questionSetting.textAnswer2 = dynamicSet.textAnswer2;
+                    _q2Data.questionSetting.textAnswer3 = dynamicSet.textAnswer3;
+                    _q2Data.questionSetting.textAnswer4 = dynamicSet.textAnswer4;
+                    _q2Data.questionSetting.textAnswer5 = dynamicSet.textAnswer5;
+                    _q2Page.SetupData(_q2Data);
+                }
+            }
+        }
+
+        private async UniTaskVoid ApplyDynamicQ2ImagesAsync(int q1AnsIdx)
+        {
+            if (q1AnsIdx < 0 || q1AnsIdx >= _q1KeywordMap.Length) return;
+
+            string keyword = _q1KeywordMap[q1AnsIdx];
+            
+            string[] specificKeys = new string[5];
+            for (int i = 0; i < 5; i++)
+            {
+                specificKeys[i] = $"BG_Step2_{keyword}_{i + 1}_1";
+            }
+            
+            await _q2Page.LoadAndSetSpecificImagesAsync(specificKeys);
+        }
+
         protected override void OnAllFinished()
         {
-            Debug.Log("[Step1Manager] 내 PC Step1 완료. Step2로 즉시 이동합니다.");
-
-            if (GameManager.Instance)
+            // Step1이 모두 끝나면 Q1과 Q2의 최종 답변을 가져와 세션 매니저의 인게임 진행 데이터로 확정함.
+            if (_q1Page && _q2Page && SessionManager.Instance)
             {
-                GameManager.Instance.ChangeScene(GameConstants.Scene.Step2); 
+                int q1Idx = _q1Page.SelectedIndex - 1;
+                int q2Selection = _q2Page.SelectedIndex; 
+
+                if (q1Idx >= 0 && q1Idx < _q1KeywordMap.Length)
+                {
+                    SessionManager.Instance.Step2MainTheme = _q1KeywordMap[q1Idx];
+                }
+                
+                if (q2Selection >= 1 && q2Selection <= 5)
+                {
+                    SessionManager.Instance.Step2SubTheme = q2Selection;
+                }
             }
+
+            if (GameManager.Instance) GameManager.Instance.ChangeScene(GameConstants.Scene.Step2, true); 
         }
     }
 }

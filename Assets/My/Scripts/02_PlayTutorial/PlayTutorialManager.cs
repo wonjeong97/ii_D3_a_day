@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using My.Scripts.Core;
 using My.Scripts._02_PlayTutorial.Pages;
 using UnityEngine;
@@ -46,21 +47,17 @@ namespace My.Scripts._02_PlayTutorial
             if (pages.Count > 2 && pages[2]) pages[2].SetupData(setting.page3);
         }
 
-        /// <summary>
-        /// 페이지 전환 시 Page1의 입력값을 Page2로 넘겨줍니다.
-        /// </summary>
         public override void TransitionToPage(int index)
         {
             if (pages != null && index >= 0 && index < pages.Count)
             {
-                if (index == 1) // Page 2로 전환될 때
+                if (index == 1) 
                 {
                     PlayTutorialPage1Controller page1 = pages[0] as PlayTutorialPage1Controller;
                     PlayTutorialPage2Controller page2 = pages[1] as PlayTutorialPage2Controller;
 
                     if (page1 && page2)
                     {
-                        // Page1에서 누른 키를 Page2에 전달
                         page2.SetInitialKey(page1.PressedKey);
                     }
                 }
@@ -73,12 +70,27 @@ namespace My.Scripts._02_PlayTutorial
             _isLocalFinished = true;
             Debug.Log("[PlayTutorialManager] 내 PC 플레이 튜토리얼 완료. 상대방 대기 중...");
 
+            // Why: 늦게 도착한 PC가 대기 중인 PC의 락을 즉시 풀어주기 위해 무조건 1회 발송함
             if (TcpManager.Instance)
             {
-                TcpManager.Instance.SendMessageToTarget("PLAY_TUTORIAL_COMPLETE");
+                TcpManager.Instance.SendMessageToTarget("PLAY_TUTORIAL_COMPLETE", "");
             }
 
+            StartCoroutine(SendCompleteSignalRoutine());
             CheckSyncAndChangeScene();
+        }
+
+        private IEnumerator SendCompleteSignalRoutine()
+        {
+            // 내가 먼저 도착했을 경우 상대방이 올 때까지 1초마다 계속 쏴줌
+            while (_isLocalFinished && !_isRemoteFinished)
+            {
+                yield return CoroutineData.GetWaitForSeconds(1.0f);
+                if (TcpManager.Instance)
+                {
+                    TcpManager.Instance.SendMessageToTarget("PLAY_TUTORIAL_COMPLETE", "");
+                }
+            }
         }
 
         private void OnNetworkMessageReceived(TcpMessage msg)
@@ -101,14 +113,11 @@ namespace My.Scripts._02_PlayTutorial
                     TcpManager.Instance.onMessageReceived -= OnNetworkMessageReceived;
                 }
 
+                Debug.Log("[PlayTutorialManager] 양방향 동기화 완료. 즉시 Step1 씬으로 이동합니다.");
+                
                 if (GameManager.Instance)
                 {
-                    Debug.Log("[PlayTutorialManager] 양방향 동기화 완료. Step1 씬으로 이동합니다.");
-                    GameManager.Instance.ChangeScene(GameConstants.Scene.Step1); 
-                }
-                else
-                {
-                    Debug.LogError("[PlayTutorialManager] GameManager가 존재하지 않습니다.");
+                    GameManager.Instance.ChangeScene(GameConstants.Scene.Step1, true); 
                 }
             }
         }

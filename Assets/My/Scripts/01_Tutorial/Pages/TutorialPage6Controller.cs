@@ -6,7 +6,8 @@ using UnityEngine.UI;
 using Wonjeong.Data;
 using Wonjeong.Utils;
 using My.Scripts.Network;
-using Wonjeong.UI; // TCP 통신 매니저 접근
+using My.Scripts.Global;
+using Wonjeong.UI;
 
 namespace My.Scripts._01_Tutorial.Pages
 {
@@ -21,8 +22,7 @@ namespace My.Scripts._01_Tutorial.Pages
     }
 
     /// <summary>
-    /// 여섯 번째 튜토리얼 페이지 컨트롤러.
-    /// 진입 후 자동으로 1번 카트리지를 선택하며, 내부 UI 페이드 아웃 연출 후 다음 단계로 넘어감.
+    /// 카트리지 선택 연출이 진행되는 튜토리얼 6페이지 컨트롤러.
     /// </summary>
     public class TutorialPage6Controller : GamePage
     {
@@ -30,8 +30,6 @@ namespace My.Scripts._01_Tutorial.Pages
         [SerializeField] private CanvasGroup pageCanvasGroup; 
         [SerializeField] private CanvasGroup cg1CanvasGroup;  
         [SerializeField] private Text descriptionUI; 
-
-        // Why: TCP 네트워크 상태에 따라 동적으로 판단하므로 isPlayer1 변수는 삭제함
 
         [Header("Cart A")]
         [SerializeField] private CanvasGroup cartACanvas; 
@@ -49,7 +47,7 @@ namespace My.Scripts._01_Tutorial.Pages
         [SerializeField] private Text cartCText; 
 
         [Header("Animation Settings")]
-        [SerializeField] private float autoSelectDelay = 1.5f; // 자동 선택 대기 시간
+        [SerializeField] private float autoSelectDelay = 1.5f; 
         [SerializeField] private float fadeDuration = 0.5f;
         [SerializeField] private float finalHoldTime = 3.0f;
 
@@ -66,14 +64,7 @@ namespace My.Scripts._01_Tutorial.Pages
         public override void SetupData(object data)
         {
             TutorialPage6Data pageData = data as TutorialPage6Data;
-            if (pageData != null)
-            {
-                _cachedData = pageData;
-            }
-            else
-            {
-                Debug.LogWarning("[TutorialPage6Controller] SetupData: 전달된 데이터가 null입니다.");
-            }
+            if (pageData != null) _cachedData = pageData;
         }
 
         public override void OnEnter()
@@ -91,29 +82,21 @@ namespace My.Scripts._01_Tutorial.Pages
                 if (descriptionUI)
                 {
                     string rawText = string.Empty;
-                    //bool isServer = TcpManager.Instance && TcpManager.Instance.IsServer;
-                    bool isServer = true;
+                    bool isServer = false;
                     
-                    // Why: 현재 PC가 서버(P1)이면 A 텍스트, 클라이언트(P2)이면 B 텍스트를 출력함
+                    // Why: 로컬 네트워크 상태를 확인하여 클라이언트일 경우 B 텍스트를 불러오도록 수정함
+                    if (TcpManager.Instance) isServer = TcpManager.Instance.IsServer;
+                    
                     if (isServer && _cachedData.descriptionTextA != null)
-                    {
                         rawText = _cachedData.descriptionTextA.text;
-                    }
                     else if (!isServer && _cachedData.descriptionTextB != null)
-                    {
                         rawText = _cachedData.descriptionTextB.text;
-                    }
-                    else
-                    {
-                        Debug.LogWarning("[TutorialPage6Controller] descriptionText 데이터가 null입니다.");
-                    }
 
                     if (!string.IsNullOrEmpty(rawText))
                     {
-                        string processedText = rawText
-                            .Replace("{nameA}", "사용자A")
-                            .Replace("{nameB}", "사용자B")
-                            .Replace("{cartridge}", "A 카트리지"); 
+                        string cart = SessionManager.Instance && !string.IsNullOrEmpty(SessionManager.Instance.Cartridge) ? SessionManager.Instance.Cartridge : "A";
+                        string processedText = My.Scripts.UI.UIUtils.ReplacePlayerNamePlaceholders(rawText)
+                            .Replace("{cartridge}", $"{cart} 카트리지"); 
 
                         descriptionUI.text = processedText;
                     }
@@ -124,14 +107,12 @@ namespace My.Scripts._01_Tutorial.Pages
                 if (cartCText && _cachedData.cartNameC != null) cartCText.text = _cachedData.cartNameC.text;
             }
 
-            // Why: 외부 연동 전 임시로 일정 시간 대기 후 1번 카트리지를 자동 선택함
             if (_autoSelectCoroutine != null) StopCoroutine(_autoSelectCoroutine);
             _autoSelectCoroutine = StartCoroutine(AutoSelectRoutine());
         }
 
         public override void OnExit()
         {
-            // Why: 씬 전환 중 화면 암전 방지를 위해 base.OnExit() 생략
             StopAllAnimationCoroutines();
 
             if (_autoSelectCoroutine != null)
@@ -141,19 +122,31 @@ namespace My.Scripts._01_Tutorial.Pages
             }
         }
 
-        private void Update()
-        {
-            // Why: 자동으로 넘어가도록 수정되었으므로 기존의 키보드 입력 체크 로직은 비워둠
-        }
-
         private IEnumerator AutoSelectRoutine()
         {
-            // 화면에 요소들이 나타난 뒤 사용자가 인지할 수 있도록 짧게 대기함
             yield return CoroutineData.GetWaitForSeconds(autoSelectDelay);
             
             if (!_isCompleted)
             {
-                SelectLegoCart(1);
+                int targetCartIndex = 1; 
+
+                if (SessionManager.Instance)
+                {
+                    string cart = SessionManager.Instance.Cartridge;
+                    if (!string.IsNullOrEmpty(cart))
+                    {
+                        switch (cart.ToUpper())
+                        {
+                            case "A": targetCartIndex = 1; break;
+                            case "B": targetCartIndex = 2; break;
+                            case "C": targetCartIndex = 3; break;
+                            case "D": targetCartIndex = 4; break;
+                            default: targetCartIndex = 1; break;
+                        }
+                    }
+                }
+
+                SelectLegoCart(targetCartIndex);
             }
         }
 
@@ -180,31 +173,17 @@ namespace My.Scripts._01_Tutorial.Pages
                 elapsed += Time.deltaTime;
                 float t = elapsed / fadeDuration;
 
-                if (cg1CanvasGroup) 
-                {
-                    cg1CanvasGroup.alpha = Mathf.Lerp(startAlpha, 0f, t);
-                }
-
+                if (cg1CanvasGroup) cg1CanvasGroup.alpha = Mathf.Lerp(startAlpha, 0f, t);
                 yield return null;
             }
 
-            if (cg1CanvasGroup) 
-            {
-                cg1CanvasGroup.alpha = 0f;
-            }
+            if (cg1CanvasGroup) cg1CanvasGroup.alpha = 0f;
+            if (pageCanvasGroup) pageCanvasGroup.alpha = 1f;
 
-            if (pageCanvasGroup)
-            {
-                pageCanvasGroup.alpha = 1f;
-            }
-
-            if (onStepComplete != null)
-            {
-                onStepComplete.Invoke(0);
-            }
+            if (onStepComplete != null) onStepComplete.Invoke(0);
         }
 
-        private void ManageCartAnimation(ref Coroutine currentRoutine, CanvasGroup canvasGroup, RectTransform rectTransform, bool isSelected)
+        private void ManageCartAnimation(ref Coroutine currentRoutine, CanvasGroup cg, RectTransform rectTransform, bool isSelected)
         {
             if (currentRoutine != null)
             {
@@ -212,16 +191,16 @@ namespace My.Scripts._01_Tutorial.Pages
                 currentRoutine = null;
             }
 
-            if (canvasGroup && rectTransform)
+            if (cg && rectTransform)
             {
-                currentRoutine = StartCoroutine(CartAnimationRoutine(canvasGroup, rectTransform, isSelected));
+                currentRoutine = StartCoroutine(CartAnimationRoutine(cg, rectTransform, isSelected));
             }
         }
 
-        private IEnumerator CartAnimationRoutine(CanvasGroup canvasGroup, RectTransform rectTransform, bool isSelected)
+        private IEnumerator CartAnimationRoutine(CanvasGroup cg, RectTransform rectTransform, bool isSelected)
         {
             float elapsed = 0f;
-            float startAlpha = canvasGroup.alpha;
+            float startAlpha = cg.alpha;
             float targetAlpha = isSelected ? 1f : 0f;
             Vector2 startPos = rectTransform.anchoredPosition;
 
@@ -230,7 +209,7 @@ namespace My.Scripts._01_Tutorial.Pages
                 elapsed += Time.deltaTime;
                 float t = elapsed / fadeDuration;
 
-                if (canvasGroup) canvasGroup.alpha = Mathf.Lerp(startAlpha, targetAlpha, t);
+                if (cg) cg.alpha = Mathf.Lerp(startAlpha, targetAlpha, t);
 
                 if (isSelected && rectTransform)
                 {
@@ -240,9 +219,10 @@ namespace My.Scripts._01_Tutorial.Pages
                 yield return null;
             }
 
-            if (canvasGroup) canvasGroup.alpha = targetAlpha;
+            if (cg) cg.alpha = targetAlpha;
             if (isSelected && rectTransform) rectTransform.anchoredPosition = _selectedTargetPos;
-            SoundManager.Instance?.PlaySFX("레고_2");
+            
+            if (SoundManager.Instance) SoundManager.Instance.PlaySFX("레고_2");
         }
 
         private void StopAllAnimationCoroutines()
@@ -250,10 +230,6 @@ namespace My.Scripts._01_Tutorial.Pages
             if (_animationCoroutineA != null) StopCoroutine(_animationCoroutineA);
             if (_animationCoroutineB != null) StopCoroutine(_animationCoroutineB);
             if (_animationCoroutineC != null) StopCoroutine(_animationCoroutineC);
-
-            _animationCoroutineA = null;
-            _animationCoroutineB = null;
-            _animationCoroutineC = null;
         }
     }
 }
