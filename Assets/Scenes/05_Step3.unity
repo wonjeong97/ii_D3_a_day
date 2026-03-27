@@ -642,7 +642,7 @@ PrefabInstance:
     - target: {fileID: 564078164340024725, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
         type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 593943697172636458, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
         type: 3}
@@ -682,6 +682,11 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 21300000, guid: 5b4daa06f8683744d9554b14ba07296d,
         type: 3}
+    - target: {fileID: 4100283173011006083, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
+        type: 3}
+      propertyPath: questionId
+      value: D3
+      objectReference: {fileID: 0}
     - target: {fileID: 4523638256239534635, guid: 80b82d1b37029c64e97d2a5e4b09cb35,
         type: 3}
       propertyPath: m_Text
@@ -2701,10 +2706,10 @@ RectTransform:
   - {fileID: 1669785327}
   m_Father: {fileID: 442639241}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 1920, y: 1080}
+  m_SizeDelta: {x: 2, y: 2}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!225 &2066322614
 CanvasGroup:

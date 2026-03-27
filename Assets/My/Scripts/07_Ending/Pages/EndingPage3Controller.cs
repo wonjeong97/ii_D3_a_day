@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using My.Scripts.Core;
+using My.Scripts.Global;
 using UnityEngine;
 using UnityEngine.UI;
 using Wonjeong.Data;
@@ -21,7 +22,6 @@ namespace My.Scripts._07_Ending.Pages
 
     /// <summary>
     /// 엔딩의 세 번째 페이지 컨트롤러 (엔딩 분기 페이지).
-    /// Why: 50% 확률로 일반/특별 엔딩을 결정하고, 특별 엔딩 시 추가 연출(빨간 선)을 재생합니다.
     /// </summary>
     public class EndingPage3Controller : GamePage<EndingPage3Data>
     {
@@ -59,8 +59,12 @@ namespace My.Scripts._07_Ending.Pages
                 redLineImage.fillAmount = 0f;
             }
 
-            // 0.0f ~ 1.0f 사이의 난수를 생성하여 0.5 이상일 경우 특별 엔딩으로 취급 (50% 확률)
-            _isSpecialEnding = UnityEngine.Random.value >= 0.5f;
+            // Why: 유저가 다른 카트리지 콘텐츠를 모두 클리어했는지(IsOtherCartridgeContentsCleared) 여부에 따라 일반/특별 엔딩을 확정함.
+            _isSpecialEnding = false;
+            if (SessionManager.Instance)
+            {
+                _isSpecialEnding = SessionManager.Instance.IsOtherCartridgeContentsCleared;
+            }
 
             Debug.Log($"[EndingPage3] 엔딩 분기 결정: {(_isSpecialEnding ? "특별 엔딩" : "일반 엔딩")}");
 
@@ -87,7 +91,7 @@ namespace My.Scripts._07_Ending.Pages
         {
             if (_cachedData == null) return;
 
-            // 결정된 확률 분기에 따라 보여줄 텍스트 데이터를 선택
+            // 결정된 분기에 따라 보여줄 텍스트 데이터를 선택
             TextSetting targetText = _isSpecialEnding ? _cachedData.specialEndingText : _cachedData.normalEndingText;
             
             if (endingTextUI)

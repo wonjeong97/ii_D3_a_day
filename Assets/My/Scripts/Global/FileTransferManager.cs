@@ -256,16 +256,15 @@ namespace My.Scripts.Global
             bool isServer = false;
             if (TcpManager.Instance) isServer = TcpManager.Instance.IsServer;
 
-            UnityEngine.Debug.Log("[FileTransferManager] 누락된 사진 검증 및 고속 동기화 시작...");
-
-            string targetRole = isServer ? "Client" : "Server";
+            string targetRole = isServer ? "Right" : "Left";
+            string dateStr = DateTime.Now.ToString("yyyy-MM-dd");
 
             for (int i = 1; i <= totalQuestions; i++)
             {
-                string relativePath = $"{userId}/{targetRole}/0_{targetRole}_Q{i}.png";
+                // Why: 변경된 파일명 규칙 {유저ID}_{역할}_Q{번호}.png 에 맞춰 경로 구성
+                string relativePath = $"{dateStr}/{userId}/{targetRole}/{userId}_{targetRole}_Q{i}.png";
                 string fullPath = Path.Combine(localSaveRoot, relativePath.Replace('/', '\\'));
                 
-                // Why: 기존 5초 대기 딜레이를 삭제하고, 없으면 딱 한 번만 빠르게 시도한 뒤 바로 넘어가도록 최적화
                 if (!File.Exists(fullPath) && !isServer)
                 {
                     byte[] data = await DownloadPhotoAsync(relativePath);

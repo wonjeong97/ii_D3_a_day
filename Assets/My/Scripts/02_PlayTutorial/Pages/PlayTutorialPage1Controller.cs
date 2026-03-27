@@ -12,6 +12,7 @@ using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using Cysharp.Threading.Tasks;
 using Wonjeong.Data;
+using Wonjeong.UI;
 using Wonjeong.Utils;
 
 namespace My.Scripts._02_PlayTutorial.Pages
@@ -21,6 +22,8 @@ namespace My.Scripts._02_PlayTutorial.Pages
     {
         public TextSetting text1;
         public TextSetting text2;
+        public TextSetting textPopupWarning; 
+        public TextSetting textPopupTimeout; 
     }
 
     public class PlayTutorialPage1Controller : GamePage
@@ -41,12 +44,19 @@ namespace My.Scripts._02_PlayTutorial.Pages
         [SerializeField] private Image imgAnswer4;
         [SerializeField] private Image imgAnswer5;
 
+        [Header("Popup UI")]
+        [SerializeField] private CanvasGroup popupCanvasGroup;
+        [SerializeField] private Text popupTextUI;
+
         [Header("Animation Settings")]
         [SerializeField] private float fadeDuration = 0.5f;
         [SerializeField] private float waitBetweenFades = 0.5f;
 
         private PlayTutorialPage1Data _cachedData;
         private Coroutine _animationCoroutine;
+        private Coroutine _inactivityMonitorCoroutine;
+        private Coroutine _popupFadeOutCoroutine;
+
         private bool _isCompleted;
         private bool _canAcceptInput;
         
@@ -92,9 +102,15 @@ namespace My.Scripts._02_PlayTutorial.Pages
                 RfidManager.Instance.onAnswerReceived += OnRfidAnswerReceived;
             }
 
+            if (TcpManager.Instance)
+            {
+                TcpManager.Instance.onMessageReceived += OnNetworkMessageReceived;
+            }
+
             if (text1Canvas) text1Canvas.alpha = 0f;
             if (imageGroupCanvas) imageGroupCanvas.alpha = 0f;
             if (text2Canvas) text2Canvas.alpha = 0f;
+            if (popupCanvasGroup) popupCanvasGroup.alpha = 0f;
 
             string cart = "A";
             if (SessionManager.Instance)
@@ -142,6 +158,11 @@ namespace My.Scripts._02_PlayTutorial.Pages
                 RfidManager.Instance.onAnswerReceived -= OnRfidAnswerReceived;
             }
 
+            if (TcpManager.Instance)
+            {
+                TcpManager.Instance.onMessageReceived -= OnNetworkMessageReceived;
+            }
+
             if (_cts != null)
             {
                 _cts.Cancel();
@@ -156,6 +177,9 @@ namespace My.Scripts._02_PlayTutorial.Pages
                 StopCoroutine(_animationCoroutine);
                 _animationCoroutine = null;
             }
+
+            if (_inactivityMonitorCoroutine != null) StopCoroutine(_inactivityMonitorCoroutine);
+            if (_popupFadeOutCoroutine != null) StopCoroutine(_popupFadeOutCoroutine);
         }
 
         /// <summary>
@@ -286,24 +310,6 @@ namespace My.Scripts._02_PlayTutorial.Pages
         }
 
         /// <summary>
-        /// 입력 처리 완료.
-        /// Why: 입력을 확정짓고 폴링을 중단한 후 매니저로 이벤트를 전달함.
-        /// </summary>
-        private void OnValidInputReceived()
-        {
-            if (RfidManager.Instance) 
-            {
-                RfidManager.Instance.StopPolling();
-            }
-            _isCompleted = true; 
-            
-            if (onStepComplete != null) 
-            {
-                onStepComplete.Invoke(0);
-            }
-        }
-
-        /// <summary>
         /// 화면 UI 페이드 인 연출.
         /// Why: 텍스트와 이미지를 순차적으로 노출시킨 후 입력 대기 상태로 전환함.
         /// </summary>
@@ -323,6 +329,88 @@ namespace My.Scripts._02_PlayTutorial.Pages
             if (RfidManager.Instance) 
             {
                 RfidManager.Instance.StartPolling();
+            }
+
+            // 입력을 받을 수 있는 상태가 되면 무응답 감지 코루틴을 시작함
+            if (_inactivityMonitorCoroutine != null) StopCoroutine(_inactivityMonitorCoroutine);
+            _inactivityMonitorCoroutine = StartCoroutine(InactivityMonitorRoutine());
+        }
+
+        /// <summary>
+        /// 2단계 무응답 감지 코루틴.
+        /// Why: 일정 시간 입력이 없을 시 팝업을 띄우고, 끝까지 응답이 없으면 타이틀로 강제 초기화함.
+        /// </summary>
+        private IEnumerator InactivityMonitorRoutine()
+        {
+            yield return CoroutineData.GetWaitForSeconds(20.0f);
+            if (_isCompleted) yield break;
+
+            if (_cachedData != null && _cachedData.textPopupWarning != null && popupTextUI)
+            {
+                SetUIText(popupTextUI, _cachedData.textPopupWarning);
+            }
+
+            if (popupCanvasGroup) yield return StartCoroutine(FadeCanvasGroupRoutine(popupCanvasGroup, popupCanvasGroup.alpha, 1f, 0.5f));
+            yield return CoroutineData.GetWaitForSeconds(3.0f);
+            if (popupCanvasGroup) yield return StartCoroutine(FadeCanvasGroupRoutine(popupCanvasGroup, popupCanvasGroup.alpha, 0f, 0.5f));
+
+            if (SoundManager.Instance) SoundManager.Instance.PlaySFX("공통_23");
+
+            yield return CoroutineData.GetWaitForSeconds(10.0f);
+            if (_isCompleted) yield break;
+
+            if (_cachedData != null && _cachedData.textPopupTimeout != null && popupTextUI)
+            {
+                SetUIText(popupTextUI, _cachedData.textPopupTimeout);
+            }
+
+            if (popupCanvasGroup) yield return StartCoroutine(FadeCanvasGroupRoutine(popupCanvasGroup, popupCanvasGroup.alpha, 1f, 0.5f));
+            yield return CoroutineData.GetWaitForSeconds(3.0f);
+
+            if (_isCompleted) yield break;
+            
+            UnityEngine.Debug.LogWarning("[PlayTutorialPage1Controller] 장시간 무응답으로 인해 타이틀 화면으로 초기화합니다.");
+
+            if (TcpManager.Instance) TcpManager.Instance.SendMessageToTarget("RETURN_TO_TITLE", "");
+            if (GameManager.Instance) GameManager.Instance.ReturnToTitle();
+        }
+
+        /// <summary>
+        /// 입력 처리 완료.
+        /// Why: 입력을 확정짓고 폴링을 중단한 후 매니저로 이벤트를 전달함.
+        /// </summary>
+        private void OnValidInputReceived()
+        {
+            if (_inactivityMonitorCoroutine != null) StopCoroutine(_inactivityMonitorCoroutine);
+            if (SoundManager.Instance) SoundManager.Instance.StopSFX();
+            
+            if (popupCanvasGroup && popupCanvasGroup.alpha > 0f)
+            {
+                if (_popupFadeOutCoroutine != null) StopCoroutine(_popupFadeOutCoroutine);
+                _popupFadeOutCoroutine = StartCoroutine(FadeCanvasGroupRoutine(popupCanvasGroup, popupCanvasGroup.alpha, 0f, 0.5f));
+            }
+
+            if (RfidManager.Instance) 
+            {
+                RfidManager.Instance.StopPolling();
+            }
+
+            _isCompleted = true; 
+            
+            if (onStepComplete != null) 
+            {
+                onStepComplete.Invoke(0);
+            }
+        }
+
+        /// <summary>
+        /// 네트워크 메시지 수신 처리 (타이틀 강제 복귀 동기화).
+        /// </summary>
+        private void OnNetworkMessageReceived(TcpMessage msg)
+        {
+            if (msg != null && msg.command == "RETURN_TO_TITLE")
+            {
+                if (GameManager.Instance) GameManager.Instance.ReturnToTitle();
             }
         }
 

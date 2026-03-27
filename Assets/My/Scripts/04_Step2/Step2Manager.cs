@@ -10,6 +10,7 @@ using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using Cysharp.Threading.Tasks;
 using My.Scripts.Core.Data;
+using My.Scripts.Network;
 using Wonjeong.Data;
 using Wonjeong.Utils;
 
@@ -60,6 +61,34 @@ namespace My.Scripts._04_Step2
 
         public override void TransitionToPage(int index)
         {
+            //  다음 페이지로 넘어가기 직전, 현재 페이지가 질문 페이지였다면 답변 데이터를 API로 전송함
+            if (currentPageIndex >= 0 && currentPageIndex < pages.Count)
+            {
+                Page_Question qPage = pages[currentPageIndex] as Page_Question;
+                if (qPage)
+                {
+                    // 질문 번호 계산 (Q1=1, Q2=2 ... Q15=15)
+                    int qNo = (currentPageIndex - 1) / 2 + 1;
+                    
+                    // 답변 값 매핑 (ㄱ->5, ㄴ2->4, ㄷ->3, ㄹ->2, ㅁ->1)
+                    int rawSelection = qPage.SelectedIndex;
+                    if (rawSelection >= 1 && rawSelection <= 5)
+                    {
+                        int mappedValue = 6 - rawSelection;
+                        
+                        // 서버면 left, 클라이언트면 right
+                        string side = (TcpManager.Instance && TcpManager.Instance.IsServer) ? "left" : "right";
+                        
+                        if (GameManager.Instance)
+                        {
+                            Debug.Log($"[Step2Manager] API 전송: Q{qNo}, Side: {side}, Value: {mappedValue}");
+                            GameManager.Instance.SendValueUpdateAPI(qNo, side, mappedValue);
+                        }
+                    }
+                }
+            }
+
+            // 기존 배경 처리 및 페이지 전환 로직 실행
             base.TransitionToPage(index);
 
             if (index > 0 && index < pages.Count)
@@ -261,7 +290,9 @@ namespace My.Scripts._04_Step2
                         questionSetting = setting.questionSets[i].questionSetting,
                         textSelected = setting.commonQuestionUI.textSelected,
                         textDescription = targetDescription,
-                        textWait = setting.commonQuestionUI.textWait
+                        textWait = setting.commonQuestionUI.textWait,
+                        textPopupWarning = setting.commonQuestionUI.textPopupWarning,
+                        textPopupTimeout = setting.commonQuestionUI.textPopupTimeout
                     };
 
                     if (pageIndex < pages.Count && pages[pageIndex])

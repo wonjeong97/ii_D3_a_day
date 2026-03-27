@@ -2,6 +2,7 @@ using System.Collections;
 using My.Scripts.Global;
 using My.Scripts.Network; 
 using UnityEngine;
+using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 using Wonjeong.Data;
 using Wonjeong.UI;
@@ -11,15 +12,16 @@ namespace My.Scripts._00_Title
 {
     /// <summary>
     /// 타이틀 화면 입력 처리 및 씬 전환 매니저.
+    /// 서버 측에서 지속적으로 API를 폴링하여 외부 시작 명령을 대기합니다.
     /// </summary>
     public class TitleManager : MonoBehaviour
     {
         private bool _isTransitioning = false; 
         private float _fadeTime = 1.0f; 
 
-        // Why: 클라이언트가 타이틀에 올 때까지 기다리기 위한 플래그 및 코루틴
         private bool _isWaitingForClient = false;
         private Coroutine _requestCoroutine;
+        private Coroutine _pollCoroutine;
 
         private void Start()
         {
@@ -28,6 +30,12 @@ namespace My.Scripts._00_Title
             if (TcpManager.Instance)
             {
                 TcpManager.Instance.onMessageReceived += OnNetworkMessageReceived;
+                
+                // Why: API 통신은 서버만 전담해야 하므로 서버 모드일 때만 폴링 코루틴을 시작함
+                if (TcpManager.Instance.IsServer)
+                {
+                    _pollCoroutine = StartCoroutine(PollRoomStateRoutine());
+                }
             }
             else
             {
@@ -58,20 +66,68 @@ namespace My.Scripts._00_Title
             }
         }
 
+        /// <summary>
+        /// 3초 주기로 API를 호출하여 방의 상태(EMPTY / USING)를 확인합니다.
+        /// Why: 외부 시스템(예: 키오스크, 웹)에서 시작을 제어할 수 있도록 상태를 폴링하기 위함.
+        /// </summary>
+        private IEnumerator PollRoomStateRoutine()
+        {
+            while (!_isTransitioning && !_isWaitingForClient)
+            {
+                yield return CoroutineData.GetWaitForSeconds(3.0f);
+
+                if (!GameManager.Instance || GameManager.Instance.ApiConfig == null)
+                {
+                    continue;
+                }
+
+                string url = $"{GameManager.Instance.ApiConfig.CheckRoomStateUrl}?code=d3";
+
+                using (UnityWebRequest request = UnityWebRequest.Get(url))
+                {
+                    request.timeout = 2; // Why: 무한 대기로 인한 코루틴 블로킹 방지
+                    yield return request.SendWebRequest();
+
+                    if (request.result == UnityWebRequest.Result.Success)
+                    {
+                        string responseText = request.downloadHandler.text.Trim().ToUpper();
+                        
+                        if (responseText.Contains("USING"))
+                        {
+                            Debug.Log("[TitleManager] 방 상태가 USING으로 확인되었습니다. 클라이언트 진입 대기를 시작합니다.");
+                            _isWaitingForClient = true;
+                            _requestCoroutine = StartCoroutine(RequestStartRoutine());
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[TitleManager] CheckRoomState API 호출 실패: {request.error}");
+                    }
+                }
+            }
+        }
+
         private void Update()
         {
             if (_isTransitioning) return; 
 
-            // Why: 씬 전환 권한을 서버가 전담하며, 엔터 입력 시 클라이언트 상태부터 체크함
-            if (TcpManager.Instance && TcpManager.Instance.IsServer)
+            // Update 내부이므로 GameManager 유니티 객체 접근 시 극단적 최적화 연산 적용
+            if (!object.ReferenceEquals(TcpManager.Instance, null))
             {
-                if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+                if (TcpManager.Instance.IsServer)
                 {
-                    if (!_isWaitingForClient)
+                    // Why: API 타임아웃 상황을 대비한 수동 디버그 넘김 키
+                    if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
                     {
-                        _isWaitingForClient = true;
-                        Debug.Log("[TitleManager] 클라이언트의 Title 씬 진입을 대기합니다...");
-                        _requestCoroutine = StartCoroutine(RequestStartRoutine());
+                        if (!_isWaitingForClient)
+                        {
+                            _isWaitingForClient = true;
+                            Debug.Log("[TitleManager] 수동 엔터 입력. 클라이언트 진입 대기를 시작합니다...");
+                            
+                            if (_pollCoroutine != null) StopCoroutine(_pollCoroutine);
+                            _requestCoroutine = StartCoroutine(RequestStartRoutine());
+                        }
                     }
                 }
             }
