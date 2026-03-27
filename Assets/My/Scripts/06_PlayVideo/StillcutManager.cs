@@ -94,7 +94,7 @@ namespace My.Scripts._06_PlayVideo
             }
         }
 
-       // <summary>
+        /// <summary>
         /// 외부 FFMPEG 프로세스를 사용해 스틸컷 이미지 병합 영상 생성.
         /// 75% 해상도로 축소하여 인코딩 속도 최적화.
         /// </summary>
