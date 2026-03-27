@@ -30,7 +30,6 @@ namespace My.Scripts.Network
     public class TcpManager : MonoBehaviour
     {
         public static TcpManager Instance { get; private set; }
-
         public Action<TcpMessage> onMessageReceived;
 
         private TcpSetting _tcpSetting;
@@ -76,16 +75,19 @@ namespace My.Scripts.Network
         {
             TcpSetting loadedSetting = JsonLoader.Load<TcpSetting>(GameConstants.Path.TcpSetting);
 
-            if (loadedSetting != null)
+            if (loadedSetting == null)
             {
-                _tcpSetting = loadedSetting;
-                _isRunning = true;
-
-                if (_tcpSetting.isServer) StartServer();
-                else StartClient();
-                
-                _heartbeatCoroutine = StartCoroutine(ConnectionMonitorRoutine());
+                UnityEngine.Debug.LogError("[TcpManager] TcpSetting.json 로드 실패. 통신을 시작할 수 없습니다.");
+                return;
             }
+
+            _tcpSetting = loadedSetting;
+            _isRunning = true;
+
+            if (_tcpSetting.isServer) StartServer();
+            else StartClient();
+            
+            _heartbeatCoroutine = StartCoroutine(ConnectionMonitorRoutine());
         }
 
         private void Update()
@@ -94,17 +96,25 @@ namespace My.Scripts.Network
             {
                 _needsToReturnToTitle = false;
                 
-                // Why: 이미 타이틀 씬이라면 불필요한 씬 로드를 방지함
-                if (SceneManager.GetActiveScene().name != GameConstants.Scene.Title)
+                string currentSceneName = SceneManager.GetActiveScene().name;
+                if (currentSceneName != GameConstants.Scene.Title)
                 {
-                    Debug.LogError("[TcpManager] 재연결 10회 실패. 타이틀로 강제 초기화합니다.");
+                    UnityEngine.Debug.LogError("[TcpManager] 재연결 10회 실패. 타이틀로 강제 초기화합니다.");
                     
-                    if (GameManager.Instance) GameManager.Instance.ReturnToTitle();
-                    else SceneManager.LoadScene(GameConstants.Scene.Title); 
+                    // Update 내부이므로 GameManager 유니티 객체 접근 시 극단적 최적화 연산 적용
+                    if (!object.ReferenceEquals(GameManager.Instance, null)) 
+                    {
+                        GameManager.Instance.ReturnToTitle();
+                    }
+                    else 
+                    {
+                        SceneManager.LoadScene(GameConstants.Scene.Title); 
+                    }
                 }
             }
 
-            while (_messageQueue.TryDequeue(out TcpMessage message))
+            TcpMessage message;
+            while (_messageQueue.TryDequeue(out message))
             {
                 if (message != null)
                 {
@@ -112,6 +122,8 @@ namespace My.Scripts.Network
                     if (onMessageReceived != null) onMessageReceived.Invoke(message);
                 }
             }
+            
+            // # TODO: 메시지 처리량이 많아질 경우 프레임 드랍 방지를 위해 한 프레임당 최대 처리 개수 제한 로직 추가 필요
         }
 
         private IEnumerator ConnectionMonitorRoutine()

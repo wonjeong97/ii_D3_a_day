@@ -57,6 +57,7 @@ namespace My.Scripts.Core.Pages
 
             if (_cachedData == null || _cachedData.textPhotoSaved == null)
             {
+                UnityEngine.Debug.LogWarning("[Page_Camera] 데이터가 누락되었습니다. 에러 화면을 출력합니다.");
                 if (errorCg) errorCg.alpha = 1f;
                 if (textMySceneCg) textMySceneCg.alpha = 0f;
                 return;
@@ -71,7 +72,7 @@ namespace My.Scripts.Core.Pages
 
             StartWebCam();
 
-            if (_sequenceCoroutine != null) StopCoroutine(_sequenceCoroutine);
+            if (object.ReferenceEquals(_sequenceCoroutine, null) == false) StopCoroutine(_sequenceCoroutine);
             _sequenceCoroutine = StartCoroutine(SequenceRoutine());
         }
 
@@ -154,7 +155,7 @@ namespace My.Scripts.Core.Pages
             if (!_isCompleted) CompletePage();
         }
 
-        private async UniTask<bool> CapturePhotoAsync()
+       private async UniTask<bool> CapturePhotoAsync()
         {
             RenderTexture rt = null;
             RenderTexture prev = null;
@@ -191,9 +192,9 @@ namespace My.Scripts.Core.Pages
                 _capturedPhoto.Apply();
 
                 bool result = true;
-                bool isStep2 = SceneManager.GetActiveScene().name == GameConstants.Scene.Step2;
+                string currentSceneName = SceneManager.GetActiveScene().name;
+                bool isStep2 = currentSceneName == GameConstants.Scene.Step2;
 
-                // Why: Step2 씬에서만 사진을 저장하고 FileTransferManager를 통해 네트워크로 전송함.
                 if (savePhoto && isStep2)
                 {
                     result = await SavePhotoAsync(_capturedPhoto);
@@ -201,8 +202,9 @@ namespace My.Scripts.Core.Pages
 
                 return result;
             }
-            catch (Exception)
+            catch (Exception e)
             {
+                UnityEngine.Debug.LogError($"[Page_Camera] 촬영 중 예외 발생: {e.Message}");
                 return false;
             }
             finally
@@ -251,6 +253,8 @@ namespace My.Scripts.Core.Pages
                 return false;
             }
         }
+        
+        // # TODO: WebCamTexture의 잦은 할당 및 해제가 메모리 단편화를 유발할 수 있으므로, 글로벌 매니저에서 풀링하여 재사용하는 구조 검토 필요
 
         private void StartWebCam()
         {

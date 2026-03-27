@@ -28,6 +28,10 @@ namespace My.Scripts._04_Step2
         public List<QuestionSetItem> questionSets;
     }
 
+    /// <summary>
+    /// Step2 씬의 페이지 흐름을 제어하는 매니저.
+    /// Why: 여러 질문과 카메라 촬영 페이지를 순환하며 배경 이미지를 동적으로 교체함.
+    /// </summary>
     public class Step2Manager : BaseFlowManager
     {
         [Header("Background Setup")]
@@ -67,6 +71,9 @@ namespace My.Scripts._04_Step2
             }
         }
 
+        /// <summary>
+        /// 배경 화면 전환 시퀀스를 비동기로 처리함.
+        /// </summary>
         private async UniTaskVoid ProcessBackgroundSequenceAsync(int questionNum, bool isCameraPage)
         {
             if (isCameraPage)
@@ -115,16 +122,13 @@ namespace My.Scripts._04_Step2
                     subCanvasBgCg.alpha = endAlpha;
                 }
             }
-            catch (OperationCanceledException)
-            {
-            }
+            catch (OperationCanceledException) { }
         }
 
         private async UniTask UpdateSubCanvasBackgroundAsync(int questionNum)
         {
             if (!subCanvasBgImage) return;
 
-            // Why: 질문 개수(15개)를 초과하는 인덱스(예: Outro 진입 시 계산되는 16)에 대한 배경 로드 시도를 차단하여 에러를 방지함.
             if (questionNum > 15) return;
 
             if (_currentBgQuestionNum == questionNum) return;
@@ -141,32 +145,30 @@ namespace My.Scripts._04_Step2
 
             string bgKey = $"BG_Step2_{mainTheme}_{subTheme}_{questionNum}";
 
-            if (_bgHandle.IsValid())
-            {
-                Addressables.Release(_bgHandle);
-            }
+            if (_bgHandle.IsValid()) Addressables.Release(_bgHandle);
 
             try
             {
                 _bgHandle = Addressables.LoadAssetAsync<Sprite>(bgKey);
                 Sprite nextBg = await _bgHandle;
                 
-                if (nextBg) 
-                {
-                    subCanvasBgImage.sprite = nextBg;
-                }
+                if (nextBg) subCanvasBgImage.sprite = nextBg;
             }
             catch (Exception e)
             {
-                Debug.LogError($"[Step2Manager] 배경 로드 실패: {bgKey}, {e.Message}");
+                UnityEngine.Debug.LogError($"[Step2Manager] 배경 로드 실패: {bgKey}, {e.Message}");
             }
         }
 
+        /// <summary>
+        /// 공통 JSON과 개별 JSON을 깊은 복사(Deep Merge) 방식으로 병합함.
+        /// Why: C# 직렬화 과정에서 빈 객체로 인해 속성값이 누락되는 현상을 완벽히 방어하기 위함.
+        /// </summary>
         protected override void LoadSettings()
         {
             if (!SessionManager.Instance)
             {
-                Debug.LogError("[Step2Manager] SessionManager가 없습니다.");
+                UnityEngine.Debug.LogError("[Step2Manager] SessionManager가 없습니다.");
                 return;
             }
 
@@ -174,20 +176,56 @@ namespace My.Scripts._04_Step2
             
             if (typeStr.Length < 2 || typeStr == "None")
             {
-                Debug.LogError($"[Step2Manager] 유효하지 않은 UserType입니다: {typeStr}");
+                UnityEngine.Debug.LogError($"[Step2Manager] 유효하지 않은 UserType입니다: {typeStr}");
                 return;
             }
 
+            string commonPath = "JSON/Step2/Common";
             string dynamicPath = $"JSON/Step2/{typeStr}";
             
-            Step2Setting setting = JsonLoader.Load<Step2Setting>(dynamicPath);
+            Step2Setting commonSetting = JsonLoader.Load<Step2Setting>(commonPath);
+            Step2Setting specificSetting = JsonLoader.Load<Step2Setting>(dynamicPath);
 
-            if (setting == null)
+            if (specificSetting == null)
             {
-                Debug.LogWarning($"[Step2Manager] {dynamicPath} 로드 실패. 데이터를 확인할 수 없습니다.");
+                UnityEngine.Debug.LogWarning($"[Step2Manager] {dynamicPath} 로드 실패. 데이터를 확인할 수 없습니다.");
                 return;
             }
 
+            // 일반 C# 객체이므로 명시적 null 검사 사용
+            if (commonSetting != null)
+            {
+                if (specificSetting.background == null) specificSetting.background = commonSetting.background;
+                if (specificSetting.introPage == null) specificSetting.introPage = commonSetting.introPage;
+                if (specificSetting.outroPage == null) specificSetting.outroPage = commonSetting.outroPage;
+                
+                // 질문 페이지 공통 UI 병합
+                if (specificSetting.commonQuestionUI == null) 
+                {
+                    specificSetting.commonQuestionUI = commonSetting.commonQuestionUI;
+                }
+                else if (commonSetting.commonQuestionUI != null)
+                {
+                    if (specificSetting.commonQuestionUI.textSelected == null) specificSetting.commonQuestionUI.textSelected = commonSetting.commonQuestionUI.textSelected;
+                    if (specificSetting.commonQuestionUI.textDescription == null) specificSetting.commonQuestionUI.textDescription = commonSetting.commonQuestionUI.textDescription;
+                    if (specificSetting.commonQuestionUI.textWait == null) specificSetting.commonQuestionUI.textWait = commonSetting.commonQuestionUI.textWait;
+                }
+
+                // 결과 페이지 공통 UI 병합 (에러 발생 원인 해결부)
+                if (specificSetting.commonResultUI == null) 
+                {
+                    specificSetting.commonResultUI = commonSetting.commonResultUI;
+                }
+                else if (commonSetting.commonResultUI != null)
+                {
+                    if (specificSetting.commonResultUI.textAnswerComplete == null) specificSetting.commonResultUI.textAnswerComplete = commonSetting.commonResultUI.textAnswerComplete;
+                    if (specificSetting.commonResultUI.textPhotoSaved == null) specificSetting.commonResultUI.textPhotoSaved = commonSetting.commonResultUI.textPhotoSaved;
+                }
+            }
+
+            Step2Setting setting = specificSetting;
+
+            // Unity 객체이므로 암시적 boolean 검사 사용
             if (backgroundPage)
             {
                 backgroundPage.SetupData(setting.background);
@@ -197,10 +235,7 @@ namespace My.Scripts._04_Step2
             if (pages.Count > 0 && pages[0])
             {
                 Page_Intro intro = pages[0] as Page_Intro;
-                if (intro)
-                {
-                    intro.SetSyncCommand("STEP2_INTRO_COMPLETE");
-                }
+                if (intro) intro.SetSyncCommand("STEP2_INTRO_COMPLETE");
                 pages[0].SetupData(setting.introPage);
             }
 
@@ -251,10 +286,7 @@ namespace My.Scripts._04_Step2
                     if (pageIndex < pages.Count && pages[pageIndex])
                     {
                         Page_Camera rPage = pages[pageIndex] as Page_Camera;
-                        if (rPage)
-                        {
-                            rPage.SetSyncCommand($"STEP2_R_{i}_COMPLETE");
-                        }
+                        if (rPage) rPage.SetSyncCommand($"STEP2_R_{i}_COMPLETE");
                         pages[pageIndex].SetupData(rData);
                     }
                     pageIndex++;
@@ -282,10 +314,7 @@ namespace My.Scripts._04_Step2
 
         private void OnDestroy()
         {
-            if (_bgHandle.IsValid())
-            {
-                Addressables.Release(_bgHandle);
-            }
+            if (_bgHandle.IsValid()) Addressables.Release(_bgHandle);
             
             if (_fadeCts != null)
             {

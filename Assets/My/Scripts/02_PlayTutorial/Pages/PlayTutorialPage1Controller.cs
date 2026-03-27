@@ -5,6 +5,7 @@ using System.Threading;
 using My.Scripts.Core;
 using My.Scripts.Network;
 using My.Scripts.Global;
+using My.Scripts.Hardware; 
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.AddressableAssets;
@@ -53,25 +54,56 @@ namespace My.Scripts._02_PlayTutorial.Pages
         private CancellationTokenSource _cts;
 
         public KeyCode PressedKey { get; private set; } = KeyCode.None;
+        public int PressedAnswerIndex { get; private set; } = -1; 
 
+        /// <summary>
+        /// 페이지 데이터 초기화.
+        /// Why: 전달된 UI 세팅 데이터를 캐싱하여 페이지 활성화 시 사용하기 위함.
+        /// </summary>
+        /// <param name="data">JSON에서 역직렬화된 데이터 객체.</param>
         public override void SetupData(object data)
         {
             PlayTutorialPage1Data pageData = data as PlayTutorialPage1Data;
-            if (pageData != null) _cachedData = pageData;
+            
+            if (pageData != null) 
+            {
+                _cachedData = pageData;
+            }
+            else 
+            {
+                UnityEngine.Debug.LogWarning("[PlayTutorialPage1Controller] 전달된 데이터가 PlayTutorialPage1Data 타입이 아닙니다.");
+            }
         }
 
+        /// <summary>
+        /// 페이지 진입 시 초기화 및 연출 시작.
+        /// Why: 컴포넌트를 초기화하고 RFID 이벤트 구독 및 비동기 이미지 로드를 시작함.
+        /// </summary>
         public override void OnEnter()
         {
             base.OnEnter();
             _isCompleted = false;
             _canAcceptInput = false; 
             PressedKey = KeyCode.None;
+            PressedAnswerIndex = -1;
+
+            if (RfidManager.Instance) 
+            {
+                RfidManager.Instance.onAnswerReceived += OnRfidAnswerReceived;
+            }
 
             if (text1Canvas) text1Canvas.alpha = 0f;
             if (imageGroupCanvas) imageGroupCanvas.alpha = 0f;
             if (text2Canvas) text2Canvas.alpha = 0f;
 
-            string cart = SessionManager.Instance && !string.IsNullOrEmpty(SessionManager.Instance.Cartridge) ? SessionManager.Instance.Cartridge : "A";
+            string cart = "A";
+            if (SessionManager.Instance)
+            {
+                if (!string.IsNullOrEmpty(SessionManager.Instance.Cartridge))
+                {
+                    cart = SessionManager.Instance.Cartridge;
+                }
+            }
 
             if (_cachedData != null)
             {
@@ -80,7 +112,7 @@ namespace My.Scripts._02_PlayTutorial.Pages
 
                 if (text1UI)
                 {
-                    text1UI.text = text1UI.text.Replace("{Cartridge}", $"{cart} 카트리지");
+                    text1UI.text = text1UI.text.Replace("{Cartridge}", cart + " 카트리지");
                 }
             }
 
@@ -96,10 +128,20 @@ namespace My.Scripts._02_PlayTutorial.Pages
             _animationCoroutine = StartCoroutine(SequenceFadeRoutine());
         }
 
+        /// <summary>
+        /// 페이지 이탈 시 자원 정리.
+        /// Why: 코루틴 중단 및 RFID 폴링 취소, 메모리 해제를 수행함.
+        /// </summary>
         public override void OnExit()
         {
             base.OnExit();
             
+            if (RfidManager.Instance) 
+            {
+                RfidManager.Instance.StopPolling();
+                RfidManager.Instance.onAnswerReceived -= OnRfidAnswerReceived;
+            }
+
             if (_cts != null)
             {
                 _cts.Cancel();
@@ -116,9 +158,15 @@ namespace My.Scripts._02_PlayTutorial.Pages
             }
         }
 
+        /// <summary>
+        /// 카트리지 이미지 비동기 로드 및 적용.
+        /// Why: 동기적 로드로 인한 프레임 드랍을 막고 안전하게 스프라이트를 적용함.
+        /// </summary>
+        /// <param name="cart">로드할 카트리지 문자열.</param>
+        /// <param name="token">작업 취소를 위한 토큰.</param>
         private async UniTaskVoid LoadAndSetCartridgeImagesAsync(string cart, CancellationToken token)
         {
-            string legoCartKey = $"Lego_cart_{cart.ToLower()}";
+            string legoCartKey = "Lego_cart_" + cart.ToLower();
             string[] keys = new string[] { legoCartKey, legoCartKey, legoCartKey, legoCartKey, legoCartKey };
 
             ReleaseLoadedImages();
@@ -147,12 +195,16 @@ namespace My.Scripts._02_PlayTutorial.Pages
             {
                 if (!token.IsCancellationRequested)
                 {
-                    Debug.LogError($"[PlayTutorialPage1Controller] 어드레서블 로드 실패: {e.Message}");
+                    UnityEngine.Debug.LogError("[PlayTutorialPage1Controller] 어드레서블 로드 실패: " + e.Message);
                     ReleaseLoadedImages();
                 }
             }
         }
 
+        /// <summary>
+        /// 로드된 어드레서블 핸들 해제.
+        /// Why: 불필요해진 메모리를 명시적으로 반환함.
+        /// </summary>
         private void ReleaseLoadedImages()
         {
             if (_loadedImageHandles == null || _loadedImageHandles.Count == 0) return;
@@ -164,22 +216,62 @@ namespace My.Scripts._02_PlayTutorial.Pages
             _loadedImageHandles.Clear();
         }
 
+        /// <summary>
+        /// 매 프레임 키보드 디버그 입력 검사.
+        /// Why: 물리 하드웨어 없이 개발 환경에서도 원활한 테스트가 가능하도록 입력을 보조함. 극단적 최적화 연산 적용.
+        /// </summary>
         private void Update()
         {
             if (_isCompleted || !_canAcceptInput) return;
 
             bool isServer = false;
-            if (TcpManager.Instance) isServer = TcpManager.Instance.IsServer;
+            if (!object.ReferenceEquals(TcpManager.Instance, null)) 
+            {
+                isServer = TcpManager.Instance.IsServer;
+            }
 
             KeyCode pressed = GetValidKey(isServer);
 
             if (pressed != KeyCode.None)
             {
                 PressedKey = pressed; 
+                
+                if (pressed >= KeyCode.Alpha1 && pressed <= KeyCode.Alpha5) 
+                {
+                    PressedAnswerIndex = pressed - KeyCode.Alpha1 + 1;
+                }
+                else if (pressed >= KeyCode.Alpha6 && pressed <= KeyCode.Alpha9) 
+                {
+                    PressedAnswerIndex = pressed - KeyCode.Alpha6 + 1;
+                }
+                else if (pressed == KeyCode.Alpha0) 
+                {
+                    PressedAnswerIndex = 5;
+                }
+
                 OnValidInputReceived();
             }
         }
 
+        /// <summary>
+        /// RFID 응답 수신 이벤트 핸들러.
+        /// Why: 폴링 중 카드가 인식되면 해당 인덱스로 상태를 갱신하고 입력을 완료함.
+        /// </summary>
+        /// <param name="index">인식된 응답 인덱스 번호 (1~5).</param>
+        private void OnRfidAnswerReceived(int index)
+        {
+            if (_isCompleted || !_canAcceptInput) return;
+            
+            PressedAnswerIndex = index; 
+            OnValidInputReceived();
+        }
+
+        /// <summary>
+        /// 현재 PC 역할에 따른 유효 키 추출.
+        /// Why: 서버와 클라이언트가 서로 다른 입력 키 세트를 사용하도록 분리함.
+        /// </summary>
+        /// <param name="isServer">서버 여부.</param>
+        /// <returns>눌린 KeyCode 반환.</returns>
         private KeyCode GetValidKey(bool isServer)
         {
             KeyCode[] keys = isServer 
@@ -193,12 +285,28 @@ namespace My.Scripts._02_PlayTutorial.Pages
             return KeyCode.None;
         }
 
+        /// <summary>
+        /// 입력 처리 완료.
+        /// Why: 입력을 확정짓고 폴링을 중단한 후 매니저로 이벤트를 전달함.
+        /// </summary>
         private void OnValidInputReceived()
         {
+            if (RfidManager.Instance) 
+            {
+                RfidManager.Instance.StopPolling();
+            }
             _isCompleted = true; 
-            if (onStepComplete != null) onStepComplete.Invoke(0);
+            
+            if (onStepComplete != null) 
+            {
+                onStepComplete.Invoke(0);
+            }
         }
 
+        /// <summary>
+        /// 화면 UI 페이드 인 연출.
+        /// Why: 텍스트와 이미지를 순차적으로 노출시킨 후 입력 대기 상태로 전환함.
+        /// </summary>
         private IEnumerator SequenceFadeRoutine()
         {
             if (text1Canvas) yield return StartCoroutine(FadeCanvasGroupRoutine(text1Canvas, 0f, 1f, fadeDuration));
@@ -210,19 +318,35 @@ namespace My.Scripts._02_PlayTutorial.Pages
             if (text2Canvas) yield return StartCoroutine(FadeCanvasGroupRoutine(text2Canvas, 0f, 1f, fadeDuration));
 
             yield return CoroutineData.GetWaitForSeconds(0.5f);
+            
             _canAcceptInput = true;
+            if (RfidManager.Instance) 
+            {
+                RfidManager.Instance.StartPolling();
+            }
         }
 
+        /// <summary>
+        /// 캔버스 그룹 페이드 처리 유틸 코루틴.
+        /// </summary>
         private IEnumerator FadeCanvasGroupRoutine(CanvasGroup target, float start, float end, float duration)
         {
             float elapsed = 0f;
             while (elapsed < duration)
             {
                 elapsed += Time.deltaTime;
-                if (target) target.alpha = Mathf.Lerp(start, end, elapsed / duration);
+                
+                if (target) 
+                {
+                    target.alpha = Mathf.Lerp(start, end, elapsed / duration);
+                }
                 yield return null;
             }
-            if (target) target.alpha = end;
+            
+            if (target) 
+            {
+                target.alpha = end;
+            }
         }
     }
 }
