@@ -17,6 +17,10 @@ namespace My.Scripts._02_PlayTutorial
         public PlayTutorialPage3Data page3;
     }
 
+    /// <summary>
+    /// 플레이 튜토리얼 씬의 페이지 전환 흐름을 제어하는 매니저.
+    /// Why: 모든 튜토리얼이 끝나면 서버/클라이언트 양방향 완료 신호를 동기화한 뒤 Step1 씬으로 함께 이동함.
+    /// </summary>
     public class PlayTutorialManager : BaseFlowManager
     {
         private bool _isLocalFinished = false;
@@ -38,7 +42,7 @@ namespace My.Scripts._02_PlayTutorial
 
             if (setting == null)
             {
-                Debug.LogError("[PlayTutorialManager] JSON/PlayTutorial 로드 실패.");
+                UnityEngine.Debug.LogError("[PlayTutorialManager] JSON/PlayTutorial 로드 실패.");
                 return;
             }
 
@@ -58,7 +62,8 @@ namespace My.Scripts._02_PlayTutorial
 
                     if (page1 && page2)
                     {
-                        page2.SetInitialKey(page1.PressedKey);
+                        // Why: RFID 연동 리팩토링으로 인해 KeyCode 대신 1~5 정수형 인덱스를 전달함
+                        page2.SetInitialAnswer(page1.PressedAnswerIndex);
                     }
                 }
             }
@@ -68,7 +73,7 @@ namespace My.Scripts._02_PlayTutorial
         protected override void OnAllFinished()
         {
             _isLocalFinished = true;
-            Debug.Log("[PlayTutorialManager] 내 PC 플레이 튜토리얼 완료. 상대방 대기 중...");
+            UnityEngine.Debug.Log("[PlayTutorialManager] 내 PC 플레이 튜토리얼 완료. 상대방 대기 중...");
 
             // Why: 늦게 도착한 PC가 대기 중인 PC의 락을 즉시 풀어주기 위해 무조건 1회 발송함
             if (TcpManager.Instance)
@@ -82,7 +87,7 @@ namespace My.Scripts._02_PlayTutorial
 
         private IEnumerator SendCompleteSignalRoutine()
         {
-            // 내가 먼저 도착했을 경우 상대방이 올 때까지 1초마다 계속 쏴줌
+            // Why: 내가 먼저 도착했을 경우 상대방이 올 때까지 1초마다 계속 동기화 신호를 발송함
             while (_isLocalFinished && !_isRemoteFinished)
             {
                 yield return CoroutineData.GetWaitForSeconds(1.0f);
@@ -98,7 +103,7 @@ namespace My.Scripts._02_PlayTutorial
             if (msg != null && msg.command == "PLAY_TUTORIAL_COMPLETE")
             {
                 _isRemoteFinished = true;
-                Debug.Log("[PlayTutorialManager] 상대방 PC 플레이 튜토리얼 완료 신호 수신.");
+                UnityEngine.Debug.Log("[PlayTutorialManager] 상대방 PC 플레이 튜토리얼 완료 신호 수신.");
                 
                 CheckSyncAndChangeScene();
             }
@@ -113,7 +118,7 @@ namespace My.Scripts._02_PlayTutorial
                     TcpManager.Instance.onMessageReceived -= OnNetworkMessageReceived;
                 }
 
-                Debug.Log("[PlayTutorialManager] 양방향 동기화 완료. 즉시 Step1 씬으로 이동합니다.");
+                UnityEngine.Debug.Log("[PlayTutorialManager] 양방향 동기화 완료. 즉시 Step1 씬으로 이동합니다.");
                 
                 if (GameManager.Instance)
                 {
