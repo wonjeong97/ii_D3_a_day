@@ -394,7 +394,7 @@ namespace My.Scripts._01_Tutorial.Pages
                 // 1. [클라이언트 측] 서버가 데이터 조회를 지시함
                 if (msg.command == "REQUEST_CLIENT_FETCH")
                 {
-                    if (TcpManager.Instance && !TcpManager.Instance.IsServer && apiManager && !string.IsNullOrEmpty(msg.payload))
+                    if (TcpManager.Instance && !TcpManager.Instance.IsServer && apiManager && !string.IsNullOrEmpty(msg.payload) && _pageCts != null)
                     {
                         string uidToFetch = msg.payload;
                         ProcessClientFetchAsync(uidToFetch, _pageCts.Token).Forget();
