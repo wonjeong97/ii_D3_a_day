@@ -112,8 +112,8 @@ namespace My.Scripts._00_Title
         {
             if (_isTransitioning) return; 
 
-            // Update 내부이므로 GameManager 유니티 객체 접근 시 극단적 최적화 연산 적용
-            if (!object.ReferenceEquals(TcpManager.Instance, null))
+            // Update 내부이므로 파괴된 유니티 객체를 안전하게 걸러내는 암시적 Null 검사 사용
+            if (TcpManager.Instance)
             {
                 if (TcpManager.Instance.IsServer)
                 {

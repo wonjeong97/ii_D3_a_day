@@ -260,9 +260,9 @@ namespace My.Scripts.Global
         private IEnumerator QuitRoutine()
         {
 #if !UNITY_EDITOR
-            if (SessionManager.Instance && SessionManager.Instance.CurrentUserId != 0 && ApiConfig != null)
+            if (SessionManager.Instance && SessionManager.Instance.CurrentUserIdx != 0 && ApiConfig != null)
             {
-                int uid = SessionManager.Instance.CurrentUserId;
+                int uid = SessionManager.Instance.CurrentUserIdx;
                 string resetUrl = $"{ApiConfig.ResetStartUrl}?idx_user={uid}&code=d3";
                 yield return StartCoroutine(SendGetRequestRoutine(resetUrl));
 
