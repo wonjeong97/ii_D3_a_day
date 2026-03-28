@@ -42,6 +42,8 @@ namespace My.Scripts.Core.Data
         public TextSetting textSelected;
         public TextSetting textDescription;
         public TextSetting textWait;
+        public TextSetting textPopupWarning; // 1차 팝업 텍스트
+        public TextSetting textPopupTimeout; // 2차(초기화) 팝업 텍스트
     }
 
     [Serializable]
@@ -69,6 +71,8 @@ namespace My.Scripts.Core.Data
         public TextSetting textSelected;
         public TextSetting textDescription;
         public TextSetting textWait;
+        public TextSetting textPopupWarning;
+        public TextSetting textPopupTimeout;
     }
 
     /// <summary>

@@ -900,7 +900,7 @@ GameObject:
   - component: {fileID: 653853279}
   - component: {fileID: 653853280}
   m_Layer: 5
-  m_Name: "Cg_\uB9C8\uC74C\uC870\uAC01"
+  m_Name: Cg_MindPiece
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1482,7 +1482,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1309373591
 RectTransform:
   m_ObjectHideFlags: 0
@@ -2384,8 +2384,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 645.29, y: -931.37}
-  m_SizeDelta: {x: 267.05, y: 2.9799805}
+  m_AnchoredPosition: {x: 614.7, y: -931.37}
+  m_SizeDelta: {x: 400.3, y: 6}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &2124412969
 MonoBehaviour:

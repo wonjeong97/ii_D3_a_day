@@ -193,9 +193,9 @@ namespace My.Scripts.Core.Pages
 
                 bool result = true;
                 string currentSceneName = SceneManager.GetActiveScene().name;
-                bool isStep2 = currentSceneName == GameConstants.Scene.Step2;
+                bool canSaveScene = currentSceneName == GameConstants.Scene.Step2 || currentSceneName == GameConstants.Scene.Step3;
 
-                if (savePhoto && isStep2)
+                if (savePhoto && canSaveScene)
                 {
                     result = await SavePhotoAsync(_capturedPhoto);
                 }
@@ -224,34 +224,40 @@ namespace My.Scripts.Core.Pages
             int height = photo.height;
             UnityEngine.Experimental.Rendering.GraphicsFormat format = photo.graphicsFormat;
 
-            bool isServer = false;
-            if (TcpManager.Instance) isServer = TcpManager.Instance.IsServer;
+            bool isServer = (TcpManager.Instance && TcpManager.Instance.IsServer);
+            string roleString = isServer ? "Left" : "Right";
             
-            string roleString = isServer ? "Server" : "Client";
-            string photoName = $"0_{roleString}_{questionId}.png"; 
+            // SessionManager에 저장된 실제 유저 인덱스 사용
+            int userIdx = SessionManager.Instance ? SessionManager.Instance.CurrentUserIdx : 0;
+            string dateStr = DateTime.Now.ToString("yyyy-MM-dd");
+            string photoName = $"{userIdx}_{roleString}_{questionId}.png"; 
+            string relativePath = $"{dateStr}/{userIdx}/{roleString}/{photoName}";
 
             try
             {
                 byte[] bytes = await UniTask.RunOnThreadPool(() => UnityEngine.ImageConversion.EncodeArrayToPNG(rawData, format, (uint)width, (uint)height));
-                
-                string userIdx = SessionManager.Instance ? SessionManager.Instance.CurrentUserId.ToString() : "0";
-                
-                string relativePath = $"{userIdx}/{roleString}/{photoName}";
+
+                // Why: Step3의 최종 결과물인 "D3" 사진인 경우에만 API 업로드 메서드 실행
+                if (questionId.ToUpper() == "D3" && SessionManager.Instance)
+                {
+                    string uid = isServer ? SessionManager.Instance.PlayerAUid : SessionManager.Instance.PlayerBUid;
+                    string module = "d3"; 
+
+                    APIManager api = UnityEngine.Object.FindFirstObjectByType<APIManager>();
+                    if (api)
+                    {
+                        // 새롭게 수정한 메서드 호출
+                        api.UploadImageAsync(bytes, userIdx, uid, module).Forget();
+                    }
+                }
 
                 if (FileTransferManager.Instance)
                 {
                     return await FileTransferManager.Instance.UploadPhotoAsync(bytes, relativePath);
                 }
-                else
-                {
-                    UnityEngine.Debug.LogWarning("[Page_Camera] FileTransferManager 인스턴스가 없어 사진을 저장할 수 없습니다.");
-                    return false;
-                }
-            }
-            catch (Exception)
-            {
                 return false;
             }
+            catch (Exception) { return false; }
         }
         
         // # TODO: WebCamTexture의 잦은 할당 및 해제가 메모리 단편화를 유발할 수 있으므로, 글로벌 매니저에서 풀링하여 재사용하는 구조 검토 필요

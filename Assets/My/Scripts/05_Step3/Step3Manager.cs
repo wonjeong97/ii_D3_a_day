@@ -95,7 +95,9 @@ namespace My.Scripts._05_Step3
                         questionSetting = setting.questionSets[i].questionSetting,
                         textSelected = setting.commonQuestionUI.textSelected,
                         textDescription = targetDescription,
-                        textWait = setting.commonQuestionUI.textWait
+                        textWait = setting.commonQuestionUI.textWait,
+                        textPopupWarning = setting.commonQuestionUI.textPopupWarning,
+                        textPopupTimeout = setting.commonQuestionUI.textPopupTimeout
                     };
 
                     if (pageIndex < pages.Count && pages[pageIndex])

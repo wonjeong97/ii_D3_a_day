@@ -41,5 +41,6 @@ namespace My.Scripts.Core.Data
         public string GetCurrentRoomUserUrl => BuildUrl(GetBaseUrl(), getCurrentRoomUser, "/getCurrentRoomUser.cfm");
         public string ExitRoomUrl => BuildUrl(GetBaseUrl(), exitRoom, "/exitRoom.cfm");
         public string ResetStartUrl => BuildUrl(GetBaseUrl(), resetStart, "/resetStart.cfm");
+        public string UploadFileUrl => BuildUrl(GetBaseUrl(), uploadFile, "/uploadFile.cfm");
     }
 }

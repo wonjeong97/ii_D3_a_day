@@ -1,6 +1,8 @@
 using System;
 using System.Collections;
 using My.Scripts.Core;
+using My.Scripts.Global;
+using My.Scripts.Network;
 using UnityEngine;
 using UnityEngine.UI;
 using Wonjeong.Data;
@@ -43,8 +45,29 @@ namespace My.Scripts._07_Ending.Pages
             _cachedData = data;
             
             // 데이터 할당 시 래퍼 메서드를 통해 위치, 폰트 등의 서식 일괄 적용
-            if (text1) SetUIText(text1, _cachedData.descriptionText1);
-            if (text2) SetUIText(text2, _cachedData.descriptionText2);
+            if (text1) 
+            {
+                SetUIText(text1, _cachedData.descriptionText1);
+            }
+            
+            if (text2) 
+            {
+                SetUIText(text2, _cachedData.descriptionText2);
+                
+                // Why: 기존 컨텐츠에서 획득한 조각 수에 이번 모듈(d3) 보상인 5개를 더해 문자열 치환
+                int currentTotal = 0;
+                if (SessionManager.Instance)
+                {
+                    currentTotal = SessionManager.Instance.TotalPieces;
+                }
+                
+                int finalPieceCount = currentTotal + 5;
+                
+                if (_cachedData.descriptionText2 != null && !string.IsNullOrEmpty(_cachedData.descriptionText2.text))
+                {
+                    text2.text = _cachedData.descriptionText2.text.Replace("{0}", finalPieceCount.ToString());
+                }
+            }
         }
 
         public override void OnEnter()
@@ -78,6 +101,15 @@ namespace My.Scripts._07_Ending.Pages
                 StopCoroutine(_sequenceCoroutine);
                 _sequenceCoroutine = null;
             }
+
+            // Why: DB 트랜잭션 경합을 방지하기 위해 세션 종료 시간 업데이트는 서버 PC에서만 1회 전담하여 호출함.
+            if (GameManager.Instance)
+            {
+                if (TcpManager.Instance && TcpManager.Instance.IsServer)
+                {
+                    GameManager.Instance.SendTimeUpdateAPI();
+                }
+            }
         }
 
         private IEnumerator SequenceRoutine()
@@ -101,8 +133,7 @@ namespace My.Scripts._07_Ending.Pages
             }
             else
             {
-                // 배열에 이미지가 등록되지 않았을 때를 대비한 안전 장치(기존처럼 사운드 1회 재생)
-                // SoundManager.Instance?.PlaySFX("공통_6");
+                // 배열에 이미지가 등록되지 않았을 때를 대비한 안전 장치
             }
             
             yield return CoroutineData.GetWaitForSeconds(2.0f);

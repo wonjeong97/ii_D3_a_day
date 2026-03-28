@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using Cysharp.Threading.Tasks;
+using My.Scripts.Core;
 using My.Scripts.Global;
 using My.Scripts.Network;
 using UnityEngine;
@@ -44,21 +45,25 @@ namespace My.Scripts._06_PlayVideo
 
         private void SetupPaths()
         {
-            string role = (TcpManager.Instance && TcpManager.Instance.IsServer) ? "Server" : "Client";
+            string role = (TcpManager.Instance && TcpManager.Instance.IsServer) ? "Left" : "Right";
             
             string baseFolder = FileTransferManager.Instance ? FileTransferManager.Instance.localSaveRoot : @"C:\UnitySharedPicture";
-            string userIdx = SessionManager.Instance ? SessionManager.Instance.CurrentUserId.ToString() : "0";
+            string dateStr = DateTime.Now.ToString("yyyy-MM-dd");
+            string userIdx = SessionManager.Instance ? SessionManager.Instance.CurrentUserIdx.ToString() : "0";
             
-            _sourceFolderPath = Path.Combine(baseFolder, userIdx, role);
+            // 날짜 폴더 병합
+            _sourceFolderPath = Path.Combine(baseFolder, dateStr, userIdx, role);
         }
 
         private async UniTask LoadPhotosAsync()
         {
-            string role = (TcpManager.Instance && TcpManager.Instance.IsServer) ? "Server" : "Client";
+            string role = (TcpManager.Instance && TcpManager.Instance.IsServer) ? "Left" : "Right";
+            string userIdx = SessionManager.Instance ? SessionManager.Instance.CurrentUserIdx.ToString() : "0";
 
             for (int i = 1; i <= totalFrames; i++)
             {
-                string fileName = $"0_{role}_Q{i}.png"; 
+                // Why: 저장된 파일명 규칙과 동일하게 로드 시에도 유저 인덱스를 앞에 붙임
+                string fileName = $"{userIdx}_{role}_Q{i}.png"; 
                 string fullPath = Path.Combine(_sourceFolderPath, fileName);
 
                 if (File.Exists(fullPath))
@@ -104,22 +109,30 @@ namespace My.Scripts._06_PlayVideo
             bool isServer = false;
             if (TcpManager.Instance) isServer = TcpManager.Instance.IsServer;
             
-            string myRole = isServer ? "Server" : "Client";
-            string otherRole = isServer ? "Client" : "Server";
+            string myRole = isServer ? "Left" : "Right";
+            string otherRole = isServer ? "Right" : "Left";
 
             string baseFolder = @"C:\UnitySharedPicture";
             if (FileTransferManager.Instance) baseFolder = FileTransferManager.Instance.localSaveRoot;
             
-            string userIdx = "0";
-            if (SessionManager.Instance) userIdx = SessionManager.Instance.CurrentUserId.ToString();
+            string dateStr = DateTime.Now.ToString("yyyy-MM-dd");
             
-            string userFolder = Path.Combine(baseFolder, userIdx);
-
+            // Why: API 업로드에 필요한 인덱스와 UID 정보를 세션에서 추출하여 인코딩 완료 콜백으로 전달할 준비를 함.
+            int userIdx = 0;
+            string uid = string.Empty;
+            
+            if (SessionManager.Instance) 
+            {
+                userIdx = SessionManager.Instance.CurrentUserIdx;
+                uid = isServer ? SessionManager.Instance.PlayerAUid : SessionManager.Instance.PlayerBUid;
+            }
+            
+            string userFolder = Path.Combine(baseFolder, dateStr, userIdx.ToString());
             if (!Directory.Exists(userFolder)) Directory.CreateDirectory(userFolder);
-
-            string myInputPath = Path.Combine(userFolder, myRole, $"0_{myRole}_Q%d.png");
-            string otherInputPath = Path.Combine(userFolder, otherRole, $"0_{otherRole}_Q%d.png");
-            string outputVideoPath = Path.Combine(userFolder, $"Result_{myRole}_Combined.mp4");
+            
+            string myInputPath = Path.Combine(userFolder, myRole, $"{userIdx}_{myRole}_Q%d.png");
+            string otherInputPath = Path.Combine(userFolder, otherRole, $"{userIdx}_{otherRole}_Q%d.png");
+            string outputVideoPath = Path.Combine(userFolder, $"{userIdx}_{myRole}_D3.mp4");
     
             string ffmpegPath = Path.Combine(Application.streamingAssetsPath, "ffmpeg.exe");
             string countdownPath = Path.Combine(Application.streamingAssetsPath, "countdown.mp4"); 
@@ -127,12 +140,11 @@ namespace My.Scripts._06_PlayVideo
             if (!File.Exists(ffmpegPath))
             {
                 UnityEngine.Debug.LogError($"[StillcutManager] ffmpeg.exe 경로가 존재하지 않습니다: {ffmpegPath}");
-                return; // Fallback 없이 종료
+                return; 
             }
 
             string args;
 
-            // 예: 1920x1080 크기 2개를 720x810으로 리사이징 후 가로로 병합하여 최종 1440x810 해상도로 출력
             if (File.Exists(countdownPath))
             {
                 args = $"-y " +
@@ -153,19 +165,17 @@ namespace My.Scripts._06_PlayVideo
                        $"-c:v libx264 \"{outputVideoPath}\"";
             }
 
-            RunFFmpegAsync(ffmpegPath, args, outputVideoPath).Forget();
+            // 인코딩 스레드에 API 통신용 파라미터(인덱스, UID)를 함께 넘겨줍니다.
+            RunFFmpegAsync(ffmpegPath, args, outputVideoPath, userIdx, uid).Forget();
 #else
             UnityEngine.Debug.LogWarning("[StillcutManager] Windows 환경 전용 함수입니다.");
 #endif
         }
 
-        /// <summary>
-        /// 비동기 스레드 풀에서 인코딩 프로세스 실행 및 대기.
+       /// <summary>
+        /// 비동기 스레드 풀에서 인코딩 프로세스 실행 후 완료 시 API 업로드를 호출함.
         /// </summary>
-        /// <param name="ffmpegPath">실행할 ffmpeg 경로</param>
-        /// <param name="args">커맨드라인 인수</param>
-        /// <param name="outputPath">결과물 확인용 경로</param>
-        private static async UniTaskVoid RunFFmpegAsync(string ffmpegPath, string args, string outputPath)
+        private static async UniTaskVoid RunFFmpegAsync(string ffmpegPath, string args, string outputPath, int userIdx, string uid)
         {
             try
             {
@@ -186,6 +196,21 @@ namespace My.Scripts._06_PlayVideo
                     if (process.ExitCode == 0 && File.Exists(outputPath))
                     {
                         UnityEngine.Debug.Log($"[StillcutManager] 비디오 인코딩 완료: {outputPath}");
+                        
+                        // --- 추가된 영상 업로드 로직 ---
+                        // Why: 완성된 최종 MP4 결과물을 API를 통해 원격 DB 서버에 백업하기 위함.
+                        byte[] videoBytes = await File.ReadAllBytesAsync(outputPath);
+                        
+                        APIManager api = UnityEngine.Object.FindFirstObjectByType<APIManager>();
+                        if (api)
+                        {
+                            api.UploadVideoAsync(videoBytes, userIdx, uid, "d3").Forget();
+                        }
+                        else
+                        {
+                            UnityEngine.Debug.LogWarning("[StillcutManager] APIManager 인스턴스를 찾을 수 없어 영상을 업로드하지 못했습니다.");
+                        }
+                        // ----------------------------
                     }
                     else
                     {

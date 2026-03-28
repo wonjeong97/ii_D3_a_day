@@ -99,14 +99,15 @@ namespace My.Scripts._06_PlayVideo
             bool isServer = false;
             if (TcpManager.Instance) isServer = TcpManager.Instance.IsServer;
 
-            string myRole = isServer ? "Server" : "Client";
-            string otherRole = isServer ? "Client" : "Server";
+            string myRole = isServer ? "Left" : "Right";
+            string otherRole = isServer ? "Right" : "Left";
             
-            string userIdx = SessionManager.Instance ? SessionManager.Instance.CurrentUserId.ToString() : "0";
+            string dateStr = DateTime.Now.ToString("yyyy-MM-dd");
+            string userIdx = SessionManager.Instance ? SessionManager.Instance.CurrentUserIdx.ToString() : "0";
             
-            // FileTransferManager 전용 상대 경로 생성
-            string myRelativePath = $"{userIdx}/{myRole}";
-            string otherRelativePath = $"{userIdx}/{otherRole}";
+            // 날짜 폴더가 포함된 상대 경로
+            string myRelativePath = $"{dateStr}/{userIdx}/{myRole}";
+            string otherRelativePath = $"{dateStr}/{userIdx}/{otherRole}";
 
             await LoadRolePhotosAsync(myRole, myRelativePath, _myLoadedSprites);
             await LoadRolePhotosAsync(otherRole, otherRelativePath, _otherLoadedSprites);
@@ -114,16 +115,17 @@ namespace My.Scripts._06_PlayVideo
 
         private async UniTask LoadRolePhotosAsync(string role, string relativeFolder, List<Sprite> targetList)
         {
+            string userIdx = SessionManager.Instance ? SessionManager.Instance.CurrentUserIdx.ToString() : "0";
+
             for (int i = 1; i <= totalPhotos; i++)
             {
-                string fileName = $"0_{role}_Q{i}.png"; 
+                // Why: 로드할 파일명 형식을 {유저인덱스}_{역할}_Q{번호}.png 로 일치시킴
+                string fileName = $"{userIdx}_{role}_Q{i}.png"; 
                 string fileRelativePath = $"{relativeFolder}/{fileName}";
 
                 if (FileTransferManager.Instance)
                 {
-                    // 로컬이든 외부든 매니저가 알아서 판단하여 이미지를 가져옴
                     byte[] fileData = await FileTransferManager.Instance.DownloadPhotoAsync(fileRelativePath);
-                    
                     if (fileData != null)
                     {
                         Texture2D tex = new Texture2D(2, 2);
@@ -133,10 +135,6 @@ namespace My.Scripts._06_PlayVideo
                             targetList.Add(sprite);
                         }
                     }
-                }
-                else
-                {
-                    UnityEngine.Debug.LogWarning("[PlayVideoManager] FileTransferManager가 없습니다.");
                 }
             }
         }
