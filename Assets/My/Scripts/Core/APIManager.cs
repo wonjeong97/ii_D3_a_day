@@ -44,12 +44,31 @@ namespace My.Scripts.Core
     }
 
     public class APIManager : MonoBehaviour
-    {
+    {   
+        public static APIManager Instance { get; private set; }
+        
         private string userUid;
 
         [Header("API Retry Settings")]
         [SerializeField] private int maxRetries = 10;
         [SerializeField] private float retryDelay = 1.0f;
+        
+        [Header("Upload Retry Settings")]
+        [SerializeField] private int uploadMaxRetries = 3;
+        [SerializeField] private float uploadRetryDelay = 2.0f;
+        
+        private void Awake()
+        {
+            if (!Instance)
+            {
+                Instance = this;
+                DontDestroyOnLoad(gameObject);
+            }
+            else
+            {
+                Destroy(gameObject);
+            }
+        }
 
         public void FetchData(string uid) 
         { 
@@ -337,7 +356,7 @@ namespace My.Scripts.Core
         /// 서버 업로드를 UniTask 기반으로 처리하며, 제공해주신 A1 로직을 D3 프로젝트 규격에 맞게 적용함.
         /// Why: Step3의 결과물(D3)을 서버로 전송할 때 Raw 바이너리 POST 방식을 사용하기 위함.
         /// </summary>
-        public async UniTask<bool> UploadImageAsync(byte[] imageBytes, int idxUser, string uid, string moduleCode)
+        public async UniTask<bool> UploadImageAsync(byte[] imageBytes, int idxUser, string uid, string moduleCode, CancellationToken cancellationToken = default)
         {
             if (imageBytes == null || imageBytes.Length == 0) return false;
 
@@ -358,8 +377,11 @@ namespace My.Scripts.Core
             // D3 프로젝트 규격에 따른 URL 파라미터 구성 (A1 로직 참조)
             string url = $"{baseUrl}?idx_user={idxUser}&uid={encodedUid}&code={moduleCode.ToLower()}&type=png";
 
-            for (int attempt = 0; attempt < maxRetries; attempt++)
+            // 수정됨: maxRetries -> uploadMaxRetries 적용
+            for (int attempt = 0; attempt < uploadMaxRetries; attempt++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 using (UnityWebRequest webRequest = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
                 {
                     // Why: 제공해주신 예시와 같이 Raw 바이너리 데이터를 직접 업로드함
@@ -370,7 +392,7 @@ namespace My.Scripts.Core
 
                     try
                     {
-                        await webRequest.SendWebRequest().ToUniTask();
+                        await webRequest.SendWebRequest().ToUniTask(cancellationToken: cancellationToken);
 
                         if (webRequest.result == UnityWebRequest.Result.Success)
                         {
@@ -378,19 +400,29 @@ namespace My.Scripts.Core
                             return true;
                         }
 
-                        if (attempt < maxRetries - 1)
+                        if (attempt < uploadMaxRetries - 1)
                         {
-                            Debug.LogWarning($"[APIManager] 업로드 실패 ({attempt + 1}/{maxRetries}): {webRequest.error}. {retryDelay}초 후 재시도...");
-                            await UniTask.Delay(TimeSpan.FromSeconds(retryDelay));
+                            // 수정됨: retryDelay -> uploadRetryDelay 적용
+                            Debug.LogWarning($"[APIManager] 업로드 실패 ({attempt + 1}/{uploadMaxRetries}): {webRequest.error}. {uploadRetryDelay}초 후 재시도...");
+                            await UniTask.Delay(TimeSpan.FromSeconds(uploadRetryDelay), cancellationToken: cancellationToken);
                         }
                         else
                         {
                             Debug.LogError($"[APIManager] 업로드 최종 실패: {webRequest.error}");
                         }
                     }
+                    catch (OperationCanceledException)
+                    {
+                        Debug.LogWarning("[APIManager] 업로드 작업이 취소되었습니다.");
+                        throw;
+                    }
                     catch (Exception e)
                     {
-                        Debug.LogError($"[APIManager] 업로드 중 예외 발생: {e.Message}");
+                        Debug.LogError($"[APIManager] 업로드 중 예외 발생 ({attempt + 1}/{uploadMaxRetries}): {e.Message}");
+                        if (attempt < uploadMaxRetries - 1)
+                        {
+                            await UniTask.Delay(TimeSpan.FromSeconds(uploadRetryDelay), cancellationToken: cancellationToken);
+                        }
                     }
                 }
             }
@@ -401,7 +433,7 @@ namespace My.Scripts.Core
         /// 완성된 MP4 영상을 서버로 업로드합니다.
         /// Why: 동영상 파일은 용량이 커 타임아웃을 300초로 길게 잡고, 콘텐츠 타입을 video/mp4로 지정하여 전송하기 위함.
         /// </summary>
-        public async UniTask<bool> UploadVideoAsync(byte[] videoBytes, int idxUser, string uid, string moduleCode)
+        public async UniTask<bool> UploadVideoAsync(byte[] videoBytes, int idxUser, string uid, string moduleCode, CancellationToken cancellationToken = default)
         {
             if (videoBytes == null || videoBytes.Length == 0) return false;
 
@@ -421,8 +453,11 @@ namespace My.Scripts.Core
             // URL 파라미터에 type=mp4 를 적용
             string url = $"{baseUrl}?idx_user={idxUser}&uid={encodedUid}&code={moduleCode.ToLower()}&type=mp4";
 
-            for (int attempt = 0; attempt < maxRetries; attempt++)
+            // 수정됨: maxRetries -> uploadMaxRetries 적용
+            for (int attempt = 0; attempt < uploadMaxRetries; attempt++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 using (UnityWebRequest webRequest = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
                 {
                     webRequest.uploadHandler = new UploadHandlerRaw(videoBytes);
@@ -432,7 +467,7 @@ namespace My.Scripts.Core
 
                     try
                     {
-                        await webRequest.SendWebRequest().ToUniTask();
+                        await webRequest.SendWebRequest().ToUniTask(cancellationToken: cancellationToken);
 
                         if (webRequest.result == UnityWebRequest.Result.Success)
                         {
@@ -440,19 +475,29 @@ namespace My.Scripts.Core
                             return true;
                         }
 
-                        if (attempt < maxRetries - 1)
+                        if (attempt < uploadMaxRetries - 1)
                         {
-                            Debug.LogWarning($"[APIManager] 영상 업로드 실패 ({attempt + 1}/{maxRetries}): {webRequest.error}. {retryDelay}초 후 재시도...");
-                            await UniTask.Delay(TimeSpan.FromSeconds(retryDelay));
+                            // 수정됨: retryDelay -> uploadRetryDelay 적용
+                            Debug.LogWarning($"[APIManager] 영상 업로드 실패 ({attempt + 1}/{uploadMaxRetries}): {webRequest.error}. {uploadRetryDelay}초 후 재시도...");
+                            await UniTask.Delay(TimeSpan.FromSeconds(uploadRetryDelay), cancellationToken: cancellationToken);
                         }
                         else
                         {
                             Debug.LogError($"[APIManager] 영상 업로드 최종 실패: {webRequest.error}");
                         }
                     }
+                    catch (OperationCanceledException)
+                    {
+                        Debug.LogWarning("[APIManager] 영상 업로드 작업이 취소되었습니다.");
+                        throw;
+                    }
                     catch (Exception e)
                     {
-                        Debug.LogError($"[APIManager] 영상 업로드 중 예외 발생: {e.Message}");
+                        Debug.LogError($"[APIManager] 영상 업로드 중 예외 발생 ({attempt + 1}/{uploadMaxRetries}): {e.Message}");
+                        if (attempt < uploadMaxRetries - 1)
+                        {
+                            await UniTask.Delay(TimeSpan.FromSeconds(uploadRetryDelay), cancellationToken: cancellationToken);
+                        }
                     }
                 }
             }

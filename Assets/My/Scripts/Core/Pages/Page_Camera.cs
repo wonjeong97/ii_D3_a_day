@@ -243,11 +243,9 @@ namespace My.Scripts.Core.Pages
                     string uid = isServer ? SessionManager.Instance.PlayerAUid : SessionManager.Instance.PlayerBUid;
                     string module = "d3"; 
 
-                    APIManager api = UnityEngine.Object.FindFirstObjectByType<APIManager>();
-                    if (api)
+                    if (APIManager.Instance)
                     {
-                        // 새롭게 수정한 메서드 호출
-                        api.UploadImageAsync(bytes, userIdx, uid, module).Forget();
+                        APIManager.Instance.UploadImageAsync(bytes, userIdx, uid, module).Forget();
                     }
                 }
 

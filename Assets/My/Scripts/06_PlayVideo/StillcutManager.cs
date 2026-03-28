@@ -197,14 +197,12 @@ namespace My.Scripts._06_PlayVideo
                     {
                         UnityEngine.Debug.Log($"[StillcutManager] 비디오 인코딩 완료: {outputPath}");
                         
-                        // --- 추가된 영상 업로드 로직 ---
-                        // Why: 완성된 최종 MP4 결과물을 API를 통해 원격 DB 서버에 백업하기 위함.
+                        // --- 영상 업로드 로직 ---
                         byte[] videoBytes = await File.ReadAllBytesAsync(outputPath);
                         
-                        APIManager api = UnityEngine.Object.FindFirstObjectByType<APIManager>();
-                        if (api)
+                        if (APIManager.Instance)
                         {
-                            api.UploadVideoAsync(videoBytes, userIdx, uid, "d3").Forget();
+                            APIManager.Instance.UploadVideoAsync(videoBytes, userIdx, uid, "d3").Forget();
                         }
                         else
                         {
