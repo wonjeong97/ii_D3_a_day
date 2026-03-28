@@ -49,13 +49,15 @@ namespace My.Scripts._01_Tutorial.Pages
         private string _pendingClientUid = string.Empty;
         private Coroutine _clientFetchTimeoutCoroutine;
         [SerializeField] private float _clientFetchTimeout = 15.0f;
+        
+        private CancellationTokenSource _pageCts;
 
         private void Update()
         {
             if (!_isPageActive) return;
             
-            // Update 루프 내부이므로 GameManager 유니티 객체 접근 시 극단적 최적화 연산 적용
-            if (!ReferenceEquals(TcpManager.Instance, null))
+            // Update 루프 내부이므로 파괴된 유니티 객체를 안전하게 걸러내는 암시적 Null 검사 사용
+            if (TcpManager.Instance)
             {
                 if (TcpManager.Instance.IsServer)
                 {
@@ -96,6 +98,14 @@ namespace My.Scripts._01_Tutorial.Pages
             _isPageActive = true;
             _isWaitingForClientFetch = false;
             _pendingClientUid = string.Empty;
+
+            // Why: 페이지 진입 시 이전 페치 작업을 취소할 수 있도록 CancellationTokenSource 초기화
+            if (_pageCts != null)
+            {
+                _pageCts.Cancel();
+                _pageCts.Dispose();
+            }
+            _pageCts = new CancellationTokenSource();
             
             if (descriptionText)
             {
@@ -342,24 +352,34 @@ namespace My.Scripts._01_Tutorial.Pages
             CompletePage();
         }
 
-        private async UniTaskVoid ProcessClientFetchAsync(string uidToFetch)
+        private async UniTaskVoid ProcessClientFetchAsync(string uidToFetch, CancellationToken token)
         {
             try
             {
-                bool success = await apiManager.FetchDataAsync(uidToFetch);
-                
-                // Why: 데이터 수신 성공이 확인된 후 서버에 준비 완료 ACK 전송
-                if (success)
+                // 타임아웃을 서버(15초)보다 짧은 12초로 설정하여 늦은 ACK 전송을 방지함
+                using (var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(token))
                 {
-                    if (TcpManager.Instance) 
+                    timeoutCts.CancelAfter(TimeSpan.FromSeconds(12.0f));
+                    
+                    bool success = await apiManager.FetchDataAsync(uidToFetch, timeoutCts.Token);
+                    
+                    // Why: 데이터 수신 성공이 확인된 후 서버에 준비 완료 ACK 전송
+                    if (success && !token.IsCancellationRequested)
                     {
-                        TcpManager.Instance.SendMessageToTarget("CLIENT_FETCH_ACK", uidToFetch);
+                        if (TcpManager.Instance) 
+                        {
+                            TcpManager.Instance.SendMessageToTarget("CLIENT_FETCH_ACK", uidToFetch);
+                        }
+                    }
+                    else
+                    {
+                        Debug.LogWarning("[TutorialPage1Controller] 클라이언트 데이터 Fetch 실패. ACK를 전송하지 않습니다.");
                     }
                 }
-                else
-                {
-                    Debug.LogWarning("[TutorialPage1Controller] 클라이언트 데이터 Fetch 실패. ACK를 전송하지 않습니다.");
-                }
+            }
+            catch (OperationCanceledException)
+            {
+                Debug.LogWarning("[TutorialPage1Controller] 클라이언트 Fetch 작업이 취소되거나 타임아웃되었습니다.");
             }
             catch (Exception ex)
             {
@@ -377,7 +397,7 @@ namespace My.Scripts._01_Tutorial.Pages
                     if (TcpManager.Instance && !TcpManager.Instance.IsServer && apiManager && !string.IsNullOrEmpty(msg.payload))
                     {
                         string uidToFetch = msg.payload;
-                        ProcessClientFetchAsync(uidToFetch).Forget();
+                        ProcessClientFetchAsync(uidToFetch, _pageCts.Token).Forget();
                     }
                 }
                 // 2. [서버 측] 클라이언트가 데이터 조회를 마치고 준비 완료 응답을 보냄
@@ -444,6 +464,14 @@ namespace My.Scripts._01_Tutorial.Pages
             }
             
             _isPageActive = false;
+
+            // Why: 페이지를 벗어날 때 실행 중인 백그라운드 Fetch 작업을 취소함
+            if (_pageCts != null)
+            {
+                _pageCts.Cancel();
+                _pageCts.Dispose();
+                _pageCts = null;
+            }
             
             if (_pollCoroutine != null)
             {
