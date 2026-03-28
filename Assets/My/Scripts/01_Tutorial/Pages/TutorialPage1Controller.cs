@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Threading;
 using Cysharp.Threading.Tasks;
 using My.Scripts.Core;
 using My.Scripts.Core.Data;
@@ -44,7 +45,8 @@ namespace My.Scripts._01_Tutorial.Pages
         private Coroutine _fadeCoroutine;
         private Coroutine _pollCoroutine;
         
-        private bool _isWaitingForClientFetch = false;
+        private bool _isWaitingForClientFetch;
+        private string _pendingClientUid = string.Empty;
         private Coroutine _clientFetchTimeoutCoroutine;
         [SerializeField] private float _clientFetchTimeout = 15.0f;
 
@@ -53,7 +55,7 @@ namespace My.Scripts._01_Tutorial.Pages
             if (!_isPageActive) return;
             
             // Update 루프 내부이므로 GameManager 유니티 객체 접근 시 극단적 최적화 연산 적용
-            if (!object.ReferenceEquals(TcpManager.Instance, null))
+            if (!ReferenceEquals(TcpManager.Instance, null))
             {
                 if (TcpManager.Instance.IsServer)
                 {
@@ -93,6 +95,7 @@ namespace My.Scripts._01_Tutorial.Pages
 
             _isPageActive = true;
             _isWaitingForClientFetch = false;
+            _pendingClientUid = string.Empty;
             
             if (descriptionText)
             {
@@ -227,12 +230,15 @@ namespace My.Scripts._01_Tutorial.Pages
                                 bool fetchFaulted = false;
 
                                 // 3. 서버 측 자체 FetchData 수행
-                                yield return apiManager.FetchDataAsync(uidLeft)
-                                                       .Timeout(TimeSpan.FromSeconds(25))
-                                                       .ToCoroutine(
-                                                            r => fetchSuccess = r, 
-                                                            ex => { fetchFaulted = true; }
-                                                        );
+                                using (var fetchCts = new CancellationTokenSource())
+                                {
+                                    fetchCts.CancelAfter(TimeSpan.FromSeconds(25));
+                                    yield return apiManager.FetchDataAsync(uidLeft, fetchCts.Token)
+                                                           .ToCoroutine(
+                                                                r => fetchSuccess = r, 
+                                                                ex => { fetchFaulted = true; }
+                                                            );
+                                }
 
                                 if (fetchFaulted || !fetchSuccess || !SessionManager.Instance || SessionManager.Instance.CurrentUserIdx == 0)
                                 {
@@ -243,12 +249,14 @@ namespace My.Scripts._01_Tutorial.Pages
                             else
                             {
                                 Debug.LogWarning("[TutorialPage1Controller] APIManager가 연결되지 않았습니다.");
+                                continue;
                             }
                             
                             // 4. 클라이언트에게 UID를 전달하고 클라이언트의 통신 완료를 대기합니다.
                             if (TcpManager.Instance)
                             {
                                 _isWaitingForClientFetch = true;
+                                _pendingClientUid = uidLeft;
                                 TcpManager.Instance.SendMessageToTarget("REQUEST_CLIENT_FETCH", uidLeft);
                                 
                                 if (_clientFetchTimeoutCoroutine != null) StopCoroutine(_clientFetchTimeoutCoroutine);
@@ -295,6 +303,7 @@ namespace My.Scripts._01_Tutorial.Pages
             {
                 Debug.LogWarning("[TutorialPage1Controller] 클라이언트 Fetch 통신 응답 타임아웃. 타이틀로 돌아갑니다.");
                 _isWaitingForClientFetch = false;
+                _pendingClientUid = string.Empty;
                 yield return StartCoroutine(ReturnToTitleSequence());
             }
         }
@@ -344,7 +353,7 @@ namespace My.Scripts._01_Tutorial.Pages
                 {
                     if (TcpManager.Instance) 
                     {
-                        TcpManager.Instance.SendMessageToTarget("CLIENT_FETCH_ACK", "");
+                        TcpManager.Instance.SendMessageToTarget("CLIENT_FETCH_ACK", uidToFetch);
                     }
                 }
                 else
@@ -376,13 +385,23 @@ namespace My.Scripts._01_Tutorial.Pages
                 {
                     if (TcpManager.Instance && TcpManager.Instance.IsServer && _isWaitingForClientFetch)
                     {
-                        _isWaitingForClientFetch = false;
-                        if (_clientFetchTimeoutCoroutine != null)
+                        // Why: 요청했던 UID와 응답으로 돌아온 식별자가 동일한지 검증함
+                        if (msg.payload == _pendingClientUid)
                         {
-                            StopCoroutine(_clientFetchTimeoutCoroutine);
-                            _clientFetchTimeoutCoroutine = null;
+                            _isWaitingForClientFetch = false;
+                            _pendingClientUid = string.Empty;
+                            
+                            if (_clientFetchTimeoutCoroutine != null)
+                            {
+                                StopCoroutine(_clientFetchTimeoutCoroutine);
+                                _clientFetchTimeoutCoroutine = null;
+                            }
+                            OnConfirmInput(); // 최종 출발 명령(PAGE1_COMPLETE) 하달 및 씬 넘김
                         }
-                        OnConfirmInput(); // 최종 출발 명령(PAGE1_COMPLETE) 하달 및 씬 넘김
+                        else
+                        {
+                            Debug.LogWarning($"[TutorialPage1Controller] 잘못된 클라이언트 Fetch ACK 수신. Expected: {_pendingClientUid}, Received: {msg.payload}");
+                        }
                     }
                 }
                 // 3. [양쪽 모두] 최종 동시 전환 명령 수신
