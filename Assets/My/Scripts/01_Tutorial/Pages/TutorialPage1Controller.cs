@@ -51,6 +51,7 @@ namespace My.Scripts._01_Tutorial.Pages
         [SerializeField] private float _clientFetchTimeout = 15.0f;
         
         private CancellationTokenSource _pageCts;
+        private CancellationTokenSource _serverFetchCts;
 
         private void Update()
         {
@@ -240,15 +241,19 @@ namespace My.Scripts._01_Tutorial.Pages
                                 bool fetchFaulted = false;
 
                                 // 3. 서버 측 자체 FetchData 수행
-                                using (var fetchCts = new CancellationTokenSource())
+                                if (_serverFetchCts != null)
                                 {
-                                    fetchCts.CancelAfter(TimeSpan.FromSeconds(25));
-                                    yield return apiManager.FetchDataAsync(uidLeft, fetchCts.Token)
-                                                           .ToCoroutine(
-                                                                r => fetchSuccess = r, 
-                                                                ex => { fetchFaulted = true; }
-                                                            );
+                                    _serverFetchCts.Cancel();
+                                    _serverFetchCts.Dispose();
                                 }
+                                _serverFetchCts = new CancellationTokenSource();
+                                _serverFetchCts.CancelAfter(TimeSpan.FromSeconds(25));
+
+                                yield return apiManager.FetchDataAsync(uidLeft, _serverFetchCts.Token)
+                                                       .ToCoroutine(
+                                                            r => fetchSuccess = r, 
+                                                            ex => { fetchFaulted = true; }
+                                                        );
 
                                 if (fetchFaulted || !fetchSuccess || !SessionManager.Instance || SessionManager.Instance.CurrentUserIdx == 0)
                                 {
@@ -472,7 +477,14 @@ namespace My.Scripts._01_Tutorial.Pages
                 _pageCts.Dispose();
                 _pageCts = null;
             }
-            
+
+            if (_serverFetchCts != null)
+            {
+                _serverFetchCts.Cancel();
+                _serverFetchCts.Dispose();
+                _serverFetchCts = null;
+            }
+
             if (_pollCoroutine != null)
             {
                 StopCoroutine(_pollCoroutine);
