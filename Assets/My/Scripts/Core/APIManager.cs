@@ -44,12 +44,31 @@ namespace My.Scripts.Core
     }
 
     public class APIManager : MonoBehaviour
-    {
+    {   
+        public static APIManager Instance { get; private set; }
+        
         private string userUid;
 
         [Header("API Retry Settings")]
         [SerializeField] private int maxRetries = 10;
         [SerializeField] private float retryDelay = 1.0f;
+        
+        [Header("Upload Retry Settings")]
+        [SerializeField] private int uploadMaxRetries = 3;
+        [SerializeField] private float uploadRetryDelay = 2.0f;
+        
+        private void Awake()
+        {
+            if (!Instance)
+            {
+                Instance = this;
+                DontDestroyOnLoad(gameObject);
+            }
+            else
+            {
+                Destroy(gameObject);
+            }
+        }
 
         public void FetchData(string uid) 
         { 

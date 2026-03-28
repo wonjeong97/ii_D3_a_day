@@ -34,9 +34,6 @@ namespace My.Scripts._01_Tutorial.Pages
         [SerializeField] private CanvasGroup textCanvasGroup;
         [SerializeField] private Text descriptionText;
 
-        [Header("Network & API")]
-        [SerializeField] private APIManager apiManager; 
-
         [Header("Animation Settings")]
         [SerializeField] private float fadeDuration = 0.5f;
 
@@ -235,7 +232,7 @@ namespace My.Scripts._01_Tutorial.Pages
                         {
                             string uidLeft = parts[0].Trim();
 
-                            if (apiManager)
+                            if (APIManager.Instance)
                             {   
                                 bool fetchSuccess = false;
                                 bool fetchFaulted = false;
@@ -249,7 +246,7 @@ namespace My.Scripts._01_Tutorial.Pages
                                 _serverFetchCts = new CancellationTokenSource();
                                 _serverFetchCts.CancelAfter(TimeSpan.FromSeconds(25));
 
-                                yield return apiManager.FetchDataAsync(uidLeft, _serverFetchCts.Token)
+                                yield return APIManager.Instance.FetchDataAsync(uidLeft, _serverFetchCts.Token)
                                                        .ToCoroutine(
                                                             r => fetchSuccess = r, 
                                                             ex => { fetchFaulted = true; }
@@ -366,7 +363,7 @@ namespace My.Scripts._01_Tutorial.Pages
                 {
                     timeoutCts.CancelAfter(TimeSpan.FromSeconds(12.0f));
                     
-                    bool success = await apiManager.FetchDataAsync(uidToFetch, timeoutCts.Token);
+                    bool success = await APIManager.Instance.FetchDataAsync(uidToFetch, timeoutCts.Token);
                     
                     // Why: 데이터 수신 성공이 확인된 후 서버에 준비 완료 ACK 전송
                     if (success && !token.IsCancellationRequested)
@@ -399,7 +396,7 @@ namespace My.Scripts._01_Tutorial.Pages
                 // 1. [클라이언트 측] 서버가 데이터 조회를 지시함
                 if (msg.command == "REQUEST_CLIENT_FETCH")
                 {
-                    if (TcpManager.Instance && !TcpManager.Instance.IsServer && apiManager && !string.IsNullOrEmpty(msg.payload) && _pageCts != null)
+                    if (TcpManager.Instance && !TcpManager.Instance.IsServer && APIManager.Instance && !string.IsNullOrEmpty(msg.payload) && _pageCts != null)
                     {
                         string uidToFetch = msg.payload;
                         ProcessClientFetchAsync(uidToFetch, _pageCts.Token).Forget();
