@@ -179,7 +179,7 @@ namespace My.Scripts.Global
             PieceD1 = 0; PieceD2 = 0; PieceD3 = 0;
 
             string rootPath = @"C:\UnitySharedPicture";
-            SessionFolderPath = Path.Combine(rootPath, DateTime.Now.ToString("yy-MM-dd"));
+            SessionFolderPath = Path.Combine(rootPath, DateTime.Now.ToString("yyyy-MM-dd"));
 
 #if UNITY_EDITOR
             if (useEditorTestData) ApplyEditorTestData();

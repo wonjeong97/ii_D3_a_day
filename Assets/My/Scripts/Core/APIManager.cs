@@ -1,6 +1,6 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 using Cysharp.Threading.Tasks; 
 using My.Scripts.Core.Data;
 using UnityEngine;
@@ -53,11 +53,11 @@ namespace My.Scripts.Core
 
         public void FetchData(string uid) 
         { 
-            FetchDataAsync(uid).Forget(); 
+            FetchDataAsync(uid, CancellationToken.None).Forget(); 
         }
         
-        [ContextMenu("Fetch API Data")]
-        public async UniTask<bool> FetchDataAsync(string uid)
+       [ContextMenu("Fetch API Data")]
+        public async UniTask<bool> FetchDataAsync(string uid, CancellationToken cancellationToken = default)
         {
 #if UNITY_EDITOR
             if (SessionManager.Instance)
@@ -101,13 +101,15 @@ namespace My.Scripts.Core
             // Why: 서버 부하 또는 네트워크 지연으로 인한 1회성 통신 실패를 방지함
             for (int attempt = 0; attempt < maxRetries; attempt++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 using (UnityWebRequest webRequest = UnityWebRequest.Get(requestUrl))
                 {
                     webRequest.timeout = 10; 
                     
                     try
                     {
-                        await webRequest.SendWebRequest().ToUniTask();
+                        await webRequest.SendWebRequest().ToUniTask(cancellationToken: cancellationToken);
 
                         if (webRequest.result == UnityWebRequest.Result.Success)
                         {
@@ -117,19 +119,24 @@ namespace My.Scripts.Core
                         if (attempt < maxRetries - 1)
                         {
                             Debug.LogWarning($"[APIManager] 유저 데이터 조회 실패 ({attempt + 1}/{maxRetries}): {webRequest.error}. {retryDelay}초 후 재시도");
-                            await UniTask.Delay(TimeSpan.FromSeconds(retryDelay));
+                            await UniTask.Delay(TimeSpan.FromSeconds(retryDelay), cancellationToken: cancellationToken);
                         }
                         else
                         {
                             Debug.LogError($"[APIManager] 유저 데이터 조회 최종 실패: {webRequest.error}");
                         }
                     }
+                    catch (OperationCanceledException)
+                    {
+                        Debug.LogWarning("[APIManager] FetchDataAsync 작업이 취소되었습니다.");
+                        throw;
+                    }
                     catch (Exception e)
                     {
                         Debug.LogWarning($"[APIManager] FetchDataAsync 통신 예외 발생 ({attempt + 1}/{maxRetries}): {e.Message}");
                         if (attempt < maxRetries - 1) 
                         {
-                            await UniTask.Delay(TimeSpan.FromSeconds(retryDelay));
+                            await UniTask.Delay(TimeSpan.FromSeconds(retryDelay), cancellationToken: cancellationToken);
                         }
                     }
                 }

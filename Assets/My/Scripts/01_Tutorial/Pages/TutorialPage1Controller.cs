@@ -45,9 +45,11 @@ namespace My.Scripts._01_Tutorial.Pages
         private Coroutine _pollCoroutine;
         
         private bool _isWaitingForClientFetch = false;
+        private Coroutine _clientFetchTimeoutCoroutine;
+        [SerializeField] private float _clientFetchTimeout = 15.0f;
 
         private void Update()
-        {   
+        {
             if (!_isPageActive) return;
             
             // Update 루프 내부이므로 GameManager 유니티 객체 접근 시 극단적 최적화 연산 적용
@@ -248,6 +250,9 @@ namespace My.Scripts._01_Tutorial.Pages
                             {
                                 _isWaitingForClientFetch = true;
                                 TcpManager.Instance.SendMessageToTarget("REQUEST_CLIENT_FETCH", uidLeft);
+                                
+                                if (_clientFetchTimeoutCoroutine != null) StopCoroutine(_clientFetchTimeoutCoroutine);
+                                _clientFetchTimeoutCoroutine = StartCoroutine(ClientFetchAckTimeoutRoutine());
                             }
                             else
                             {
@@ -276,6 +281,21 @@ namespace My.Scripts._01_Tutorial.Pages
                         }
                     }
                 }
+            }
+        }
+        
+        /// <summary>
+        /// 클라이언트 통신 응답 대기 시간을 초과할 경우 초기화를 진행하는 안전장치.
+        /// </summary>
+        private IEnumerator ClientFetchAckTimeoutRoutine()
+        {
+            yield return CoroutineData.GetWaitForSeconds(_clientFetchTimeout);
+            
+            if (_isWaitingForClientFetch)
+            {
+                Debug.LogWarning("[TutorialPage1Controller] 클라이언트 Fetch 통신 응답 타임아웃. 타이틀로 돌아갑니다.");
+                _isWaitingForClientFetch = false;
+                yield return StartCoroutine(ReturnToTitleSequence());
             }
         }
 
@@ -313,6 +333,31 @@ namespace My.Scripts._01_Tutorial.Pages
             CompletePage();
         }
 
+        private async UniTaskVoid ProcessClientFetchAsync(string uidToFetch)
+        {
+            try
+            {
+                bool success = await apiManager.FetchDataAsync(uidToFetch);
+                
+                // Why: 데이터 수신 성공이 확인된 후 서버에 준비 완료 ACK 전송
+                if (success)
+                {
+                    if (TcpManager.Instance) 
+                    {
+                        TcpManager.Instance.SendMessageToTarget("CLIENT_FETCH_ACK", "");
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning("[TutorialPage1Controller] 클라이언트 데이터 Fetch 실패. ACK를 전송하지 않습니다.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[TutorialPage1Controller] 클라이언트 데이터 Fetch 중 예외 발생: {ex.Message}");
+            }
+        }
+
         private void OnNetworkMessageReceived(TcpMessage msg)
         {
             if (msg != null)
@@ -323,15 +368,7 @@ namespace My.Scripts._01_Tutorial.Pages
                     if (TcpManager.Instance && !TcpManager.Instance.IsServer && apiManager && !string.IsNullOrEmpty(msg.payload))
                     {
                         string uidToFetch = msg.payload;
-                        
-                        // 자신의 세션을 갱신한 후 준비가 완료되었음을 서버에 알림
-                        apiManager.FetchDataAsync(uidToFetch).ContinueWith(success => 
-                        {
-                            if (TcpManager.Instance) 
-                            {
-                                TcpManager.Instance.SendMessageToTarget("CLIENT_FETCH_ACK", "");
-                            }
-                        }).Forget();
+                        ProcessClientFetchAsync(uidToFetch).Forget();
                     }
                 }
                 // 2. [서버 측] 클라이언트가 데이터 조회를 마치고 준비 완료 응답을 보냄
@@ -340,6 +377,11 @@ namespace My.Scripts._01_Tutorial.Pages
                     if (TcpManager.Instance && TcpManager.Instance.IsServer && _isWaitingForClientFetch)
                     {
                         _isWaitingForClientFetch = false;
+                        if (_clientFetchTimeoutCoroutine != null)
+                        {
+                            StopCoroutine(_clientFetchTimeoutCoroutine);
+                            _clientFetchTimeoutCoroutine = null;
+                        }
                         OnConfirmInput(); // 최종 출발 명령(PAGE1_COMPLETE) 하달 및 씬 넘김
                     }
                 }
@@ -394,6 +436,12 @@ namespace My.Scripts._01_Tutorial.Pages
             {
                 StopCoroutine(_fadeCoroutine);
                 _fadeCoroutine = null;
+            }
+
+            if (_clientFetchTimeoutCoroutine != null)
+            {
+                StopCoroutine(_clientFetchTimeoutCoroutine);
+                _clientFetchTimeoutCoroutine = null;
             }
 
             if (TcpManager.Instance)
