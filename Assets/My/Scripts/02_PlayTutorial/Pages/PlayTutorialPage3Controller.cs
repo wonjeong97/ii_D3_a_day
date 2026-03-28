@@ -28,9 +28,6 @@ namespace My.Scripts._02_PlayTutorial.Pages
         [SerializeField] private Text descriptionUI;
         [SerializeField] private Text waitUI;
 
-        [Header("Settings")]
-        [SerializeField] private float localFadeDuration = 0.5f;
-
         private PlayTutorialPage3Data _cachedData;
 
         public override void SetupData(object data)
