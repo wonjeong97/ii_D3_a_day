@@ -15,14 +15,23 @@ namespace My.Scripts.Core
         protected virtual void Awake()
         {
             canvasGroup = GetComponent<CanvasGroup>();
-            if (canvasGroup == null) canvasGroup = gameObject.AddComponent<CanvasGroup>();
+            if (!canvasGroup) canvasGroup = gameObject.AddComponent<CanvasGroup>();
         }
 
         public abstract void SetupData(object data);
 
         public virtual void OnEnter() 
         { 
-            gameObject.SetActive(true);
+            Transform current = transform;
+            while (current)
+            {
+                if (!current.gameObject.activeSelf)
+                {
+                    current.gameObject.SetActive(true);
+                }
+                current = current.parent;
+            }
+            
             SetAlpha(1f);
         }
 

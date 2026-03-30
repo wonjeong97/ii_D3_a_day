@@ -238,9 +238,11 @@ namespace My.Scripts._04_Step2
                     if (specificSetting.commonQuestionUI.textSelected == null) specificSetting.commonQuestionUI.textSelected = commonSetting.commonQuestionUI.textSelected;
                     if (specificSetting.commonQuestionUI.textDescription == null) specificSetting.commonQuestionUI.textDescription = commonSetting.commonQuestionUI.textDescription;
                     if (specificSetting.commonQuestionUI.textWait == null) specificSetting.commonQuestionUI.textWait = commonSetting.commonQuestionUI.textWait;
+                    if (specificSetting.commonQuestionUI.textPopupWarning == null) specificSetting.commonQuestionUI.textPopupWarning = commonSetting.commonQuestionUI.textPopupWarning;
+                    if (specificSetting.commonQuestionUI.textPopupTimeout == null) specificSetting.commonQuestionUI.textPopupTimeout = commonSetting.commonQuestionUI.textPopupTimeout;
                 }
 
-                // 결과 페이지 공통 UI 병합 (에러 발생 원인 해결부)
+                // 결과 페이지 공통 UI 병합
                 if (specificSetting.commonResultUI == null) 
                 {
                     specificSetting.commonResultUI = commonSetting.commonResultUI;
@@ -281,7 +283,7 @@ namespace My.Scripts._04_Step2
                     bool hasOverrideDesc = setting.questionSets[i].textDescription != null && 
                                            !string.IsNullOrEmpty(setting.questionSets[i].textDescription.text);
 
-                    TextSetting targetDescription = hasOverrideDesc 
+                   TextSetting targetDescription = hasOverrideDesc 
                         ? setting.questionSets[i].textDescription 
                         : setting.commonQuestionUI.textDescription;
 

@@ -46,11 +46,11 @@ namespace My.Scripts.Global
         public ColorData PlayerBColor { get; set; } = ColorData.NotSet;
         
         public UserType CurrentUserType { get; set; } = UserType.A1;
-        public string CurrentModuleCode { get; set; } = "d3"; 
+        public string CurrentModuleCode { get; set; } = "D3"; 
         public string Cartridge { get; set; } = string.Empty;
         
-        public bool IsOtherCartridgeContentsCleared { get; set; } = false;
-        public int ClearedEndCount { get; set; } = 0; 
+        public bool IsOtherCartridgeContentsCleared { get; set; }
+        public int ClearedEndCount { get; set; } 
 
         public string Step2MainTheme { get; set; } = "Sea";
         public int Step2SubTheme { get; set; } = 1;
@@ -164,7 +164,7 @@ namespace My.Scripts.Global
             PlayerBColor = ColorData.NotSet;
 
             CurrentUserType = UserType.A1;
-            CurrentModuleCode = "d3"; 
+            CurrentModuleCode = "D3"; 
             Cartridge = string.Empty;
             
             IsOtherCartridgeContentsCleared = false;

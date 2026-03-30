@@ -563,6 +563,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c7e12ab71370e6d45bcda57b772eb3bd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  maxRetries: 10
+  retryDelay: 1
+  uploadMaxRetries: 3
+  uploadRetryDelay: 2
 --- !u!4 &782751129
 Transform:
   m_ObjectHideFlags: 0
@@ -1039,6 +1043,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a5ec9dfc1f159984baa7e3426eac560d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  overrideSettings: 0
+  inspectorIsServer: 1
 --- !u!4 &1608457130
 Transform:
   m_ObjectHideFlags: 0
@@ -1214,8 +1220,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1173d1d4dac74964589f16c781715017, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  networkSharedRootPath: \\192.168.0.44\SharedPicture
-  useEditorTestData: 1
+  useEditorTestData: 0
   testNameA: AAA
   testNameB: BBB
   testColorA: 2

@@ -81,7 +81,8 @@ namespace My.Scripts._00_Title
                     continue;
                 }
 
-                string url = $"{GameManager.Instance.ApiConfig.CheckRoomStateUrl}?code=d3";
+                string moduleCode = SessionManager.Instance ? SessionManager.Instance.CurrentModuleCode : "D3";
+                string url = $"{GameManager.Instance.ApiConfig.CheckRoomStateUrl}?code={moduleCode}";
 
                 using (UnityWebRequest request = UnityWebRequest.Get(url))
                 {

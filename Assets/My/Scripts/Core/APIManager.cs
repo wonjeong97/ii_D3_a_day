@@ -374,17 +374,14 @@ namespace My.Scripts.Core
             }
 
             string encodedUid = UnityWebRequest.EscapeURL(uid);
-            // D3 프로젝트 규격에 따른 URL 파라미터 구성 (A1 로직 참조)
-            string url = $"{baseUrl}?idx_user={idxUser}&uid={encodedUid}&code={moduleCode.ToLower()}&type=png";
+            string url = $"{baseUrl}?idx_user={idxUser}&uid={encodedUid}&code={moduleCode}&type=png";
 
-            // 수정됨: maxRetries -> uploadMaxRetries 적용
             for (int attempt = 0; attempt < uploadMaxRetries; attempt++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
                 using (UnityWebRequest webRequest = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
                 {
-                    // Why: 제공해주신 예시와 같이 Raw 바이너리 데이터를 직접 업로드함
                     webRequest.uploadHandler = new UploadHandlerRaw(imageBytes);
                     webRequest.uploadHandler.contentType = "image/png"; 
                     webRequest.downloadHandler = new DownloadHandlerBuffer();
@@ -451,9 +448,8 @@ namespace My.Scripts.Core
 
             string encodedUid = UnityWebRequest.EscapeURL(uid);
             // URL 파라미터에 type=mp4 를 적용
-            string url = $"{baseUrl}?idx_user={idxUser}&uid={encodedUid}&code={moduleCode.ToLower()}&type=mp4";
+            string url = $"{baseUrl}?idx_user={idxUser}&uid={encodedUid}&code={moduleCode}&type=mp4";
 
-            // 수정됨: maxRetries -> uploadMaxRetries 적용
             for (int attempt = 0; attempt < uploadMaxRetries; attempt++)
             {
                 cancellationToken.ThrowIfCancellationRequested();

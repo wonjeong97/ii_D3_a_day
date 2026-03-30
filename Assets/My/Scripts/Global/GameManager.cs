@@ -154,24 +154,29 @@ namespace My.Scripts.Global
             _isTransitioning = false;
         }
 
-        public void ReturnToTitle()
+        public void ReturnToTitle(bool isClear = false)
         {
             if (_isTransitioning) return;
             _isTransitioning = true;
-            StartCoroutine(ReturnToTitleRoutine());
+            StartCoroutine(ReturnToTitleRoutine(isClear));
         }
 
-        private IEnumerator ReturnToTitleRoutine()
+        private IEnumerator ReturnToTitleRoutine(bool isClear)
         {
             Debug.Log("[GameManager] 타이틀로 돌아감");
 
             if (SessionManager.Instance && SessionManager.Instance.CurrentUserIdx != 0 && ApiConfig != null)
             {
                 int uid = SessionManager.Instance.CurrentUserIdx;
-                string resetUrl = $"{ApiConfig.ResetStartUrl}?idx_user={uid}&code=d3";
-                yield return StartCoroutine(SendGetRequestRoutine(resetUrl));
+                string moduleCode = SessionManager.Instance.CurrentModuleCode;
+                
+                if (!isClear)
+                {
+                    string resetUrl = $"{ApiConfig.ResetStartUrl}?idx_user={uid}&code={moduleCode}";
+                    yield return StartCoroutine(SendGetRequestRoutine(resetUrl));
+                }
 
-                string exitUrl = $"{ApiConfig.ExitRoomUrl}?code=d3&idx_user={uid}";
+                string exitUrl = $"{ApiConfig.ExitRoomUrl}?code={moduleCode}&idx_user={uid}";
                 yield return StartCoroutine(SendGetRequestRoutine(exitUrl));
             }
 
@@ -179,7 +184,7 @@ namespace My.Scripts.Global
             if (SessionManager.Instance) SessionManager.Instance.ClearSession();
 
             _isTransitioning = false; 
-            ChangeScene(GameConstants.Scene.Title);
+            ChangeScene(GameConstants.Scene.Title, true);
         }
 
         #region API 호출 로직
@@ -208,35 +213,35 @@ namespace My.Scripts.Global
         public void SendResetStartAPI()
         {
             if (!SessionManager.Instance || SessionManager.Instance.CurrentUserIdx == 0 || ApiConfig == null) return;
-            string url = $"{ApiConfig.ResetStartUrl}?idx_user={SessionManager.Instance.CurrentUserIdx}&code=d3";
+            string url = $"{ApiConfig.ResetStartUrl}?idx_user={SessionManager.Instance.CurrentUserIdx}&code={SessionManager.Instance.CurrentModuleCode}";
             StartCoroutine(SendGetRequestRoutine(url));
         }
 
         public void SendExitRoomAPI()
         {
             if (!SessionManager.Instance || SessionManager.Instance.CurrentUserIdx == 0 || ApiConfig == null) return;
-            string url = $"{ApiConfig.ExitRoomUrl}?code=d3&idx_user={SessionManager.Instance.CurrentUserIdx}";
+            string url = $"{ApiConfig.ExitRoomUrl}?code={SessionManager.Instance.CurrentModuleCode}&idx_user={SessionManager.Instance.CurrentUserIdx}";
             StartCoroutine(SendGetRequestRoutine(url));
         }
 
         public void SendTimeUpdateAPI()
         {
             if (!SessionManager.Instance || SessionManager.Instance.CurrentUserIdx == 0 || ApiConfig == null) return;
-            string url = $"{ApiConfig.UpdateTimeUrl}?idx_user={SessionManager.Instance.CurrentUserIdx}&option=end&code=d3";
+            string url = $"{ApiConfig.UpdateTimeUrl}?idx_user={SessionManager.Instance.CurrentUserIdx}&option=end&code={SessionManager.Instance.CurrentModuleCode}";
             StartCoroutine(SendGetRequestRoutine(url));
         }
 
         public void SendValueUpdateAPI(int qNo, string side, int value)
         {
             if (!SessionManager.Instance || SessionManager.Instance.CurrentUserIdx == 0 || ApiConfig == null) return;
-            string url = $"{ApiConfig.UpdateValueUrl}?idx_user={SessionManager.Instance.CurrentUserIdx}&q_no={qNo}&side={side}&code=d3&value={value}";
+            string url = $"{ApiConfig.UpdateValueUrl}?idx_user={SessionManager.Instance.CurrentUserIdx}&q_no={qNo}&side={side}&code={SessionManager.Instance.CurrentModuleCode}&value={value}";
             StartCoroutine(SendGetRequestRoutine(url));
         }
 
         public void SendPieceUpdateAPI(int value)
         {
             if (value < 0 || !SessionManager.Instance || SessionManager.Instance.CurrentUserIdx == 0 || ApiConfig == null) return;
-            string url = $"{ApiConfig.UpdatePieceUrl}?idx_user={SessionManager.Instance.CurrentUserIdx}&code=d3&value={value}";
+            string url = $"{ApiConfig.UpdatePieceUrl}?idx_user={SessionManager.Instance.CurrentUserIdx}&code={SessionManager.Instance.CurrentModuleCode}&value={value}";
             StartCoroutine(SendGetRequestRoutine(url));
         }
 
@@ -263,10 +268,12 @@ namespace My.Scripts.Global
             if (SessionManager.Instance && SessionManager.Instance.CurrentUserIdx != 0 && ApiConfig != null)
             {
                 int uid = SessionManager.Instance.CurrentUserIdx;
-                string resetUrl = $"{ApiConfig.ResetStartUrl}?idx_user={uid}&code=d3";
+                string moduleCode = SessionManager.Instance.CurrentModuleCode;
+                
+                string resetUrl = $"{ApiConfig.ResetStartUrl}?idx_user={uid}&code={moduleCode}";
                 yield return StartCoroutine(SendGetRequestRoutine(resetUrl));
 
-                string exitUrl = $"{ApiConfig.ExitRoomUrl}?code=d3&idx_user={uid}";
+                string exitUrl = $"{ApiConfig.ExitRoomUrl}?code={moduleCode}&idx_user={uid}";
                 yield return StartCoroutine(SendGetRequestRoutine(exitUrl));
             }
 #else

@@ -153,7 +153,9 @@ namespace My.Scripts._01_Tutorial.Pages
                 }
 
                 ApiSettings config = GameManager.Instance.ApiConfig;
-                string roomStateUrl = $"{config.CheckRoomStateUrl}?code=d3";
+                // 세션에서 동적으로 모듈 코드를 가져옵니다 (기본값 D3)
+                string moduleCode = SessionManager.Instance ? SessionManager.Instance.CurrentModuleCode : "D3";
+                string roomStateUrl = $"{config.CheckRoomStateUrl}?code={moduleCode}";
                 string roomState = string.Empty;
                 bool roomStateSuccess = false;
 
@@ -189,8 +191,9 @@ namespace My.Scripts._01_Tutorial.Pages
                     yield break; 
                 }
                 else if (roomState.Contains("USING"))
-                {
-                    string userUrl = $"{config.GetCurrentRoomUserUrl}?code=d3";
+                {   
+                    // 이미 선언된 moduleCode를 재사용하여 하드코딩 제거
+                    string userUrl = $"{config.GetCurrentRoomUserUrl}?code={moduleCode}";
                     string userData = string.Empty;
                     bool userSuccess = false;
 

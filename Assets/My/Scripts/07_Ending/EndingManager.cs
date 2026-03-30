@@ -48,8 +48,7 @@ namespace My.Scripts._07_Ending
 
             if (GameManager.Instance)
             {
-                // Why: ReturnToTitle은 내부적으로 SessionManager의 데이터를 지우고, 방 리셋 API를 호출한 뒤 Title 씬으로 전환함.
-                GameManager.Instance.ReturnToTitle(); 
+                GameManager.Instance.ReturnToTitle(true); 
             }
         }
     }
