@@ -24,8 +24,8 @@ namespace My.Scripts.Global
         public string localSaveRoot;
 
         private HttpListener _listener;
+        private CancellationTokenSource _cts;
         private Thread _serverThread;
-        private bool _isRunning;
 
         /// <summary>
         /// 싱글톤 인스턴스를 초기화함.
@@ -104,7 +104,7 @@ namespace My.Scripts.Global
                 _listener.Prefixes.Add($"http://*:{port}/");
                 _listener.Start();
 
-                _isRunning = true;
+                _cts = new CancellationTokenSource();
                 _serverThread = new Thread(ServerListenRoutine);
                 _serverThread.IsBackground = true;
                 _serverThread.Start();
@@ -122,7 +122,7 @@ namespace My.Scripts.Global
         /// </summary>
         private void ServerListenRoutine()
         {
-            while (_isRunning && _listener != null && _listener.IsListening)
+            while (!_cts.Token.IsCancellationRequested && _listener != null && _listener.IsListening)
             {
                 try
                 {
@@ -399,7 +399,7 @@ namespace My.Scripts.Global
         /// </summary>
         private void CleanupServer()
         {
-            _isRunning = false;
+            _cts?.Cancel();
             if (TcpManager.Instance) TcpManager.Instance.onMessageReceived -= OnNetworkMessageReceived;
             
             try
@@ -413,9 +413,11 @@ namespace My.Scripts.Global
 
                 if (_serverThread != null && _serverThread.IsAlive)
                 {
-                    _serverThread.Abort();
+                    _serverThread.Join(TimeSpan.FromSeconds(2));
                     _serverThread = null;
                 }
+                _cts?.Dispose();
+                _cts = null;
             }
             catch (Exception e)
             {

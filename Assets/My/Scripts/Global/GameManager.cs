@@ -338,6 +338,7 @@ namespace My.Scripts.Global
 
         /// <summary>
         /// 서버 데이터 정리 완료 후 안전하게 프로그램을 종료함.
+        /// 의도치 않은 종료 시 방 상태 고착(USING)을 막기 위해 시작 시간 리셋 및 퇴장 API를 호출함.
         /// </summary>
         private IEnumerator QuitRoutine()
         {
@@ -347,8 +348,14 @@ namespace My.Scripts.Global
                 int uid = SessionManager.Instance.CurrentUserIdx;
                 string moduleCode = SessionManager.Instance.CurrentModuleCode;
                 
-                string resetUrl = $"{ApiConfig.ResetStartUrl}?idx_user={uid}&code={moduleCode}";
-                yield return StartCoroutine(SendGetRequestRoutine(resetUrl));
+                // 앱 강제 종료 시점까지 세션 인덱스가 존재한다면 정상 엔딩을 보지 못한 미클리어 상태임.
+                bool isClear = false;
+                
+                if (!isClear)
+                {
+                    string resetUrl = $"{ApiConfig.ResetStartUrl}?idx_user={uid}&code={moduleCode}";
+                    yield return StartCoroutine(SendGetRequestRoutine(resetUrl));
+                }
 
                 string exitUrl = $"{ApiConfig.ExitRoomUrl}?code={moduleCode}&idx_user={uid}";
                 yield return StartCoroutine(SendGetRequestRoutine(exitUrl));
