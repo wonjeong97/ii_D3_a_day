@@ -521,7 +521,7 @@
           "scale": {"x": 1, "y": 1, "z": 1},
           "text": "ㄱ. 늘 그 자리에 있어,\n돌아갈 곳이 되어줘",
           "fontName": "font8",
-          "fontSize": 28,
+          "fontSize": 26,
           "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
           "alignment": 0
         },
@@ -529,9 +529,9 @@
           "name": "Text_A2",
           "position": {"x": -125, "y": 176},
           "scale": {"x": 1, "y": 1, "z": 1},
-          "text": "ㄴ. 서로를 멋지게\n응원하며, 반짝이고 있어",
+          "text": "ㄴ. 서로를 멋지게 응원\n하며, 반짝이고 있어",
           "fontName": "font8",
-          "fontSize": 28,
+          "fontSize": 25,
           "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
           "alignment": 0
         },
@@ -549,9 +549,9 @@
           "name": "Text_A4",
           "position": {"x": -125, "y": 176},
           "scale": {"x": 1, "y": 1, "z": 1},
-          "text": "ㄹ. 지금의 내가 될 수 있게\n해준 사람이야",
+          "text": "ㄹ. 지금의 내가 될 수\n있게 해준 사람이야",
           "fontName": "font8",
-          "fontSize": 28,
+          "fontSize": 27,
           "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
           "alignment": 0
         },
@@ -611,7 +611,7 @@
           "name": "Text_A3",
           "position": {"x": -125, "y": 176},
           "scale": {"x": 1, "y": 1, "z": 1},
-          "text": "ㄷ. 앞으로도 \n잘 될 거라고 응원해",
+          "text": "ㄷ. 앞으로도\n잘 될 거라고 응원해",
           "fontName": "font8",
           "fontSize": 28,
           "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
@@ -775,9 +775,9 @@
           "name": "Text_A5",
           "position": {"x": -125, "y": 176},
           "scale": {"x": 1, "y": 1, "z": 1},
-          "text": "ㅁ. 문득 시간이\n흘렀다는 걸\n느끼게 돼",
+          "text": "ㅁ. 문득 시간이\n흘렀다는 걸 느끼게 돼",
           "fontName": "font8",
-          "fontSize": 28,
+          "fontSize": 26,
           "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1},
           "alignment": 0
         }
