@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using My.Scripts.Core;
-using My.Scripts.Global;
 using My.Scripts.Network; 
 using My.Scripts.Hardware; 
 using UnityEngine;
@@ -17,7 +16,6 @@ namespace My.Scripts._02_PlayTutorial.Pages
     [Serializable]
     public class PlayTutorialPage2Data
     {
-        // # TODO: 제이슨 구조 확정 시 데이터 필드 추가 필요
     }
 
     /// <summary>
@@ -37,8 +35,8 @@ namespace My.Scripts._02_PlayTutorial.Pages
         private Coroutine _fadeCoroutine;
         private Coroutine _countdownCoroutine;
         
-        private bool _isCompleted = false;
-        private bool _isWaitingForReset = false;
+        private bool _isCompleted;
+        private bool _isWaitingForReset;
         private int _holdingAnswerIndex = -1;
 
         private readonly KeyCode[] _p1Keys = new KeyCode[] { 
@@ -67,7 +65,7 @@ namespace My.Scripts._02_PlayTutorial.Pages
             }
             else 
             {
-                UnityEngine.Debug.LogWarning("[PlayTutorialPage2Controller] SetupData: 전달된 데이터가 null입니다.");
+                Debug.LogWarning("[PlayTutorialPage2Controller] SetupData: 전달된 데이터가 null입니다.");
             }
         }
 
@@ -112,13 +110,12 @@ namespace My.Scripts._02_PlayTutorial.Pages
                 RfidManager.Instance.onAnswerReceived -= OnRfidAnswerReceived;
             }
 
-            if (!object.ReferenceEquals(_fadeCoroutine, null)) StopCoroutine(_fadeCoroutine);
-            if (!object.ReferenceEquals(_countdownCoroutine, null)) StopCoroutine(_countdownCoroutine);
+            if (_fadeCoroutine != null) StopCoroutine(_fadeCoroutine);
+            if (_countdownCoroutine != null) StopCoroutine(_countdownCoroutine);
         }
 
         /// <summary>
         /// 매 프레임 키보드 디버그 입력을 검사함.
-        /// Why: Update 루프 내부이므로 object.ReferenceEquals를 사용하여 극단적 최적화를 적용함.
         /// </summary>
         private void Update()
         {
@@ -135,7 +132,7 @@ namespace My.Scripts._02_PlayTutorial.Pages
                 }
                 else if (_holdingAnswerIndex != newlyPressedIndex)
                 {
-                    // Why: 카운트 진행 중 다른 키/카드를 누르면 페널티를 부과하기 위함.
+                    // 카운트 진행 중 다른 키/카드를 누르면 다시 시작하기 위함
                     InterruptCountdown(newlyPressedIndex); 
                 }
             }
@@ -169,7 +166,7 @@ namespace My.Scripts._02_PlayTutorial.Pages
         {
             bool isServer = false;
             
-            if (!object.ReferenceEquals(TcpManager.Instance, null)) 
+            if (TcpManager.Instance) 
             {
                 isServer = TcpManager.Instance.IsServer;
             }
@@ -220,7 +217,7 @@ namespace My.Scripts._02_PlayTutorial.Pages
         /// <param name="newAnswerIndex">새로 인식된 응답 인덱스.</param>
         private void InterruptCountdown(int newAnswerIndex)
         {
-            if (!object.ReferenceEquals(_countdownCoroutine, null))
+            if (_countdownCoroutine != null)
             {
                 StopCoroutine(_countdownCoroutine);
                 _countdownCoroutine = null;

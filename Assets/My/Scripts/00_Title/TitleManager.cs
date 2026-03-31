@@ -12,17 +12,24 @@ namespace My.Scripts._00_Title
 {
     /// <summary>
     /// 타이틀 화면 입력 처리 및 씬 전환 매니저.
-    /// 서버 측에서 지속적으로 API를 폴링하여 외부 시작 명령을 대기합니다.
+    /// 서버 측에서 지속적으로 API를 폴링하여 외부 시작 명령을 대기함.
     /// </summary>
     public class TitleManager : MonoBehaviour
     {
-        private bool _isTransitioning = false; 
+        private bool _isTransitioning; 
         private float _fadeTime = 1.0f; 
 
-        private bool _isWaitingForClient = false;
+        private bool _isWaitingForClient;
         private Coroutine _requestCoroutine;
         private Coroutine _pollCoroutine;
+        
+        [Header("API Polling Settings")]
+        [SerializeField] private float pollingInterval = 3.0f;
+        [SerializeField] private int apiTimeout = 10;
 
+        /// <summary>
+        /// 매니저 초기화 및 네트워크 이벤트 구독을 수행함.
+        /// </summary>
         private void Start()
         {
             LoadSettings();
@@ -31,7 +38,7 @@ namespace My.Scripts._00_Title
             {
                 TcpManager.Instance.onMessageReceived += OnNetworkMessageReceived;
                 
-                // Why: API 통신은 서버만 전담해야 하므로 서버 모드일 때만 폴링 코루틴을 시작함
+                // 외부 API 통신 부하는 서버 권한을 가진 PC에서만 전담하도록 제한함.
                 if (TcpManager.Instance.IsServer)
                 {
                     _pollCoroutine = StartCoroutine(PollRoomStateRoutine());
@@ -43,6 +50,10 @@ namespace My.Scripts._00_Title
             }
         }
 
+        /// <summary>
+        /// 환경 설정 JSON 데이터를 메모리에 적재함.
+        /// Why: 페이드 시간 및 공통 설정값을 씬 진입 시점에 즉시 적용하기 위함.
+        /// </summary>
         private void LoadSettings()
         {
             Settings settings = JsonLoader.Load<Settings>(GameConstants.Path.JsonSetting);
@@ -67,14 +78,13 @@ namespace My.Scripts._00_Title
         }
 
         /// <summary>
-        /// 3초 주기로 API를 호출하여 방의 상태(EMPTY / USING)를 확인합니다.
-        /// Why: 외부 시스템(예: 키오스크, 웹)에서 시작을 제어할 수 있도록 상태를 폴링하기 위함.
+        /// 외부 API를 주기적으로 호출하여 현재 방의 점유 상태를 확인함.
         /// </summary>
         private IEnumerator PollRoomStateRoutine()
         {
             while (!_isTransitioning && !_isWaitingForClient)
             {
-                yield return CoroutineData.GetWaitForSeconds(3.0f);
+                yield return CoroutineData.GetWaitForSeconds(pollingInterval);
 
                 if (!GameManager.Instance || GameManager.Instance.ApiConfig == null)
                 {
@@ -86,13 +96,15 @@ namespace My.Scripts._00_Title
 
                 using (UnityWebRequest request = UnityWebRequest.Get(url))
                 {
-                    request.timeout = 2; // Why: 무한 대기로 인한 코루틴 블로킹 방지
+                    // 무한 대기로 인한 코루틴 블로킹 현상을 방지함.
+                    request.timeout = apiTimeout;
                     yield return request.SendWebRequest();
 
                     if (request.result == UnityWebRequest.Result.Success)
                     {
                         string responseText = request.downloadHandler.text.Trim().ToUpper();
                         
+                        // 외부 시스템의 시작 명령을 감지하여 씬 전환을 트리거함.
                         if (responseText.Contains("USING"))
                         {
                             Debug.Log("[TitleManager] 방 상태가 USING으로 확인되었습니다. 클라이언트 진입 대기를 시작합니다.");
@@ -109,17 +121,20 @@ namespace My.Scripts._00_Title
             }
         }
 
+        /// <summary>
+        /// 매 프레임 수동 조작 상태를 검사함.
+        /// </summary>
         private void Update()
         {
             if (_isTransitioning) return; 
 
-            // Update 내부이므로 파괴된 유니티 객체를 안전하게 걸러내는 암시적 Null 검사 사용
+            //  Update 내부이므로 파괴된 유니티 객체를 안전하게 걸러내는 암시적 불리언 변환 사용.
             if (TcpManager.Instance)
             {
                 if (TcpManager.Instance.IsServer)
                 {
-                    // Why: API 타임아웃 상황을 대비한 수동 디버그 넘김 키
-                    if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+                    // API 서버 장애 발생 시 테스트 및 원활한 시연을 위해 수동 씬 전환 단축키를 제공함.
+                    if (Input.GetKeyDown(KeyCode.Return))
                     {
                         if (!_isWaitingForClient)
                         {
@@ -135,7 +150,8 @@ namespace My.Scripts._00_Title
         }
 
         /// <summary>
-        /// 클라이언트가 Title 씬에 도착해 응답할 때까지 1초 주기로 계속 넘어갈 준비가 되었는지 물어봅니다.
+        /// 클라이언트 PC의 씬 진입 준비 상태를 지속적으로 확인함.
+        /// Why: 양쪽 PC가 동일한 타이밍에 다음 씬으로 넘어가도록 동기화하기 위함.
         /// </summary>
         private IEnumerator RequestStartRoutine()
         {
@@ -150,8 +166,10 @@ namespace My.Scripts._00_Title
         }
 
         /// <summary>
-        /// 동기화가 완료되면 최종적으로 씬을 넘기는 처리를 합니다.
+        /// 모든 준비가 완료되었을 때 실제 씬 전환 로직을 실행함.
+        /// Why: 중복 전환을 방지하고 클라이언트에게 전환 명령을 하달하기 위함.
         /// </summary>
+        /// <param name="playerID">태그된 플레이어의 고유 식별자.</param>
         private void ProcessTag(int playerID)
         {
             if (_isTransitioning) return;
@@ -174,13 +192,14 @@ namespace My.Scripts._00_Title
         }
 
         /// <summary>
-        /// 수신된 TCP 메시지를 파싱하여 씬 전환을 완벽하게 동기화합니다.
+        /// 수신된 TCP 통신 메시지를 분석하고 동기화 로직을 처리함.
         /// </summary>
+        /// <param name="msg">네트워크 수신 메시지 객체.</param>
         private void OnNetworkMessageReceived(TcpMessage msg)
         {
             if (msg == null) return;
 
-            // 1. [클라이언트] 서버로부터 튜토리얼로 넘어갈 거냐는 물음을 받으면, 나도 타이틀에 있다고 대답함
+            // 서버의 시작 확인 요청에 대해 클라이언트가 준비 완료 상태임을 응답함.
             if (msg.command == "REQUEST_START")
             {
                 if (TcpManager.Instance && !TcpManager.Instance.IsServer)
@@ -188,7 +207,7 @@ namespace My.Scripts._00_Title
                     TcpManager.Instance.SendMessageToTarget("START_ACK", "");
                 }
             }
-            // 2. [서버] 클라이언트가 타이틀에 도착해 대답을 주면, 물어보기를 멈추고 씬을 넘김
+            // 클라이언트의 준비 완료 응답을 확인한 후 서버가 최종 씬 전환을 지시함.
             else if (msg.command == "START_ACK")
             {
                 if (TcpManager.Instance && TcpManager.Instance.IsServer)
@@ -203,7 +222,7 @@ namespace My.Scripts._00_Title
                     }
                 }
             }
-            // 3. [클라이언트] 서버의 최종 명령(CHANGE_SCENE)을 받고 씬을 넘김
+            // 서버의 최종 씬 전환 명령을 수신하여 클라이언트의 씬을 변경함.
             else if (msg.command == "CHANGE_SCENE")
             {
                 if (!_isTransitioning)
@@ -223,6 +242,10 @@ namespace My.Scripts._00_Title
             }
         }
 
+        /// <summary>
+        /// 씬 종료 시 리소스를 해제함.
+        /// Why: 메모리 누수 및 비정상적인 네트워크 콜백 실행을 방지하기 위함.
+        /// </summary>
         private void OnDestroy()
         {   
             StopAllCoroutines();

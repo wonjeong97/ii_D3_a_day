@@ -51,7 +51,7 @@ namespace My.Scripts.Hardware
 
         /// <summary>
         /// 싱글톤 초기화 및 JSON 로드 수행.
-        /// Why: 브릿지 프로세스 경로와 카드-응답 매핑 데이터를 앱 실행 시 1회 캐싱하기 위함.
+        /// 브릿지 프로세스 경로와 카드-응답 매핑 데이터를 앱 실행 시 1회 캐싱하기 위함.
         /// </summary>
         private void Awake() 
         {
@@ -76,17 +76,17 @@ namespace My.Scripts.Hardware
         }
 
         /// <summary>
-        /// 컴포넌트 활성화 시 브릿지 프로세스 가동.
-        /// Why: 비동기로 파이프 연결을 안전하게 시도하기 위함.
+        /// 컴포넌트 활성화 시 브릿지 프로세스 가동을 트리거함.
+        /// 이벤트 함수의 async 선언을 제거하여 규약을 준수함.
         /// </summary>
-        private async UniTaskVoid Start()
+        private void Start()
         {
-            await EnsureBridgeRunningAsync();
+            EnsureBridgeRunningAsync().Forget();
         }
 
         /// <summary>
         /// 브릿지 프로세스의 생존 여부를 확인하고 필요 시 재기동 및 파이프 재연결 수행.
-        /// Why: 외부 프로세스가 예기치 않게 종료되거나 통신이 끊겼을 때 자동으로 복구하기 위함.
+        /// 외부 프로세스가 예기치 않게 종료되거나 통신이 끊겼을 때 자동으로 복구하기 위함.
         /// </summary>
         private async UniTask<bool> EnsureBridgeRunningAsync()
         {
@@ -118,7 +118,7 @@ namespace My.Scripts.Hardware
 
         /// <summary>
         /// 숨김 상태로 32비트 브릿지 프로세스 실행.
-        /// Why: 64비트 유니티 환경에서 32비트 전용 DLL을 구동하기 위함.
+        /// 64비트 유니티 환경에서 32비트 전용 DLL을 구동하기 위함.
         /// </summary>
         private void StartBridgeProcess()
         {
@@ -145,7 +145,7 @@ namespace My.Scripts.Hardware
 
         /// <summary>
         /// 비동기 네임드 파이프 연결 수행.
-        /// Why: 메인 스레드 블로킹을 방지하기 위해 비동기 타임아웃(3초)을 적용함.
+        /// 메인 스레드 블로킹을 방지하기 위해 비동기 타임아웃(3초)을 적용함.
         /// </summary>
         private async UniTask<bool> ConnectToPipeAsync()
         {
@@ -166,7 +166,7 @@ namespace My.Scripts.Hardware
 
         /// <summary>
         /// 입력 대기 구간 진입 시 자동 폴링 시작.
-        /// Why: 타이머 기반으로 지속적인 태그 검사를 수행하기 위함.
+        /// 타이머 기반으로 지속적인 태그 검사를 수행하기 위함.
         /// </summary>
         public void StartPolling()
         {
@@ -178,7 +178,7 @@ namespace My.Scripts.Hardware
 
         /// <summary>
         /// 입력 완료 또는 페이지 이탈 시 자동 폴링 중지.
-        /// Why: 불필요한 하드웨어 통신과 리소스 낭비를 막기 위함.
+        /// 불필요한 하드웨어 통신과 리소스 낭비를 막기 위함.
         /// </summary>
         public void StopPolling()
         {
@@ -232,7 +232,7 @@ namespace My.Scripts.Hardware
 
         /// <summary>
         /// 파이프를 통해 바이트 데이터를 전송하고 응답을 수신함.
-        /// Why: 1초 이상의 지연 발생 시 타임아웃 처리하여 메인 루프 멈춤을 방지함.
+        /// 1초 이상의 지연 발생 시 타임아웃 처리하여 메인 루프 멈춤을 방지함.
         /// </summary>
         private async UniTask SendCommandAsync(string command)
         {
@@ -243,7 +243,7 @@ namespace My.Scripts.Hardware
                 byte[] commandBytes = Encoding.UTF8.GetBytes(command);
                 await _pipeClient.WriteAsync(commandBytes, 0, commandBytes.Length).AsUniTask();
 
-                // Why: 기존의 잦은 new byte[256] 할당을 피하고, 클래스 멤버 배열(_readBuffer)을 재사용하여 GC 스파이크를 최적화함.
+                // 기존의 잦은 할당을 피하고 캐싱된 배열(_readBuffer)을 재사용하여 GC 스파이크를 최적화함.
                 int bytesRead = await _pipeClient.ReadAsync(_readBuffer, 0, _readBuffer.Length)
                     .AsUniTask()
                     .Timeout(TimeSpan.FromSeconds(1.0f));
@@ -275,7 +275,7 @@ namespace My.Scripts.Hardware
 
         /// <summary>
         /// 수신된 문자열을 파싱하고 매핑 이벤트를 발생시킴.
-        /// Why: 브릿지가 보내는 JSON 응답을 역직렬화하여 정확한 UID(payload)만 추출하기 위함.
+        /// 브릿지가 보내는 JSON 응답을 역직렬화하여 정확한 UID(payload)만 추출하기 위함.
         /// </summary>
         private void ProcessResponse(string response)
         {
@@ -297,7 +297,7 @@ namespace My.Scripts.Hardware
                 // JSON 파싱 실패 시 아래 Fallback 로직으로 넘어감
             }
 
-            // 구버전 포맷 (예: RFID_READ:FB8A1848) 수신 시 대응하는 Fallback 로직
+            // 구버전 포맷 수신 시 대응하는 Fallback 로직
             if (response.Contains("RFID_READ"))
             {
                 string[] parts = response.Split(':');
@@ -311,7 +311,7 @@ namespace My.Scripts.Hardware
 
         /// <summary>
         /// 추출된 UID를 검증하고 이벤트를 발생시킴.
-        /// Why: 중복 코드를 방지하고 공통된 처리 및 로그 출력을 수행하기 위함.
+        /// 중복 코드를 방지하고 공통된 처리 및 로그 출력을 수행하기 위함.
         /// </summary>
         private void ProcessMatchedUid(string uid)
         {
@@ -333,7 +333,7 @@ namespace My.Scripts.Hardware
 
         /// <summary>
         /// 설정된 JSON 배열을 순회하여 UID에 해당하는 답변 인덱스를 찾음.
-        /// Why: 읽어들인 태그가 1~5번 중 어느 답변에 해당하는지 식별하기 위함.
+        /// 읽어들인 태그가 1~5번 중 어느 답변에 해당하는지 식별하기 위함.
         /// </summary>
         private int GetAnswerIndexFromUid(string uid)
         {
@@ -350,7 +350,7 @@ namespace My.Scripts.Hardware
 
         /// <summary>
         /// 앱 종료 또는 씬 해제 시 정리 작업 수행.
-        /// Why: 백그라운드 프로세스가 좀비 상태로 남는 것을 방지함.
+        /// 백그라운드 프로세스가 좀비 상태로 남는 것을 방지함.
         /// </summary>
         private void OnDestroy()
         {

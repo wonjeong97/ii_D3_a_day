@@ -10,19 +10,26 @@ using Wonjeong.Utils;
 
 namespace My.Scripts.Global
 {
+    /// <summary>
+    /// 양쪽 PC 간의 이미지 및 영상 파일 전송을 담당하는 매니저.
+    /// 서버 PC는 HTTP 서버를 구동하여 파일 저장 및 제공을 수행하고, 클라이언트는 HTTP 요청을 통해 데이터를 동기화함.
+    /// </summary>
     public class FileTransferManager : MonoBehaviour
     {
         public static FileTransferManager Instance { get; private set; }
 
         [Header("Server Settings")]
-        public string serverIp = "127.0.0.1";
-        public int port = 8080;
+        public string serverIp;
+        public int port;
         public string localSaveRoot = @"C:\UnitySharedPicture";
 
         private HttpListener _listener;
         private Thread _serverThread;
         private bool _isRunning;
 
+        /// <summary>
+        /// 싱글톤 인스턴스를 초기화하고 씬 전환 시 파괴되지 않도록 설정함.
+        /// </summary>
         private void Awake()
         {
             if (!Instance)
@@ -36,13 +43,23 @@ namespace My.Scripts.Global
             }
         }
 
+        /// <summary>
+        /// 네트워크 설정 파일을 로드하고 서버 PC인 경우 HTTP 서버를 가동함.
+        /// </summary>
         private void Start()
         {
             TcpSetting loadedSetting = JsonLoader.Load<TcpSetting>(GameConstants.Path.TcpSetting);
-            if (loadedSetting != null && !string.IsNullOrEmpty(loadedSetting.serverIP))
+            if (loadedSetting != null)
             {
-                serverIp = loadedSetting.serverIP;
-                UnityEngine.Debug.Log($"[FileTransferManager] TcpSetting IP 로드 성공: {serverIp}");
+                if (!string.IsNullOrWhiteSpace(loadedSetting.serverIP)) serverIp = loadedSetting.serverIP;
+                if (loadedSetting.port > 0 && loadedSetting.port <= 65535) port = loadedSetting.port;
+            }
+            
+            if (string.IsNullOrWhiteSpace(serverIp) || port <= 0 || port > 65535)
+            {
+                Debug.LogError("[FileTransferManager] 유효한 serverIp/port 설정이 없어 비활성화합니다.");
+                enabled = false;
+                return;
             }
 
             if (TcpManager.Instance)
@@ -56,6 +73,10 @@ namespace My.Scripts.Global
             }
         }
 
+        /// <summary>
+        /// .NET HttpListener를 사용하여 경량 파일 서버를 시작함.
+        /// 메인 스레드 블로킹을 방지하기 위해 별도 백그라운드 스레드에서 요청을 수신함.
+        /// </summary>
         private void StartHttpServer()
         {
             try
@@ -71,14 +92,17 @@ namespace My.Scripts.Global
                 _serverThread.IsBackground = true;
                 _serverThread.Start();
 
-                UnityEngine.Debug.Log($"[FileTransferManager] 파일 서버 실행됨 (포트: {port})");
+                Debug.Log($"[FileTransferManager] 파일 서버 가동: 포트 {port}");
             }
             catch (Exception e)
             {
-                UnityEngine.Debug.LogError($"[FileTransferManager] 서버 실행 실패: {e.Message}");
+                Debug.LogError($"[FileTransferManager] 서버 실행 실패: {e.Message}");
             }
         }
 
+        /// <summary>
+        /// 스레드 루프를 통해 들어오는 HTTP 요청을 지속적으로 수신함.
+        /// </summary>
         private void ServerListenRoutine()
         {
             while (_isRunning && _listener.IsListening)
@@ -92,6 +116,11 @@ namespace My.Scripts.Global
             }
         }
 
+        /// <summary>
+        /// 수신된 GET/POST 요청을 분석하여 파일을 전송하거나 저장함.
+        /// 클라이언트의 데이터 백업 및 공유 기능을 수행하기 위함.
+        /// </summary>
+        /// <param name="context">HTTP 요청 컨텍스트.</param>
         private void ProcessRequest(HttpListenerContext context)
         {
             HttpListenerRequest req = context.Request;
@@ -119,7 +148,6 @@ namespace My.Scripts.Global
                     {
                         byte[] fileBytes = File.ReadAllBytes(fullFilePath);
                         
-                        // Why: 데이터를 쓰기 전에 상태를 먼저 설정하여 오류를 방지함
                         res.StatusCode = 200;
                         res.ContentType = "image/png";
                         res.ContentLength64 = fileBytes.Length;
@@ -133,7 +161,7 @@ namespace My.Scripts.Global
             }
             catch (Exception e)
             {
-                UnityEngine.Debug.LogError($"[FileTransferManager] 요청 처리 중 에러: {e.Message}");
+                Debug.LogError($"[FileTransferManager] 요청 처리 에러: {e.Message}");
                 res.StatusCode = 500;
             }
             finally
@@ -142,6 +170,13 @@ namespace My.Scripts.Global
             }
         }
 
+        /// <summary>
+        /// 촬영된 사진을 로컬에 저장하고 역할에 따라 서버로 전송함.
+        /// 서버 PC는 로컬 저장 후 클라이언트에 통보하며, 클라이언트는 HTTP POST를 통해 서버로 데이터를 전송함.
+        /// </summary>
+        /// <param name="imageBytes">이미지 바이트 데이터.</param>
+        /// <param name="relativePath">저장될 상대 경로.</param>
+        /// <returns>전송 및 저장 성공 여부.</returns>
         public async UniTask<bool> UploadPhotoAsync(byte[] imageBytes, string relativePath)
         {
             if (imageBytes == null) return false;
@@ -156,7 +191,7 @@ namespace My.Scripts.Global
             }
             catch (Exception e)
             {
-                UnityEngine.Debug.LogError($"[FileTransferManager] 로컬 저장 실패: {e.Message}");
+                Debug.LogError($"[FileTransferManager] 로컬 저장 실패: {e.Message}");
                 return false;
             }
 
@@ -191,6 +226,9 @@ namespace My.Scripts.Global
             }
         }
 
+        /// <summary>
+        /// 사진 준비 완료 통보를 수신하면 비동기로 다운로드를 시작함.
+        /// </summary>
         private void OnNetworkMessageReceived(TcpMessage msg)
         {
             if (msg != null && msg.command == "NOTIFY_PHOTO_READY")
@@ -202,23 +240,40 @@ namespace My.Scripts.Global
             }
         }
 
+        /// <summary>
+        /// 원격 서버에서 사진을 다운로드하여 로컬 경로에 저장함.
+        /// 다운로드된 데이터가 유효한지 검증하여 Null 참조 에러를 방지함.
+        /// </summary>
         private async UniTaskVoid DownloadAndSavePhotoAsync(string relativePath)
         {
             string fullPath = Path.Combine(localSaveRoot, relativePath.Replace('/', '\\'));
             if (File.Exists(fullPath)) return;
 
+            // 데이터 수신 결과가 null일 가능성을 체크하여 엔티티 할당 안전성 확보
             byte[] data = await DownloadPhotoAsync(relativePath);
             if (data != null && data.Length > 0)
             {
-                string dir = Path.GetDirectoryName(fullPath);
-                if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
-                await File.WriteAllBytesAsync(fullPath, data);
+                try
+                {
+                    string dir = Path.GetDirectoryName(fullPath);
+                    if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+                    await File.WriteAllBytesAsync(fullPath, data);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"[FileTransferManager] 파일 쓰기 중 오류: {e.Message}");
+                }
             }
         }
 
+        /// <summary>
+        /// 지정된 경로의 사진 데이터를 가져옴. 로컬 디스크를 우선 조회하여 불필요한 통신을 방지함.
+        /// 로컬에 없을 경우에만 HTTP GET 요청을 통해 서버에서 가져오며 블랙스크린 방지를 위해 타임아웃을 적용함.
+        /// </summary>
+        /// <param name="relativePath">사진 상대 경로.</param>
+        /// <returns>이미지 바이트 배열.</returns>
         public async UniTask<byte[]> DownloadPhotoAsync(string relativePath)
         {
-            // Why: 무조건 로컬 디스크를 먼저 확인하여 무의미한 HTTP 통신과 블랙스크린을 방지합니다.
             try
             {
                 string fullPath = Path.Combine(localSaveRoot, relativePath.Replace('/', '\\'));
@@ -227,7 +282,7 @@ namespace My.Scripts.Global
                     return await File.ReadAllBytesAsync(fullPath);
                 }
             }
-            catch (Exception e) { UnityEngine.Debug.LogWarning($"[FileTransferManager] 로컬 읽기 에러: {e.Message}"); }
+            catch (Exception e) { Debug.LogWarning($"[FileTransferManager] 로컬 읽기 에러: {e.Message}"); }
 
             bool isServer = false;
             if (TcpManager.Instance) isServer = TcpManager.Instance.IsServer;
@@ -237,7 +292,7 @@ namespace My.Scripts.Global
                 string url = $"http://{serverIp}:{port}/{relativePath}";
                 using (UnityWebRequest www = UnityWebRequest.Get(url))
                 {
-                    www.timeout = 5; // 무한 대기(블랙스크린) 방지용 타임아웃 5초
+                    www.timeout = 5; 
                     try
                     {
                         await www.SendWebRequest();
@@ -251,6 +306,13 @@ namespace My.Scripts.Global
             return null;
         }
 
+        /// <summary>
+        /// 특정 유저의 모든 질문 답변 사진을 동기화함.
+        /// 영상 인코딩 전 누락된 사진이 없는지 교차 검증하기 위함.
+        /// </summary>
+        /// <param name="totalQuestions">총 질문 개수.</param>
+        /// <param name="userId">유저 고유 식별자.</param>
+        /// <returns>동기화 프로세스 완료 여부.</returns>
         public async UniTask<bool> SyncAllPhotosAsync(int totalQuestions, string userId)
         {
             bool isServer = false;
@@ -261,7 +323,6 @@ namespace My.Scripts.Global
 
             for (int i = 1; i <= totalQuestions; i++)
             {
-                // Why: 변경된 파일명 규칙 {유저ID}_{역할}_Q{번호}.png 에 맞춰 경로 구성
                 string relativePath = $"{dateStr}/{userId}/{targetRole}/{userId}_{targetRole}_Q{i}.png";
                 string fullPath = Path.Combine(localSaveRoot, relativePath.Replace('/', '\\'));
                 
@@ -283,6 +344,9 @@ namespace My.Scripts.Global
             return true;
         }
 
+        /// <summary>
+        /// 객체 파괴 시 가동 중인 HTTP 서버와 이벤트를 해제함.
+        /// </summary>
         private void OnDestroy()
         {
             _isRunning = false;

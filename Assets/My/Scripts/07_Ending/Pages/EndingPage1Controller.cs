@@ -9,7 +9,7 @@ using Wonjeong.Utils;
 namespace My.Scripts._07_Ending.Pages
 {
     /// <summary>
-    /// 엔딩 페이지 1의 JSON 데이터를 담는 모델.
+    /// 엔딩 페이지 1의 JSON 데이터를 매핑하기 위한 데이터 구조체.
     /// </summary>
     [Serializable]
     public class EndingPage1Data
@@ -20,7 +20,7 @@ namespace My.Scripts._07_Ending.Pages
 
     /// <summary>
     /// 엔딩의 첫 번째 페이지 컨트롤러.
-    /// Why: 하나의 텍스트 UI를 재활용하여 시간에 맞춰 두 개의 문장을 페이드 인/아웃으로 교체하여 보여주기 위함.
+    /// 하나의 텍스트 UI를 재활용하여 두 개의 문장을 순차적으로 페이드 전환하며 보여주기 위함.
     /// </summary>
     public class EndingPage1Controller : GamePage
     {
@@ -35,13 +35,16 @@ namespace My.Scripts._07_Ending.Pages
 
         private EndingPage1Data _cachedData;
         private Coroutine _sequenceCoroutine;
-        private bool _isCompleted = false;
+        private bool _isCompleted;
 
+        /// <summary>
+        /// 외부로부터 전달받은 페이지 데이터를 메모리에 캐싱함.
+        /// </summary>
+        /// <param name="data">EndingPage1Data 타입의 데이터 객체.</param>
         public override void SetupData(object data)
         {
             EndingPage1Data pageData = data as EndingPage1Data;
             
-            // 일반 C# 객체이므로 명시적 null 검사 수행
             if (pageData != null)
             {
                 _cachedData = pageData;
@@ -52,18 +55,24 @@ namespace My.Scripts._07_Ending.Pages
             }
         }
 
+        /// <summary>
+        /// 페이지 진입 시 초기화 및 텍스트 교체 시퀀스를 시작함.
+        /// </summary>
         public override void OnEnter()
         {
             base.OnEnter();
             _isCompleted = false;
 
-            // 처음 시작할 때는 캔버스가 켜져있어야 하므로 알파값을 1로 초기화
             if (mainCg) mainCg.alpha = 1f;
 
             if (_sequenceCoroutine != null) StopCoroutine(_sequenceCoroutine);
             _sequenceCoroutine = StartCoroutine(SequenceRoutine());
         }
 
+        /// <summary>
+        /// 페이지 이탈 시 진행 중인 코루틴을 중단함.
+        /// 백그라운드 연산 낭비 및 널 참조 에러를 방지하기 위함.
+        /// </summary>
         public override void OnExit()
         {
             base.OnExit();
@@ -75,18 +84,19 @@ namespace My.Scripts._07_Ending.Pages
             }
         }
 
+        /// <summary>
+        /// 첫 번째 텍스트 노출, 페이드 아웃, 텍스트 교체, 페이드 인 과정을 순차적으로 제어함.
+        /// 정해진 타임라인에 따라 엔딩 문구를 연출하기 위함.
+        /// </summary>
         private IEnumerator SequenceRoutine()
         {
-            // 1. 첫 번째 텍스트 세팅
             if (_cachedData != null && mainTextUI)
             {
                 SetUIText(mainTextUI, _cachedData.text1);
             }
 
-            // 2. 6초 대기
             yield return CoroutineData.GetWaitForSeconds(firstWaitTime);
 
-            // 3. 0.5초 동안 페이드 아웃
             if (mainCg)
             {
                 float elapsed = 0f;
@@ -99,13 +109,11 @@ namespace My.Scripts._07_Ending.Pages
                 mainCg.alpha = 0f;
             }
 
-            // 4. 두 번째 텍스트로 교체
             if (_cachedData != null && mainTextUI)
             {
                 SetUIText(mainTextUI, _cachedData.text2);
             }
 
-            // 5. 0.5초 동안 페이드 인
             if (mainCg)
             {
                 float elapsed = 0f;
@@ -118,13 +126,14 @@ namespace My.Scripts._07_Ending.Pages
                 mainCg.alpha = 1f;
             }
 
-            // 6. 3초 대기
             yield return CoroutineData.GetWaitForSeconds(secondWaitTime);
 
-            // 7. 페이지 완료 처리
             CompletePage();
         }
 
+        /// <summary>
+        /// 시퀀스 완료 플래그를 세우고 매니저에게 페이지 완료 이벤트를 알림.
+        /// </summary>
         private void CompletePage()
         {
             if (_isCompleted) return;

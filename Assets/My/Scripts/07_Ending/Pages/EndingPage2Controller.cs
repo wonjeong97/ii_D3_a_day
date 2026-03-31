@@ -12,7 +12,7 @@ using Wonjeong.Utils;
 namespace My.Scripts._07_Ending.Pages
 {
     /// <summary>
-    /// 엔딩 페이지 2의 JSON 데이터를 담는 모델.
+    /// JSON에서 로드되는 엔딩 페이지 2의 데이터 구조체.
     /// </summary>
     [Serializable]
     public class EndingPage2Data
@@ -22,8 +22,8 @@ namespace My.Scripts._07_Ending.Pages
     }
 
     /// <summary>
-    /// 보상(조각)을 연출과 함께 보여주는 엔딩의 두 번째 페이지 컨트롤러.
-    /// Why: 조각 이미지가 순차적으로 페이드 인 된 후, 텍스트가 나타나는 애니메이션을 수행함.
+    /// 최종 보상인 조각 획득을 시각적으로 연출하는 엔딩의 두 번째 페이지 컨트롤러.
+    /// 조각 이미지가 순차적으로 나타난 뒤 최종 획득 개수 텍스트를 노출함.
     /// </summary>
     public class EndingPage2Controller : GamePage<EndingPage2Data>
     {
@@ -40,11 +40,15 @@ namespace My.Scripts._07_Ending.Pages
         private EndingPage2Data _cachedData; 
         private Coroutine _sequenceCoroutine;
 
+        /// <summary>
+        /// 전달받은 데이터를 캐싱하고 획득한 총 조각 수를 계산하여 텍스트를 치환함.
+        /// 기존 누적 조각 수에 이번 모듈 보상인 5개를 더해 실시간으로 결과를 반영하기 위함.
+        /// </summary>
+        /// <param name="data">EndingPage2Data 타입의 데이터 객체.</param>
         protected override void SetupData(EndingPage2Data data)
         {
             _cachedData = data;
             
-            // 데이터 할당 시 래퍼 메서드를 통해 위치, 폰트 등의 서식 일괄 적용
             if (text1) 
             {
                 SetUIText(text1, _cachedData.descriptionText1);
@@ -54,7 +58,6 @@ namespace My.Scripts._07_Ending.Pages
             {
                 SetUIText(text2, _cachedData.descriptionText2);
                 
-                // Why: 기존 컨텐츠에서 획득한 조각 수에 이번 모듈(d3) 보상인 5개를 더해 문자열 치환
                 int currentTotal = 0;
                 if (SessionManager.Instance)
                 {
@@ -70,14 +73,15 @@ namespace My.Scripts._07_Ending.Pages
             }
         }
 
+        /// <summary>
+        /// 페이지 진입 시 연출 요소들을 초기화하고 시퀀스를 시작함.
+        /// 연출 전 모든 UI의 투명도를 시작 상태로 리셋하여 시각적 오류를 방지함.
+        /// </summary>
         public override void OnEnter()
         {
             base.OnEnter();
             
-            // 텍스트 그룹은 처음에 투명하게 숨김
             if (textCanvasGroup) textCanvasGroup.alpha = 0f;
-            
-            // 배경 등의 요소를 위해 부모 캔버스 그룹은 켜두고, 내부 조각 이미지들을 투명하게 설정
             if (imageCanvasGroup) imageCanvasGroup.alpha = 1f;
             
             if (pieceImages != null)
@@ -92,6 +96,10 @@ namespace My.Scripts._07_Ending.Pages
             _sequenceCoroutine = StartCoroutine(SequenceRoutine());
         }
 
+        /// <summary>
+        /// 페이지 이탈 시 코루틴을 중단하고 서버 PC에서 세션 종료 API를 호출함.
+        /// DB 트랜잭션 경합 방지를 위해 한 대의 기기에서만 전담하여 세션 시간을 업데이트함.
+        /// </summary>
         public override void OnExit()
         {
             base.OnExit();
@@ -115,11 +123,14 @@ namespace My.Scripts._07_Ending.Pages
             }
         }
 
+        /// <summary>
+        /// 조각 이미지를 하나씩 순차적으로 노출한 후 설명 텍스트를 페이드 인 시킴.
+        /// 유저에게 보상 획득에 대한 몰입감 있는 피드백을 제공하기 위함.
+        /// </summary>
         private IEnumerator SequenceRoutine()
         {
             yield return CoroutineData.GetWaitForSeconds(0.5f);
             
-            // 5개의 조각 이미지를 각각 0.8초 동안 순차적으로 나타내며 사운드 재생
             if (pieceImages != null && pieceImages.Length > 0)
             {
                 foreach (Image pieceImg in pieceImages)
@@ -134,20 +145,18 @@ namespace My.Scripts._07_Ending.Pages
                     }
                 }
             }
-            else
-            {
-                // 배열에 이미지가 등록되지 않았을 때를 대비한 안전 장치
-            }
             
             yield return CoroutineData.GetWaitForSeconds(2.0f);
             
-            // 텍스트 그룹 등장
             yield return StartCoroutine(FadeCanvasGroup(textCanvasGroup, 0f, 1f, 0.5f));
             yield return CoroutineData.GetWaitForSeconds(3.0f);
 
             CompleteStep();
         }
 
+        /// <summary>
+        /// 캔버스 그룹의 알파값을 선형 보간하여 페이드 연출을 수행함.
+        /// </summary>
         private IEnumerator FadeCanvasGroup(CanvasGroup cg, float s, float e, float d)
         {
             if (!cg) yield break;
@@ -163,7 +172,9 @@ namespace My.Scripts._07_Ending.Pages
             cg.alpha = e;
         }
 
-        /// <summary> 개별 이미지(Image)의 투명도를 선형 보간하여 시각적 전환 수행 </summary>
+        /// <summary>
+        /// 개별 이미지 컴포넌트의 알파값을 선형 보간하여 시각적 전환을 수행함.
+        /// </summary>
         private IEnumerator FadeImage(Image img, float s, float e, float d)
         {
             if (!img) yield break;
@@ -179,7 +190,9 @@ namespace My.Scripts._07_Ending.Pages
             SetImageAlpha(img, e);
         }
 
-        /// <summary> 이미지의 투명도 직접 갱신 </summary>
+        /// <summary>
+        /// 이미지의 알파 채널 값을 직접 갱신함.
+        /// </summary>
         private void SetImageAlpha(Image img, float a)
         {
             if (img)

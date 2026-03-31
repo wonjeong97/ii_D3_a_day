@@ -26,7 +26,7 @@ namespace My.Scripts._01_Tutorial.Pages
     
     /// <summary>
     /// 첫 번째 튜토리얼 페이지 컨트롤러.
-    /// 서버에서 방 상태를 확인하고 UID를 추출한 뒤, 양쪽 PC가 모두 FetchData를 완료할 때까지 기다렸다가 동시에 전환합니다.
+    /// 서버에서 방 상태를 확인하고 UID를 추출한 뒤, 양쪽 PC가 모두 FetchData를 완료할 때까지 기다렸다가 동시에 전환함.
     /// </summary>
     public class TutorialPage1Controller : GamePage
     {
@@ -49,17 +49,24 @@ namespace My.Scripts._01_Tutorial.Pages
         
         private CancellationTokenSource _pageCts;
         private CancellationTokenSource _serverFetchCts;
+        
+        [Header("API Polling Settings")]
+        [SerializeField] private float pollingInterval = 3.0f;
+        [SerializeField] private int apiTimeout = 10;
 
+        /// <summary>
+        /// 매 프레임 수동 조작 상태를 검사함.
+        /// </summary>
         private void Update()
         {
             if (!_isPageActive) return;
             
-            // Update 루프 내부이므로 파괴된 유니티 객체를 안전하게 걸러내는 암시적 Null 검사 사용
+            // 파괴된 유니티 객체를 안전하게 걸러내기 위해 암시적 불리언 변환을 사용함.
             if (TcpManager.Instance)
             {
                 if (TcpManager.Instance.IsServer)
                 {
-                    // Why: API 통신 지연이나 오류 상황을 대비한 수동 강제 진행 단축키
+                    // API 서버 장애 발생 시 원활한 테스트 및 시연을 위해 수동 씬 전환 단축키를 제공함.
                     if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
                     {
                         OnConfirmInput();
@@ -68,6 +75,10 @@ namespace My.Scripts._01_Tutorial.Pages
             }
         }
 
+        /// <summary>
+        /// 페이지 초기 데이터 세팅.
+        /// JSON에서 로드한 UI 텍스트 데이터를 캐싱하여 렌더링 시 사용하기 위함.
+        /// </summary>
         public override void SetupData(object data)
         {
             TutorialPage1Data pageData = data as TutorialPage1Data;
@@ -89,6 +100,10 @@ namespace My.Scripts._01_Tutorial.Pages
             }
         }
 
+        /// <summary>
+        /// 페이지 진입 시 상태 초기화 및 연출 시작.
+        /// 이전 비동기 작업을 취소하고 서버 모드일 경우 API 폴링을 시작하기 위함.
+        /// </summary>
         public override void OnEnter()
         {
             base.OnEnter(); 
@@ -97,7 +112,7 @@ namespace My.Scripts._01_Tutorial.Pages
             _isWaitingForClientFetch = false;
             _pendingClientUid = string.Empty;
 
-            // Why: 페이지 진입 시 이전 페치 작업을 취소할 수 있도록 CancellationTokenSource 초기화
+            // 페이지 진입 시 이전 페치 작업을 취소할 수 있도록 토큰 소스를 초기화함.
             if (_pageCts != null)
             {
                 _pageCts.Cancel();
@@ -127,7 +142,7 @@ namespace My.Scripts._01_Tutorial.Pages
             {
                 TcpManager.Instance.onMessageReceived += OnNetworkMessageReceived;
 
-                // Why: 서버만 방 상태 및 유저 데이터를 조회하는 책임을 가집니다.
+                // 외부 API 통신 부하를 줄이기 위해 서버 권한을 가진 PC에서만 통신을 전담하도록 제한함.
                 if (TcpManager.Instance.IsServer)
                 {
                     if (_pollCoroutine != null) StopCoroutine(_pollCoroutine);
@@ -137,7 +152,8 @@ namespace My.Scripts._01_Tutorial.Pages
         }
 
         /// <summary>
-        /// 3초 주기로 방 상태 및 유저 존재 여부를 확인하는 폴링 코루틴.
+        /// 주기적으로 API를 호출하여 방 상태 및 유저 존재 여부를 확인함.
+        /// 유저가 룸에 입장했는지 감지하고 세션 통신을 시작하기 위함.
         /// </summary>
         private IEnumerator PollApiRoutine()
         {
@@ -145,7 +161,7 @@ namespace My.Scripts._01_Tutorial.Pages
 
             while (_isPageActive)
             {
-                yield return CoroutineData.GetWaitForSeconds(3.0f);
+                yield return CoroutineData.GetWaitForSeconds(pollingInterval);
 
                 if (!GameManager.Instance || GameManager.Instance.ApiConfig == null)
                 {
@@ -153,18 +169,16 @@ namespace My.Scripts._01_Tutorial.Pages
                 }
 
                 ApiSettings config = GameManager.Instance.ApiConfig;
-                // 세션에서 동적으로 모듈 코드를 가져옵니다 (기본값 D3)
                 string moduleCode = SessionManager.Instance ? SessionManager.Instance.CurrentModuleCode : "D3";
                 string roomStateUrl = $"{config.CheckRoomStateUrl}?code={moduleCode}";
                 string roomState = string.Empty;
                 bool roomStateSuccess = false;
 
-                // 1. 방 상태 확인 (타임아웃 10초, 최대 10회 재시도)
                 for (int attempt = 0; attempt < 10; attempt++)
                 {
                     using (UnityWebRequest req = UnityWebRequest.Get(roomStateUrl))
                     {
-                        req.timeout = 10;
+                        req.timeout = apiTimeout;
                         yield return req.SendWebRequest();
 
                         if (req.result == UnityWebRequest.Result.Success)
@@ -192,17 +206,15 @@ namespace My.Scripts._01_Tutorial.Pages
                 }
                 else if (roomState.Contains("USING"))
                 {   
-                    // 이미 선언된 moduleCode를 재사용하여 하드코딩 제거
                     string userUrl = $"{config.GetCurrentRoomUserUrl}?code={moduleCode}";
                     string userData = string.Empty;
                     bool userSuccess = false;
 
-                    // 2. 현재 방 유저 조회 (타임아웃 10초, 최대 10회 재시도)
                     for (int attempt = 0; attempt < 10; attempt++)
                     {
                         using (UnityWebRequest req = UnityWebRequest.Get(userUrl))
                         {
-                            req.timeout = 10;
+                            req.timeout = apiTimeout;
                             yield return req.SendWebRequest();
 
                             if (req.result == UnityWebRequest.Result.Success)
@@ -222,13 +234,13 @@ namespace My.Scripts._01_Tutorial.Pages
                         continue;
                     }
 
-                    // Why: API 응답이 비어있지 않은지 검사하여 유저 입장이 완료되었음을 판별하고 UID를 추출합니다.
+                    // API 응답이 비어있지 않은지 검사하여 유저 입장이 완료되었음을 판별하고 UID를 추출함.
                     if (!string.IsNullOrEmpty(userData) && userData != "[]" && userData.ToLower() != "null")
                     {
                         Debug.Log("[TutorialPage1Controller] 방 상태 USING 및 유저 정보 확인됨. 개별 FetchData를 수행합니다.");
                         emptyUserStartTime = -1f; 
 
-                        // 응답 형태(예: uid1,uid2,idx)에서 첫 번째 UID를 안전하게 분리
+                        // 쉼표나 줄바꿈으로 구분된 응답 데이터에서 첫 번째 값인 UID를 안전하게 분리함.
                         string[] parts = userData.Split(new[] { '\r', '\n', ',' }, StringSplitOptions.RemoveEmptyEntries);
                         
                         if (parts.Length >= 1)
@@ -240,16 +252,14 @@ namespace My.Scripts._01_Tutorial.Pages
                                 bool fetchSuccess = false;
                                 bool fetchFaulted = false;
 
-                                // 3. 서버 측 자체 FetchData 수행
                                 if (_serverFetchCts != null)
                                 {
                                     _serverFetchCts.Cancel();
                                     _serverFetchCts.Dispose();
                                 }
                                 _serverFetchCts = new CancellationTokenSource();
-                                _serverFetchCts.CancelAfter(TimeSpan.FromSeconds(25));
 
-                                yield return APIManager.Instance.FetchDataAsync(uidLeft, _serverFetchCts.Token)
+                                yield return APIManager.Instance.FetchDataAsync(uidLeft, 25.0f, _serverFetchCts.Token)
                                                        .ToCoroutine(
                                                             r => fetchSuccess = r, 
                                                             ex => { fetchFaulted = true; }
@@ -267,7 +277,6 @@ namespace My.Scripts._01_Tutorial.Pages
                                 continue;
                             }
                             
-                            // 4. 클라이언트에게 UID를 전달하고 클라이언트의 통신 완료를 대기합니다.
                             if (TcpManager.Instance)
                             {
                                 _isWaitingForClientFetch = true;
@@ -282,12 +291,11 @@ namespace My.Scripts._01_Tutorial.Pages
                                 CompletePage();
                             }
                             
-                            yield break; // 폴링 코루틴 완전 종료
+                            yield break; 
                         }
                     }
                     else
                     {
-                        // Why: USING 상태이나 유저 데이터가 비어있는 시점부터 타이머를 측정합니다.
                         if (emptyUserStartTime < 0f)
                         {
                             emptyUserStartTime = Time.time;
@@ -308,7 +316,8 @@ namespace My.Scripts._01_Tutorial.Pages
         }
         
         /// <summary>
-        /// 클라이언트 통신 응답 대기 시간을 초과할 경우 초기화를 진행하는 안전장치.
+        /// 클라이언트 통신 응답 대기 시간을 초과할 경우 작동하는 안전장치.
+        /// 상대방 통신 불량 시 무한 대기를 방지하고 씬을 초기화하기 위함.
         /// </summary>
         private IEnumerator ClientFetchAckTimeoutRoutine()
         {
@@ -324,7 +333,8 @@ namespace My.Scripts._01_Tutorial.Pages
         }
 
         /// <summary>
-        /// 클라이언트에게 귀환 명령을 내리고 1초 대기 후 본인도 타이틀로 돌아가는 시퀀스 코루틴.
+        /// 클라이언트에게 귀환 명령을 내리고 본인도 타이틀로 돌아가는 시퀀스 코루틴.
+        /// 네트워크 오류 발생 시 양쪽 기기의 씬 상태를 타이틀로 동일하게 맞추기 위함.
         /// </summary>
         private IEnumerator ReturnToTitleSequence()
         {
@@ -342,7 +352,8 @@ namespace My.Scripts._01_Tutorial.Pages
         }
 
         /// <summary>
-        /// 강제 진행 시 빈 페이로드를 전송합니다.
+        /// 강제 진행 시 빈 페이로드를 전송함.
+        /// 개발 중 수동 스킵 명령을 상대 기기에도 동일하게 전달하기 위함.
         /// </summary>
         private void OnConfirmInput()
         {
@@ -357,29 +368,30 @@ namespace My.Scripts._01_Tutorial.Pages
             CompletePage();
         }
 
+        /// <summary>
+        /// 클라이언트의 데이터를 비동기로 불러오는 요청을 처리함.
+        /// 클라이언트 측에서 필요한 세션 데이터를 API를 통해 동기화하기 위함.
+        /// </summary>
+        /// <param name="uidToFetch">조회할 대상의 고유 ID.</param>
+        /// <param name="token">작업 취소 토큰.</param>
         private async UniTaskVoid ProcessClientFetchAsync(string uidToFetch, CancellationToken token)
         {
             try
             {
-                // 타임아웃을 서버(15초)보다 짧은 12초로 설정하여 늦은 ACK 전송을 방지함
-                using (var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(token))
+                // 타임아웃 처리 로직이 APIManager 내부로 이관되어 호출부가 간결해짐.
+                bool success = await APIManager.Instance.FetchDataAsync(uidToFetch, 12.0f, token);
+                
+                // 데이터 수신 성공이 확인된 후 서버에 준비 완료 ACK를 전송하여 다음 흐름을 유도함.
+                if (success && !token.IsCancellationRequested)
                 {
-                    timeoutCts.CancelAfter(TimeSpan.FromSeconds(12.0f));
-                    
-                    bool success = await APIManager.Instance.FetchDataAsync(uidToFetch, timeoutCts.Token);
-                    
-                    // Why: 데이터 수신 성공이 확인된 후 서버에 준비 완료 ACK 전송
-                    if (success && !token.IsCancellationRequested)
+                    if (TcpManager.Instance) 
                     {
-                        if (TcpManager.Instance) 
-                        {
-                            TcpManager.Instance.SendMessageToTarget("CLIENT_FETCH_ACK", uidToFetch);
-                        }
+                        TcpManager.Instance.SendMessageToTarget("CLIENT_FETCH_ACK", uidToFetch);
                     }
-                    else
-                    {
-                        Debug.LogWarning("[TutorialPage1Controller] 클라이언트 데이터 Fetch 실패. ACK를 전송하지 않습니다.");
-                    }
+                }
+                else
+                {
+                    Debug.LogWarning("[TutorialPage1Controller] 클라이언트 데이터 Fetch 실패. ACK를 전송하지 않습니다.");
                 }
             }
             catch (OperationCanceledException)
@@ -392,11 +404,13 @@ namespace My.Scripts._01_Tutorial.Pages
             }
         }
 
+        /// <summary>
+        /// 수신된 네트워크 메시지를 파싱하여 동기화 및 씬 전환을 처리함.
+        /// </summary>
         private void OnNetworkMessageReceived(TcpMessage msg)
         {
             if (msg != null)
             {
-                // 1. [클라이언트 측] 서버가 데이터 조회를 지시함
                 if (msg.command == "REQUEST_CLIENT_FETCH")
                 {
                     if (TcpManager.Instance && !TcpManager.Instance.IsServer && APIManager.Instance && !string.IsNullOrEmpty(msg.payload) && _pageCts != null)
@@ -405,12 +419,11 @@ namespace My.Scripts._01_Tutorial.Pages
                         ProcessClientFetchAsync(uidToFetch, _pageCts.Token).Forget();
                     }
                 }
-                // 2. [서버 측] 클라이언트가 데이터 조회를 마치고 준비 완료 응답을 보냄
                 else if (msg.command == "CLIENT_FETCH_ACK")
                 {
                     if (TcpManager.Instance && TcpManager.Instance.IsServer && _isWaitingForClientFetch)
                     {
-                        // Why: 요청했던 UID와 응답으로 돌아온 식별자가 동일한지 검증함
+                        // 요청했던 UID와 응답으로 돌아온 식별자가 동일한지 검증하여 무결성을 확인함.
                         if (msg.payload == _pendingClientUid)
                         {
                             _isWaitingForClientFetch = false;
@@ -421,7 +434,7 @@ namespace My.Scripts._01_Tutorial.Pages
                                 StopCoroutine(_clientFetchTimeoutCoroutine);
                                 _clientFetchTimeoutCoroutine = null;
                             }
-                            OnConfirmInput(); // 최종 출발 명령(PAGE1_COMPLETE) 하달 및 씬 넘김
+                            OnConfirmInput(); 
                         }
                         else
                         {
@@ -429,7 +442,6 @@ namespace My.Scripts._01_Tutorial.Pages
                         }
                     }
                 }
-                // 3. [양쪽 모두] 최종 동시 전환 명령 수신
                 else if (msg.command == "PAGE1_COMPLETE")
                 {
                     CompletePage();
@@ -445,7 +457,7 @@ namespace My.Scripts._01_Tutorial.Pages
         }
 
         /// <summary>
-        /// 완료 신호를 발생시켜 매니저의 TransitionToNext를 트리거합니다.
+        /// 완료 신호를 발생시켜 매니저의 다음 페이지 전환을 트리거함.
         /// </summary>
         private void CompletePage()
         {
@@ -458,6 +470,10 @@ namespace My.Scripts._01_Tutorial.Pages
             }
         }
 
+        /// <summary>
+        /// 페이지 이탈 시 실행 중인 비동기 작업 및 네트워크 구독을 해제함.
+        /// 백그라운드 스레드 누수 방지 및 콜백 중복 실행을 막기 위함.
+        /// </summary>
         public override void OnExit()
         {
             base.OnExit();
@@ -470,7 +486,6 @@ namespace My.Scripts._01_Tutorial.Pages
             
             _isPageActive = false;
 
-            // Why: 페이지를 벗어날 때 실행 중인 백그라운드 Fetch 작업을 취소함
             if (_pageCts != null)
             {
                 _pageCts.Cancel();
@@ -509,6 +524,9 @@ namespace My.Scripts._01_Tutorial.Pages
             }
         }
 
+        /// <summary>
+        /// 텍스트 UI의 알파값을 선형 보간하여 페이드 연출을 수행함.
+        /// </summary>
         private IEnumerator FadeTextRoutine(CanvasGroup target, float start, float end, float duration)
         {
             float elapsed = 0f;

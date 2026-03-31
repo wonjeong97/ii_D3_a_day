@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using My.Scripts.Core;
-using My.Scripts.Global;
 using UnityEngine;
 using UnityEngine.UI;
 using Wonjeong.Data;
@@ -10,6 +9,9 @@ using Wonjeong.Utils;
 
 namespace My.Scripts._02_PlayTutorial.Pages
 {
+    /// <summary>
+    /// JSON에서 로드되는 조작 튜토리얼 3페이지 데이터 구조체.
+    /// </summary>
     [Serializable]
     public class PlayTutorialPage3Data
     {
@@ -19,7 +21,7 @@ namespace My.Scripts._02_PlayTutorial.Pages
 
     /// <summary>
     /// 상대 플레이어를 기다리는 마지막 대기 페이지 컨트롤러.
-    /// Why: 입장 후 3초 대기 후 완료 신호를 발송하여 동기화를 요청함.
+    /// 양방향 동기화를 위해 대기 화면을 띄우고 완료 신호를 발송함.
     /// </summary>
     public class PlayTutorialPage3Controller : GamePage
     {
@@ -30,6 +32,10 @@ namespace My.Scripts._02_PlayTutorial.Pages
 
         private PlayTutorialPage3Data _cachedData;
 
+        /// <summary>
+        /// 전달된 UI 세팅 데이터를 캐싱하여 페이지 활성화 시 렌더링에 활용함.
+        /// </summary>
+        /// <param name="data">JSON에서 역직렬화된 데이터 객체.</param>
         public override void SetupData(object data)
         {
             PlayTutorialPage3Data pageData = data as PlayTutorialPage3Data;
@@ -44,6 +50,9 @@ namespace My.Scripts._02_PlayTutorial.Pages
             }
         }
 
+        /// <summary>
+        /// 페이지 진입 시 UI 텍스트를 갱신하고 대기 시퀀스를 시작함.
+        /// </summary>
         public override void OnEnter()
         {
             base.OnEnter();
@@ -54,10 +63,17 @@ namespace My.Scripts._02_PlayTutorial.Pages
             StartCoroutine(SequenceRoutine());
         }
 
+        /// <summary>
+        /// 페이지 이탈 시 실행되는 로직.
+        /// 마지막 튜토리얼 페이지이므로 씬 전환 시 화면에 UI를 유지하기 위해 base.OnExit() 호출을 생략함.
+        /// </summary>
         public override void OnExit()
         {
         }
 
+        /// <summary>
+        /// 캐싱된 텍스트 데이터를 UI 컴포넌트에 적용함.
+        /// </summary>
         private void ApplyDataToUI()
         {
             if (_cachedData == null) return;
@@ -66,6 +82,10 @@ namespace My.Scripts._02_PlayTutorial.Pages
             SetUIText(waitUI, _cachedData.waitText);
         }
 
+        /// <summary>
+        /// 입장 사운드 재생 후 지정된 시간 동안 대기하고 완료 이벤트를 트리거함.
+        /// 최소 대기 시간을 보장하여 네트워크 동기화 전 시각적 안정감을 주기 위함.
+        /// </summary>
         private IEnumerator SequenceRoutine()
         {   
             if (SoundManager.Instance)
@@ -73,10 +93,8 @@ namespace My.Scripts._02_PlayTutorial.Pages
                 SoundManager.Instance.PlaySFX("레고_3");
             }
             
-            // Why: 입장 후 3초 대기
             yield return CoroutineData.GetWaitForSeconds(3.0f);
 
-            // Why: 3초 대기 후 매니저에게 완료 신호 발송
             if (onStepComplete != null)
             {
                 onStepComplete.Invoke(0);

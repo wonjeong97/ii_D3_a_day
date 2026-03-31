@@ -1,7 +1,15 @@
 namespace My.Scripts.Global
 {
+    /// <summary>
+    /// 프로젝트 전역에서 사용되는 상수 값들을 관리하는 클래스.
+    /// 하드코딩으로 인한 오타를 방지하고 유지보수 효율성을 높이기 위함.
+    /// </summary>
     public static class GameConstants
     {
+        /// <summary>
+        /// 빌드 설정에 등록된 씬 이름 정의.
+        /// SceneManager를 통한 씬 전환 시 정확한 문자열 참조를 보장함.
+        /// </summary>
         public static class Scene
         { 
             public const string Title = "00_Title"; 
@@ -14,6 +22,10 @@ namespace My.Scripts.Global
             public const string Ending = "07_Ending"; 
         }
 
+        /// <summary>
+        /// 외부 리소스 및 구성 파일 로드 시 사용되는 경로 정의.
+        /// Resources 폴더 또는 StreamingAssets 내의 JSON 파일 위치를 일괄 관리함.
+        /// </summary>
         public static class Path
         {
             public const string JsonSetting = "Settings"; 

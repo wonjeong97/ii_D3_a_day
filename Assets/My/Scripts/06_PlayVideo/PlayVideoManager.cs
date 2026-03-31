@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Threading;
 using My.Scripts.Network;
 using My.Scripts.Global;
@@ -10,6 +9,10 @@ using Cysharp.Threading.Tasks;
 
 namespace My.Scripts._06_PlayVideo
 {
+    /// <summary>
+    /// 양쪽 PC에서 촬영된 사진들을 불러와 메인 화면 및 모자이크 연출을 수행하는 매니저.
+    /// 애니메이션과 연동되어 사진을 주기적으로 교체하며 연출 종료 시 동기화 후 엔딩 씬으로 전환함.
+    /// </summary>
     public class PlayVideoManager : MonoBehaviour
     {   
         public static PlayVideoManager Instance;
@@ -35,16 +38,22 @@ namespace My.Scripts._06_PlayVideo
         private readonly static int FilmTrigger = Animator.StringToHash("Film");
         private bool _isAnimationStarted;
         
-        // 동기화를 위한 변수 추가
-        private bool _isLocalVideoFinished = false;
-        private bool _isRemoteVideoFinished = false;
+        private bool _isLocalVideoFinished;
+        private bool _isRemoteVideoFinished;
 
+        /// <summary>
+        /// 싱글톤 패턴 초기화 및 기존 인스턴스 파괴.
+        /// </summary>
         private void Awake()
         {
             if (!Instance) Instance = this;
             else if (Instance != this) Destroy(gameObject);
         }
 
+        /// <summary>
+        /// 초기 UI 상태를 설정하고 비동기 사진 로드를 시작함.
+        /// 로딩 완료 전 애니메이션이 재생되는 것을 막기 위해 애니메이터를 일시 정지함.
+        /// </summary>
         private void Start()
         {
             if (uiAnimator) uiAnimator.enabled = false;
@@ -58,6 +67,10 @@ namespace My.Scripts._06_PlayVideo
             LoadAndPrepareAsync().Forget();
         }
 
+        /// <summary>
+        /// 우측 영역 이미지들의 X축 스케일을 반전시킴.
+        /// 마주보는 물리적 기기 구조에서 좌우 대칭 연출을 구현하기 위함.
+        /// </summary>
         private void SetupImagesUI()
         {
             if (rightMainImage)
@@ -82,6 +95,10 @@ namespace My.Scripts._06_PlayVideo
             }
         }
 
+        /// <summary>
+        /// 사진 로드 및 스프라이트 할당 완료 후 애니메이션을 재생함.
+        /// 리소스가 준비되지 않은 상태에서 빈 화면 연출이 시작되는 것을 방지함.
+        /// </summary>
         private async UniTaskVoid LoadAndPrepareAsync()
         {
             await LoadPhotosAsSpritesAsync();
@@ -94,6 +111,9 @@ namespace My.Scripts._06_PlayVideo
             }
         }
 
+        /// <summary>
+        /// 서버 클라이언트 역할에 맞춰 본인과 상대방의 사진 경로를 파악하고 메모리에 로드함.
+        /// </summary>
         private async UniTask LoadPhotosAsSpritesAsync()
         {
             bool isServer = false;
@@ -105,7 +125,6 @@ namespace My.Scripts._06_PlayVideo
             string dateStr = DateTime.Now.ToString("yyyy-MM-dd");
             string userIdx = SessionManager.Instance ? SessionManager.Instance.CurrentUserIdx.ToString() : "0";
             
-            // 날짜 폴더가 포함된 상대 경로
             string myRelativePath = $"{dateStr}/{userIdx}/{myRole}";
             string otherRelativePath = $"{dateStr}/{userIdx}/{otherRole}";
 
@@ -113,13 +132,15 @@ namespace My.Scripts._06_PlayVideo
             await LoadRolePhotosAsync(otherRole, otherRelativePath, _otherLoadedSprites);
         }
 
+        /// <summary>
+        /// 저장소 또는 통신을 통해 특정 역할의 사진 데이터를 스프라이트로 변환하여 리스트에 추가함.
+        /// </summary>
         private async UniTask LoadRolePhotosAsync(string role, string relativeFolder, List<Sprite> targetList)
         {
             string userIdx = SessionManager.Instance ? SessionManager.Instance.CurrentUserIdx.ToString() : "0";
 
             for (int i = 1; i <= totalPhotos; i++)
             {
-                // Why: 로드할 파일명 형식을 {유저인덱스}_{역할}_Q{번호}.png 로 일치시킴
                 string fileName = $"{userIdx}_{role}_Q{i}.png"; 
                 string fileRelativePath = $"{relativeFolder}/{fileName}";
 
@@ -139,6 +160,9 @@ namespace My.Scripts._06_PlayVideo
             }
         }
 
+        /// <summary>
+        /// 애니메이션 시작 전 초기 화면에 보여질 기본 사진들을 각 UI 컴포넌트에 할당함.
+        /// </summary>
         private void AssignInitialSprites()
         {
             if (_myLoadedSprites.Count > 0)
@@ -154,6 +178,10 @@ namespace My.Scripts._06_PlayVideo
             }
         }
 
+        /// <summary>
+        /// 모자이크 그룹별로 다른 사진이 보이도록 인덱스를 분산하여 할당함.
+        /// 인덱스 연산 예시 15장 기준 2, 7, 12번 인덱스가 각 그룹의 초기값으로 지정됨.
+        /// </summary>
         private void AssignSpritesToTargets(Image[] targetImages, List<Sprite> sprites)
         {
             if (targetImages == null || sprites.Count == 0) return;
@@ -174,6 +202,10 @@ namespace My.Scripts._06_PlayVideo
             }
         }
 
+        /// <summary>
+        /// 애니메이션 타임라인 이벤트에 의해 호출되어 사진 교체 코루틴을 실행함.
+        /// 중복 실행을 막고 씬 종료 시 자동으로 코루틴이 취소되도록 토큰을 주입함.
+        /// </summary>
         public void StartVideoAnimation()
         {
             if (_isAnimationStarted) return;
@@ -187,7 +219,7 @@ namespace My.Scripts._06_PlayVideo
         }
 
         /// <summary>
-        /// 애니메이션 타임라인 종료 시 호출되며, 양쪽 PC의 종료를 동기화함.
+        /// 애니메이션 타임라인 종료 시 호출되어 상대방 PC에 완료 신호를 발송함.
         /// </summary>
         public void MoveToEndingScene()
         {
@@ -201,6 +233,9 @@ namespace My.Scripts._06_PlayVideo
             CheckSyncAndChangeScene();
         }
 
+        /// <summary>
+        /// 상대방의 영상 재생 완료 신호를 수신하고 동기화 상태를 갱신함.
+        /// </summary>
         private void OnNetworkMessageReceived(TcpMessage msg)
         {
             if (msg != null && msg.command == "PLAYVIDEO_COMPLETE")
@@ -210,6 +245,9 @@ namespace My.Scripts._06_PlayVideo
             }
         }
 
+        /// <summary>
+        /// 양쪽 PC 모두 재생을 완료했는지 확인하고 엔딩 씬으로 전환함.
+        /// </summary>
         private void CheckSyncAndChangeScene()
         {
             if (_isLocalVideoFinished && _isRemoteVideoFinished)
@@ -226,6 +264,10 @@ namespace My.Scripts._06_PlayVideo
             }
         }
 
+        /// <summary>
+        /// 메인 화면의 큰 이미지를 설정된 간격마다 다음 사진으로 교체함.
+        /// 슬라이드쇼 형태의 시각적 피드백을 제공하기 위함.
+        /// </summary>
         private async UniTaskVoid UpdateMainImagesAsync(CancellationToken token)
         {
             if (!leftMainImage && !rightMainImage) return;
@@ -252,6 +294,9 @@ namespace My.Scripts._06_PlayVideo
             }
         }
 
+        /// <summary>
+        /// 다수의 작은 사진들을 3개의 그룹으로 나누어 순차적 노출 및 교체 연출을 시작함.
+        /// </summary>
         private void PlayMosaicSequence(CancellationToken token)
         {
             List<Image>[] leftImageGroups = new List<Image>[3];
@@ -272,6 +317,9 @@ namespace My.Scripts._06_PlayVideo
             if (_otherLoadedSprites.Count > 0) UpdateMosaicSpritesAsync(rightImageGroups, _otherLoadedSprites, token).Forget();
         }
 
+        /// <summary>
+        /// 초기 모자이크 이미지들의 투명도를 0으로 설정하고 순번에 맞춰 3개의 그룹으로 분배함.
+        /// </summary>
         private void PrepareMosaicGroups(Image[] targetImages, List<Image>[] groups)
         {
             if (targetImages == null) return;
@@ -288,6 +336,10 @@ namespace My.Scripts._06_PlayVideo
             }
         }
 
+        /// <summary>
+        /// 투명하게 숨겨진 모자이크 이미지들을 짧은 간격으로 하나씩 나타나게 함.
+        /// 단조로운 연출을 피하고 역동적인 화면 구성을 제공하기 위함.
+        /// </summary>
         private async UniTaskVoid TurnOnImagesSequentiallyAsync(CancellationToken token)
         {
             List<Image> allTargets = new List<Image>();
@@ -309,6 +361,9 @@ namespace My.Scripts._06_PlayVideo
             }
         }
 
+        /// <summary>
+        /// 3개의 모자이크 그룹에 할당된 사진들을 설정된 주기마다 순환시킴.
+        /// </summary>
         private async UniTaskVoid UpdateMosaicSpritesAsync(List<Image>[] imageGroups, List<Sprite> sprites, CancellationToken token)
         {
             if (sprites.Count == 0) return;
@@ -338,6 +393,9 @@ namespace My.Scripts._06_PlayVideo
             }
         }
 
+        /// <summary>
+        /// 씬 종료 시 네트워크 이벤트를 해제하고 텍스처 메모리를 완전히 반환함.
+        /// </summary>
         private void OnDestroy()
         {
             if (TcpManager.Instance) TcpManager.Instance.onMessageReceived -= OnNetworkMessageReceived;
@@ -346,6 +404,10 @@ namespace My.Scripts._06_PlayVideo
             ClearSprites(_otherLoadedSprites);
         }
 
+        /// <summary>
+        /// 메모리에 동적 생성된 스프라이트와 텍스처를 파괴함.
+        /// 대용량 이미지 로드로 인한 메모리 릭을 방지하기 위함.
+        /// </summary>
         private void ClearSprites(List<Sprite> sprites)
         {
             foreach (Sprite sprite in sprites)

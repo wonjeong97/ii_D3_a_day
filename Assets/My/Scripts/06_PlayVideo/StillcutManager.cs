@@ -14,6 +14,10 @@ using Wonjeong.Utils;
 
 namespace My.Scripts._06_PlayVideo
 {
+    /// <summary>
+    /// 촬영된 스틸컷 이미지를 로드하여 화면에 시뮬레이션하고 백그라운드에서 병합 영상을 생성하는 매니저.
+    /// 플레이어에게 시각적 피드백을 제공하는 동시에 서버 전송용 결과물을 백그라운드에서 준비함.
+    /// </summary>
     public class StillcutManager : MonoBehaviour
     {
         [Header("Simulation UI")]
@@ -24,26 +28,49 @@ namespace My.Scripts._06_PlayVideo
         [SerializeField] private int totalFrames = 15;
         [SerializeField] private float frameDuration = 1.0f;
 
-        private List<Texture2D> _loadedTextures = new List<Texture2D>();
+        private readonly List<Texture2D> _loadedTextures = new List<Texture2D>();
         private string _sourceFolderPath;
 
-        private async void Start()
+        /// <summary>
+        /// 씬 진입 시 비동기 초기화 로직을 트리거함.
+        /// </summary>
+        private void Start()
         {
             SetupPaths();
-            
-            await LoadPhotosAsync();
+            InitializeAsync().Forget();
+        }
 
-            if (_loadedTextures.Count > 0)
+        /// <summary>
+        /// 이미지 로드 및 시뮬레이션을 비동기로 준비함.
+        /// async void 사용으로 인한 앱 크래시를 방지하고 모든 예외를 안전하게 포착하기 위함.
+        /// </summary>
+        private async UniTaskVoid InitializeAsync()
+        {
+            try
             {
-                StartCoroutine(PlaySimulationRoutine());
+                await LoadPhotosAsync();
+
+                if (_loadedTextures.Count > 0)
+                {
+                    StartCoroutine(PlaySimulationRoutine());
+                }
+                else
+                {
+                    UnityEngine.Debug.LogError("[StillcutManager] 로드된 사진이 없습니다. 경로를 확인하세요.");
+                    MoveToEnding();
+                }
             }
-            else
+            catch (Exception e)
             {
-                UnityEngine.Debug.LogError("[StillcutManager] 로드된 사진이 없습니다. 경로를 확인하세요.");
+                UnityEngine.Debug.LogError($"[StillcutManager] 초기화 중 예외 발생: {e.Message}");
                 MoveToEnding();
             }
         }
 
+        /// <summary>
+        /// 로컬 저장 경로, 현재 날짜, 유저 인덱스, 네트워크 역할을 조합하여 대상 폴더 경로를 생성함.
+        /// 양쪽 PC가 각자의 역할에 맞는 사진 데이터를 정확히 바라보게 함.
+        /// </summary>
         private void SetupPaths()
         {
             string role = (TcpManager.Instance && TcpManager.Instance.IsServer) ? "Left" : "Right";
@@ -52,10 +79,13 @@ namespace My.Scripts._06_PlayVideo
             string dateStr = DateTime.Now.ToString("yyyy-MM-dd");
             string userIdx = SessionManager.Instance ? SessionManager.Instance.CurrentUserIdx.ToString() : "0";
             
-            // 날짜 폴더 병합
             _sourceFolderPath = Path.Combine(baseFolder, dateStr, userIdx, role);
         }
 
+        /// <summary>
+        /// 생성된 경로에서 사진 파일들을 읽어와 텍스처로 변환함.
+        /// 저장된 파일명 규칙을 기반으로 순차적으로 접근하여 메모리에 적재함.
+        /// </summary>
         private async UniTask LoadPhotosAsync()
         {
             string role = (TcpManager.Instance && TcpManager.Instance.IsServer) ? "Left" : "Right";
@@ -63,7 +93,6 @@ namespace My.Scripts._06_PlayVideo
 
             for (int i = 1; i <= totalFrames; i++)
             {
-                // Why: 저장된 파일명 규칙과 동일하게 로드 시에도 유저 인덱스를 앞에 붙임
                 string fileName = $"{userIdx}_{role}_Q{i}.png"; 
                 string fullPath = Path.Combine(_sourceFolderPath, fileName);
 
@@ -79,6 +108,10 @@ namespace My.Scripts._06_PlayVideo
             }
         }
 
+        /// <summary>
+        /// 로드된 텍스처를 지정된 시간 간격으로 교체하며 슬라이드쇼를 재생함.
+        /// 영상 인코딩이 진행되는 동안 유저에게 보여줄 임시 시각 연출을 수행함.
+        /// </summary>
         private IEnumerator PlaySimulationRoutine()
         {
             if (fadeGroup) fadeGroup.alpha = 1f;
@@ -92,6 +125,9 @@ namespace My.Scripts._06_PlayVideo
             MoveToEnding();
         }
 
+        /// <summary>
+        /// 시뮬레이션 종료 또는 오류 발생 시 엔딩 씬으로 흐름을 넘김.
+        /// </summary>
         private void MoveToEnding()
         {
             if (GameManager.Instance)
@@ -101,8 +137,9 @@ namespace My.Scripts._06_PlayVideo
         }
 
         /// <summary>
-        /// 외부 FFMPEG 프로세스를 사용해 스틸컷 이미지 병합 영상 생성.
-        /// 75% 해상도로 축소하여 인코딩 속도 최적화.
+        /// 외부 FFmpeg 프로세스를 백그라운드에서 실행하여 양쪽 기기의 사진을 하나로 병합한 영상을 생성함.
+        /// API 업로드에 필요한 인덱스와 UID 정보를 세션에서 추출하여 콜백으로 전달할 준비를 함께 수행함.
+        /// 입력 예시: C:\UnitySharedPicture\2026-03-31\123\Left\123_Left_Q%d.png
         /// </summary>
         public static void GenerateVideoInBackground()
         {
@@ -118,7 +155,6 @@ namespace My.Scripts._06_PlayVideo
             
             string dateStr = DateTime.Now.ToString("yyyy-MM-dd");
             
-            // Why: API 업로드에 필요한 인덱스와 UID 정보를 세션에서 추출하여 인코딩 완료 콜백으로 전달할 준비를 함.
             int userIdx = 0;
             string uid = string.Empty;
             
@@ -166,7 +202,6 @@ namespace My.Scripts._06_PlayVideo
                        $"-c:v libx264 \"{outputVideoPath}\"";
             }
 
-            // 인코딩 스레드에 API 통신용 파라미터(인덱스, UID)를 함께 넘겨줍니다.
             RunFFmpegAsync(ffmpegPath, args, outputVideoPath, userIdx, uid).Forget();
 #else
             UnityEngine.Debug.LogWarning("[StillcutManager] Windows 환경 전용 함수입니다.");
@@ -174,8 +209,14 @@ namespace My.Scripts._06_PlayVideo
         }
 
         /// <summary>
-        /// 비동기 스레드 풀에서 인코딩 프로세스 실행 후 완료 시 API 업로드를 호출함.
+        /// 메인 스레드 병목을 막기 위해 비동기 스레드 풀에서 인코딩 대기 작업을 수행함.
+        /// 인코딩이 정상 종료되면 생성된 결과물 경로를 전달하여 서버 업로드 API를 호출함.
         /// </summary>
+        /// <param name="ffmpegPath">FFmpeg 실행 파일의 전체 시스템 경로.</param>
+        /// <param name="args">FFmpeg 실행에 사용될 커맨드라인 포맷 인자열.</param>
+        /// <param name="outputPath">인코딩 결과물이 최종 저장될 로컬 파일 경로.</param>
+        /// <param name="userIdx">API 전송 시 식별자로 사용될 현재 유저의 고유 인덱스 번호.</param>
+        /// <param name="uid">API 전송 시 식별자로 사용될 현재 유저의 고유 아이디.</param>
         private static async UniTaskVoid RunFFmpegAsync(string ffmpegPath, string args, string outputPath, int userIdx, string uid)
         {
             try
@@ -202,19 +243,15 @@ namespace My.Scripts._06_PlayVideo
                     {
                         UnityEngine.Debug.Log($"[StillcutManager] 비디오 인코딩 완료: {outputPath}");
                         
-                        // --- 영상 업로드 로직 ---
-                        byte[] videoBytes = await File.ReadAllBytesAsync(outputPath);
-                        
                         if (APIManager.Instance)
                         {
                             string module = SessionManager.Instance ? SessionManager.Instance.CurrentModuleCode : "D3";
-                            APIManager.Instance.UploadVideoAsync(videoBytes, userIdx, uid, module).Forget();
+                            APIManager.Instance.UploadVideoAsync(outputPath, userIdx, uid, module).Forget();
                         }
                         else
                         {
                             UnityEngine.Debug.LogWarning("[StillcutManager] APIManager 인스턴스를 찾을 수 없어 영상을 업로드하지 못했습니다.");
                         }
-                        // ----------------------------
                     }
                     else
                     {
@@ -228,6 +265,10 @@ namespace My.Scripts._06_PlayVideo
             }
         }
 
+        /// <summary>
+        /// 동적 생성된 텍스처 리소스를 파괴함.
+        /// 씬 종료 시 대용량 이미지로 인한 비디오 메모리 누수를 방지하기 위함.
+        /// </summary>
         private void OnDestroy()
         {
             foreach (Texture2D tex in _loadedTextures)

@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using My.Scripts.Core.Data;
-using My.Scripts.Global; 
 using My.Scripts.Network;
 using My.Scripts.UI;
 using UnityEngine;
@@ -25,7 +24,7 @@ namespace My.Scripts.Core.Pages
         [SerializeField] private float autoTransitionDelay = 3.0f;
 
         private CommonIntroData _cachedData;
-        private bool _isCompleted = false;
+        private bool _isCompleted;
         private Coroutine _autoTransitionCoroutine;
 
         /// <summary>

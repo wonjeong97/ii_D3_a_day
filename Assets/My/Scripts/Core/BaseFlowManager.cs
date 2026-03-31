@@ -1,4 +1,3 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -7,21 +6,23 @@ namespace My.Scripts.Core
 {
     /// <summary>
     /// CanvasGroup을 활용하여 단일 PC 환경의 페이지 흐름을 제어하는 베이스 클래스.
-    /// TCP 통신 도입으로 P1/P2 구분이 사라지고, 각 PC가 자신의 페이지 리스트만 독립적으로 관리함.
+    /// 각 PC가 독립적으로 페이지 리스트를 관리하며 페이드 인/아웃 전환을 수행함.
     /// </summary>
     public abstract class BaseFlowManager : MonoBehaviour
     {
         [Header("Flow Settings")]
         [SerializeField] protected List<GamePage> pages = new List<GamePage>();
-        [SerializeField] protected float fadeDuration = 0.5f;
-
-        protected int currentPageIndex = -1;
-        protected bool isTransitioning = false;
-        protected bool isFinished = false;
+        [SerializeField] protected float fadeDuration;
         
-        // Why: 특정 씬(Step1 등)에서 시작 즉시 화면이 페이드 없이 노출되어야 할 때 사용하는 플래그
-        protected bool skipFirstPageFade = false;
+        protected int currentPageIndex = -1;
+        protected bool isTransitioning;
+        protected bool isFinished;
+        protected bool skipFirstPageFade;
 
+        /// <summary>
+        /// 초기 설정 로드 후 페이지 리스트를 비활성화하고 첫 페이지를 트리거함.
+        /// 특정 씬에서 즉각적인 화면 노출이 필요한 경우 페이드 연출 없이 첫 페이지를 활성화함.
+        /// </summary>
         protected virtual void Start()
         {
             LoadSettings();
@@ -39,7 +40,6 @@ namespace My.Scripts.Core
             {
                 if (skipFirstPageFade)
                 {
-                    // Why: 페이드 연출을 무시하고 첫 페이지를 알파값 1로 즉시 활성화함
                     currentPageIndex = 0;
                     GamePage firstPage = pages[0];
                     if (firstPage)
@@ -60,13 +60,24 @@ namespace My.Scripts.Core
             }
         }
 
+        /// <summary>
+        /// 씬별로 필요한 JSON 데이터 또는 리소스 설정을 로드함.
+        /// </summary>
         protected abstract void LoadSettings();
 
+        /// <summary>
+        /// 현재 인덱스의 다음 순서 페이지로 전환을 요청함.
+        /// </summary>
         public void TransitionToNext()
         {
             TransitionToPage(currentPageIndex + 1);
         }
 
+        /// <summary>
+        /// 지정된 인덱스의 페이지로 전환하며 범위를 벗어날 경우 종료 시퀀스를 실행함.
+        /// 중복 전환이나 종료 후 실행을 방지하기 위해 상태 플래그를 검사함.
+        /// </summary>
+        /// <param name="index">전환할 대상 페이지 인덱스.</param>
         public virtual void TransitionToPage(int index)
         {
             if (isTransitioning || isFinished) return;
@@ -92,6 +103,10 @@ namespace My.Scripts.Core
             StartCoroutine(PageTransitionRoutine(index));
         }
 
+        /// <summary>
+        /// 이전 페이지를 페이드 아웃하고 새 페이지를 페이드 인 하는 시퀀스 루틴.
+        /// 페이지 전환 중 상태 변화를 막기 위해 트랜지션 플래그를 제어함.
+        /// </summary>
         private IEnumerator PageTransitionRoutine(int index)
         {
             isTransitioning = true;
@@ -121,6 +136,9 @@ namespace My.Scripts.Core
             isTransitioning = false;
         }
 
+        /// <summary>
+        /// CanvasGroup의 알파값을 시간에 따라 선형 보간하여 투명도를 조절함.
+        /// </summary>
         private IEnumerator FadePage(GamePage page, float startAlpha, float endAlpha)
         {
             if (!page) yield break;
@@ -141,6 +159,9 @@ namespace My.Scripts.Core
             cg.alpha = endAlpha;
         }
 
+        /// <summary>
+        /// 모든 페이지 시퀀스가 완료되었을 때 실행되는 추상 메서드.
+        /// </summary>
         protected abstract void OnAllFinished();
     }
 }
