@@ -63,7 +63,7 @@ namespace My.Scripts._07_Ending
             if (GameManager.Instance)
             {
                 // 세션 클리어 및 방 상태 리셋 후 타이틀 씬으로 전환함.
-                GameManager.Instance.ReturnToTitle(); 
+                GameManager.Instance.ReturnToTitle(true); 
             }
         }
     }
