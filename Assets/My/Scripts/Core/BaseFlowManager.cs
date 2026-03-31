@@ -13,7 +13,7 @@ namespace My.Scripts.Core
     {
         [Header("Flow Settings")]
         [SerializeField] protected List<GamePage> pages = new List<GamePage>();
-        [SerializeField] private float fadeDuration = 0.5f;
+        [SerializeField] protected float fadeDuration = 0.5f;
 
         protected int currentPageIndex = -1;
         protected bool isTransitioning = false;

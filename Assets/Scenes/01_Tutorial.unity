@@ -3162,6 +3162,7 @@ MonoBehaviour:
   textCanvasGroup: {fileID: 1530975599}
   descriptionText: {fileID: 1530975597}
   fadeDuration: 0.5
+  _clientFetchTimeout: 15
 --- !u!1 &2089370622
 GameObject:
   m_ObjectHideFlags: 0

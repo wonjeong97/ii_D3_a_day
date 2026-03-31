@@ -37,6 +37,7 @@ namespace My.Scripts.Hardware
         private bool _isProcessingCommand = false;
         
         private CancellationTokenSource _pollingCts;
+        private readonly byte[] _readBuffer = new byte[256];
 
         /// <summary>
         /// 브릿지 프로그램으로부터 수신되는 JSON 응답을 역직렬화하기 위한 내부 클래스.
@@ -242,14 +243,14 @@ namespace My.Scripts.Hardware
                 byte[] commandBytes = Encoding.UTF8.GetBytes(command);
                 await _pipeClient.WriteAsync(commandBytes, 0, commandBytes.Length).AsUniTask();
 
-                byte[] buffer = new byte[256];
-                int bytesRead = await _pipeClient.ReadAsync(buffer, 0, buffer.Length)
-                                                .AsUniTask()
-                                                .Timeout(TimeSpan.FromSeconds(1.0f));
+                // Why: 기존의 잦은 new byte[256] 할당을 피하고, 클래스 멤버 배열(_readBuffer)을 재사용하여 GC 스파이크를 최적화함.
+                int bytesRead = await _pipeClient.ReadAsync(_readBuffer, 0, _readBuffer.Length)
+                    .AsUniTask()
+                    .Timeout(TimeSpan.FromSeconds(1.0f));
 
                 if (bytesRead > 0)
                 {
-                    string response = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+                    string response = Encoding.UTF8.GetString(_readBuffer, 0, bytesRead);
                     ProcessResponse(response);
                 }
             }
@@ -259,7 +260,6 @@ namespace My.Scripts.Hardware
                 CleanupPipe(); 
             }
         }
-        // # TODO: buffer 배열(new byte[256]) 할당이 잦으므로, ArrayPool을 활용한 메모리 재사용 최적화 검토 필요
 
         /// <summary>
         /// 파이프 객체를 메모리에서 해제함.

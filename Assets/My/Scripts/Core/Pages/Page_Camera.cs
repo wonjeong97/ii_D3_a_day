@@ -39,10 +39,23 @@ namespace My.Scripts.Core.Pages
 
         private WebCamTexture _webCamTexture;
         private Texture2D _capturedPhoto;
-        private const int PhotoWidth = 1920;
-        private const int PhotoHeight = 1080;
+        private const int CamWidth = 1920;
+        private const int CamHeight = 1080;
+        private const int SaveWidth = 960;
+        private const int SaveHeight = 1080;
+        
+        private static WebCamTexture _sharedWebCamTexture;
+        private static Texture2D _sharedCapturedPhoto;
+        private static int _instanceCount = 0;
+        
 
         public void SetSyncCommand(string command) { }
+
+        protected override void Awake()
+        {
+            base.Awake();
+            _instanceCount++;
+        }
 
         public override void SetupData(object data)
         {
@@ -87,15 +100,7 @@ namespace My.Scripts.Core.Pages
             StopWebCam();
         }
 
-        private void OnDestroy()
-        {
-            StopWebCam();
-            if (_capturedPhoto != null)
-            {
-                Destroy(_capturedPhoto);
-                _capturedPhoto = null;
-            }
-        }
+       
 
         private void ApplyDataToUI()
         {
@@ -155,41 +160,49 @@ namespace My.Scripts.Core.Pages
             if (!_isCompleted) CompletePage();
         }
 
-       private async UniTask<bool> CapturePhotoAsync()
+private async UniTask<bool> CapturePhotoAsync()
         {
             RenderTexture rt = null;
             RenderTexture prev = null;
 
             try
             {
-                if (!_webCamTexture || !_webCamTexture.isPlaying) return false; 
+                if (!_sharedWebCamTexture || !_sharedWebCamTexture.isPlaying) return false; 
 
                 float timeout = 2.0f;
                 float elapsed = 0f;
                 
                 while (elapsed < timeout)
                 {
-                    if (!_webCamTexture) return false; 
-                    if (_webCamTexture.width > 16 && _webCamTexture.didUpdateThisFrame) break;
+                    if (!_sharedWebCamTexture) return false; 
+                    if (_sharedWebCamTexture.width > 16 && _sharedWebCamTexture.didUpdateThisFrame) break;
                     elapsed += Time.deltaTime;
                     await UniTask.Yield();
                 }
 
-                if (!_webCamTexture || _webCamTexture.width <= 16) return false;
+                if (!_sharedWebCamTexture || _sharedWebCamTexture.width <= 16) return false;
 
-                rt = RenderTexture.GetTemporary(PhotoWidth, PhotoHeight, 0, RenderTextureFormat.ARGB32);
-                Graphics.Blit(_webCamTexture, rt);
+                // 카메라 원본 해상도만큼 RenderTexture 생성
+                rt = RenderTexture.GetTemporary(CamWidth, CamHeight, 0, RenderTextureFormat.ARGB32);
+                Graphics.Blit(_sharedWebCamTexture, rt);
 
-                if (!_capturedPhoto || _capturedPhoto.width != PhotoWidth || _capturedPhoto.height != PhotoHeight)
+                // 저장할 크기(960x1080)로 Texture2D를 정적으로 한 번만 생성하여 재사용함
+                if (!_sharedCapturedPhoto || _sharedCapturedPhoto.width != SaveWidth || _sharedCapturedPhoto.height != SaveHeight)
                 {
-                    if (_capturedPhoto) Destroy(_capturedPhoto);
-                    _capturedPhoto = new Texture2D(PhotoWidth, PhotoHeight, TextureFormat.RGBA32, false);
+                    if (_sharedCapturedPhoto) Destroy(_sharedCapturedPhoto);
+                    _sharedCapturedPhoto = new Texture2D(SaveWidth, SaveHeight, TextureFormat.RGBA32, false);
                 }
 
                 prev = RenderTexture.active;
                 RenderTexture.active = rt;
-                _capturedPhoto.ReadPixels(new Rect(0, 0, PhotoWidth, PhotoHeight), 0, 0);
-                _capturedPhoto.Apply();
+                
+                // 가운데 크롭을 위한 X 좌표 계산: (1920 - 960) / 2 = 480
+                int startX = (CamWidth - SaveWidth) / 2;
+                int startY = (CamHeight - SaveHeight) / 2; 
+
+                // 화면 가운데 영역만 잘라서 읽어오기
+                _sharedCapturedPhoto.ReadPixels(new Rect(startX, startY, SaveWidth, SaveHeight), 0, 0);
+                _sharedCapturedPhoto.Apply();
 
                 bool result = true;
                 string currentSceneName = SceneManager.GetActiveScene().name;
@@ -197,7 +210,7 @@ namespace My.Scripts.Core.Pages
 
                 if (savePhoto && canSaveScene)
                 {
-                    result = await SavePhotoAsync(_capturedPhoto);
+                    result = await SavePhotoAsync(_sharedCapturedPhoto);
                 }
 
                 return result;
@@ -237,15 +250,17 @@ namespace My.Scripts.Core.Pages
             {
                 byte[] bytes = await UniTask.RunOnThreadPool(() => UnityEngine.ImageConversion.EncodeArrayToPNG(rawData, format, (uint)width, (uint)height));
 
-                // Why: Step3의 최종 결과물인 "D3" 사진인 경우에만 API 업로드 메서드 실행
-                if (questionId.ToUpper() == "D3" && SessionManager.Instance)
+                // Why: Step3의 최종 결과물인 현재 모듈 사진인 경우에만 API 업로드 메서드 실행
+                string currentModule = SessionManager.Instance &&
+                                       !string.IsNullOrEmpty(SessionManager.Instance.CurrentModuleCode) ? SessionManager.Instance.CurrentModuleCode : "D3";
+                
+                if (questionId.ToUpper() == currentModule.ToUpper() && SessionManager.Instance)
                 {
                     string uid = isServer ? SessionManager.Instance.PlayerAUid : SessionManager.Instance.PlayerBUid;
-                    string module = "d3"; 
 
                     if (APIManager.Instance)
                     {
-                        APIManager.Instance.UploadImageAsync(bytes, userIdx, uid, module).Forget();
+                        APIManager.Instance.UploadImageAsync(bytes, userIdx, uid, currentModule).Forget();
                     }
                 }
 
@@ -258,27 +273,27 @@ namespace My.Scripts.Core.Pages
             catch (Exception) { return false; }
         }
         
-        // # TODO: WebCamTexture의 잦은 할당 및 해제가 메모리 단편화를 유발할 수 있으므로, 글로벌 매니저에서 풀링하여 재사용하는 구조 검토 필요
-
         private void StartWebCam()
         {
-            if (_webCamTexture && _webCamTexture.isPlaying) return;
+            if (_sharedWebCamTexture && _sharedWebCamTexture.isPlaying) return;
 
-            WebCamDevice[] devices = WebCamTexture.devices;
-            if (devices.Length == 0) return;
+            if (!_sharedWebCamTexture)
+            {
+                WebCamDevice[] devices = WebCamTexture.devices;
+                if (devices.Length == 0) return;
+                _sharedWebCamTexture = new WebCamTexture(devices[0].name, CamWidth, CamHeight);
+            }
 
             try
             {
-                _webCamTexture = new WebCamTexture(devices[0].name, PhotoWidth, PhotoHeight);
-                _webCamTexture.Play();
+                _sharedWebCamTexture.Play();
             }
             catch (Exception) { }
         }
 
         private void StopWebCam()
         {
-            if (_webCamTexture && _webCamTexture.isPlaying) _webCamTexture.Stop();
-            _webCamTexture = null;
+            if (_sharedWebCamTexture && _sharedWebCamTexture.isPlaying) _sharedWebCamTexture.Stop();
         }
 
         private IEnumerator FadeCanvasGroupRoutine(CanvasGroup target, float start, float end, float duration)
@@ -306,6 +321,27 @@ namespace My.Scripts.Core.Pages
             }
 
             if (onStepComplete != null) onStepComplete.Invoke(0);
+        }
+        
+        private void OnDestroy()
+        {
+            StopWebCam();
+            _instanceCount--;
+
+            if (_instanceCount <= 0)
+            {
+                if (_sharedWebCamTexture)
+                {
+                    Destroy(_sharedWebCamTexture);
+                    _sharedWebCamTexture = null;
+                }
+                if (_sharedCapturedPhoto)
+                {
+                    Destroy(_sharedCapturedPhoto);
+                    _sharedCapturedPhoto = null;
+                }
+                _instanceCount = 0;
+            }
         }
     }
 }

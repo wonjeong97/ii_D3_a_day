@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
 using My.Scripts.Core;
 using My.Scripts.Global;
@@ -172,7 +173,7 @@ namespace My.Scripts._06_PlayVideo
 #endif
         }
 
-       /// <summary>
+        /// <summary>
         /// 비동기 스레드 풀에서 인코딩 프로세스 실행 후 완료 시 API 업로드를 호출함.
         /// </summary>
         private static async UniTaskVoid RunFFmpegAsync(string ffmpegPath, string args, string outputPath, int userIdx, string uid)
@@ -191,8 +192,12 @@ namespace My.Scripts._06_PlayVideo
                 Process process = Process.Start(psi);
                 if (process != null)
                 {
+                    Task<string> readErrorTask = process.StandardError.ReadToEndAsync();
+
                     await UniTask.RunOnThreadPool(() => process.WaitForExit());
                     
+                    string stderr = await readErrorTask;
+
                     if (process.ExitCode == 0 && File.Exists(outputPath))
                     {
                         UnityEngine.Debug.Log($"[StillcutManager] 비디오 인코딩 완료: {outputPath}");
@@ -202,7 +207,8 @@ namespace My.Scripts._06_PlayVideo
                         
                         if (APIManager.Instance)
                         {
-                            APIManager.Instance.UploadVideoAsync(videoBytes, userIdx, uid, "d3").Forget();
+                            string module = SessionManager.Instance ? SessionManager.Instance.CurrentModuleCode : "D3";
+                            APIManager.Instance.UploadVideoAsync(videoBytes, userIdx, uid, module).Forget();
                         }
                         else
                         {
@@ -212,7 +218,6 @@ namespace My.Scripts._06_PlayVideo
                     }
                     else
                     {
-                        string stderr = process.StandardError != null ? process.StandardError.ReadToEnd() : "N/A";
                         UnityEngine.Debug.LogError($"[StillcutManager] 인코딩 실패 (ExitCode: {process.ExitCode}): {stderr}");
                     }
                 }
