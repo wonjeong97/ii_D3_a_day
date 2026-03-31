@@ -12,7 +12,7 @@ namespace My.Scripts.Global
 {
     /// <summary>
     /// 양쪽 PC 간의 이미지 및 영상 파일 전송을 담당하는 매니저.
-    /// 서버 PC는 HTTP 서버를 구동하여 파일 저장 및 제공을 수행하고, 클라이언트는 HTTP 요청을 통해 데이터를 동기화함.
+    /// 설정 파일에 명시된 독립적인 HTTP 포트를 사용하여 TCP 소켓과의 충돌을 방지함.
     /// </summary>
     public class FileTransferManager : MonoBehaviour
     {
@@ -21,14 +21,14 @@ namespace My.Scripts.Global
         [Header("Server Settings")]
         public string serverIp;
         public int port;
-        public string localSaveRoot = @"C:\UnitySharedPicture";
+        public string localSaveRoot;
 
         private HttpListener _listener;
+        private CancellationTokenSource _cts;
         private Thread _serverThread;
-        private bool _isRunning;
 
         /// <summary>
-        /// 싱글톤 인스턴스를 초기화하고 씬 전환 시 파괴되지 않도록 설정함.
+        /// 싱글톤 인스턴스를 초기화함.
         /// </summary>
         private void Awake()
         {
@@ -49,15 +49,33 @@ namespace My.Scripts.Global
         private void Start()
         {
             TcpSetting loadedSetting = JsonLoader.Load<TcpSetting>(GameConstants.Path.TcpSetting);
+            
             if (loadedSetting != null)
             {
-                if (!string.IsNullOrWhiteSpace(loadedSetting.serverIP)) serverIp = loadedSetting.serverIP;
-                if (loadedSetting.port > 0 && loadedSetting.port <= 65535) port = loadedSetting.port;
+                if (!string.IsNullOrWhiteSpace(loadedSetting.serverIP)) 
+                {
+                    serverIp = loadedSetting.serverIP;
+                }
+                
+                if (loadedSetting.httpPort > 0 && loadedSetting.httpPort <= 65535) 
+                {
+                    port = loadedSetting.httpPort; 
+                }
+                
+                if (!string.IsNullOrWhiteSpace(loadedSetting.localSaveRoot))
+                {
+                    localSaveRoot = loadedSetting.localSaveRoot;
+                }
             }
             
-            if (string.IsNullOrWhiteSpace(serverIp) || port <= 0 || port > 65535)
+            if (string.IsNullOrWhiteSpace(localSaveRoot))
             {
-                Debug.LogError("[FileTransferManager] 유효한 serverIp/port 설정이 없어 비활성화합니다.");
+                localSaveRoot = @"C:\UnitySharedPicture";
+            }
+            
+            if (string.IsNullOrWhiteSpace(serverIp) || port <= 0)
+            {
+                Debug.LogError("[FileTransferManager] 유효한 serverIp/httpPort 설정이 없어 비활성화합니다.");
                 enabled = false;
                 return;
             }
@@ -75,7 +93,6 @@ namespace My.Scripts.Global
 
         /// <summary>
         /// .NET HttpListener를 사용하여 경량 파일 서버를 시작함.
-        /// 메인 스레드 블로킹을 방지하기 위해 별도 백그라운드 스레드에서 요청을 수신함.
         /// </summary>
         private void StartHttpServer()
         {
@@ -87,12 +104,12 @@ namespace My.Scripts.Global
                 _listener.Prefixes.Add($"http://*:{port}/");
                 _listener.Start();
 
-                _isRunning = true;
+                _cts = new CancellationTokenSource();
                 _serverThread = new Thread(ServerListenRoutine);
                 _serverThread.IsBackground = true;
                 _serverThread.Start();
 
-                Debug.Log($"[FileTransferManager] 파일 서버 가동: 포트 {port}");
+                Debug.Log($"[FileTransferManager] 파일 전송용 HTTP 서버 가동: 포트 {port}");
             }
             catch (Exception e)
             {
@@ -105,7 +122,7 @@ namespace My.Scripts.Global
         /// </summary>
         private void ServerListenRoutine()
         {
-            while (_isRunning && _listener.IsListening)
+            while (!_cts.Token.IsCancellationRequested && _listener != null && _listener.IsListening)
             {
                 try
                 {
@@ -113,12 +130,15 @@ namespace My.Scripts.Global
                     ProcessRequest(context);
                 }
                 catch (HttpListenerException) { }
+                catch (Exception e)
+                {
+                    Debug.LogWarning($"[FileTransferManager] 리스너 루틴 예외: {e.Message}");
+                }
             }
         }
 
         /// <summary>
         /// 수신된 GET/POST 요청을 분석하여 파일을 전송하거나 저장함.
-        /// 클라이언트의 데이터 백업 및 공유 기능을 수행하기 위함.
         /// </summary>
         /// <param name="context">HTTP 요청 컨텍스트.</param>
         private void ProcessRequest(HttpListenerContext context)
@@ -172,7 +192,6 @@ namespace My.Scripts.Global
 
         /// <summary>
         /// 촬영된 사진을 로컬에 저장하고 역할에 따라 서버로 전송함.
-        /// 서버 PC는 로컬 저장 후 클라이언트에 통보하며, 클라이언트는 HTTP POST를 통해 서버로 데이터를 전송함.
         /// </summary>
         /// <param name="imageBytes">이미지 바이트 데이터.</param>
         /// <param name="relativePath">저장될 상대 경로.</param>
@@ -221,7 +240,11 @@ namespace My.Scripts.Global
                         await www.SendWebRequest();
                         return www.result == UnityWebRequest.Result.Success;
                     }
-                    catch { return false; }
+                    catch (Exception e)
+                    { 
+                        Debug.LogError($"[FileTransferManager] 업로드 요청 실패: {e.Message}");
+                        return false; 
+                    }
                 }
             }
         }
@@ -249,8 +272,8 @@ namespace My.Scripts.Global
             string fullPath = Path.Combine(localSaveRoot, relativePath.Replace('/', '\\'));
             if (File.Exists(fullPath)) return;
 
-            // 데이터 수신 결과가 null일 가능성을 체크하여 엔티티 할당 안전성 확보
             byte[] data = await DownloadPhotoAsync(relativePath);
+            
             if (data != null && data.Length > 0)
             {
                 try
@@ -267,8 +290,7 @@ namespace My.Scripts.Global
         }
 
         /// <summary>
-        /// 지정된 경로의 사진 데이터를 가져옴. 로컬 디스크를 우선 조회하여 불필요한 통신을 방지함.
-        /// 로컬에 없을 경우에만 HTTP GET 요청을 통해 서버에서 가져오며 블랙스크린 방지를 위해 타임아웃을 적용함.
+        /// 지정된 경로의 사진 데이터를 가져옴.
         /// </summary>
         /// <param name="relativePath">사진 상대 경로.</param>
         /// <returns>이미지 바이트 배열.</returns>
@@ -282,7 +304,10 @@ namespace My.Scripts.Global
                     return await File.ReadAllBytesAsync(fullPath);
                 }
             }
-            catch (Exception e) { Debug.LogWarning($"[FileTransferManager] 로컬 읽기 에러: {e.Message}"); }
+            catch (Exception e) 
+            { 
+                Debug.LogWarning($"[FileTransferManager] 로컬 읽기 에러: {e.Message}"); 
+            }
 
             bool isServer = false;
             if (TcpManager.Instance) isServer = TcpManager.Instance.IsServer;
@@ -297,9 +322,14 @@ namespace My.Scripts.Global
                     {
                         await www.SendWebRequest();
                         if (www.result == UnityWebRequest.Result.Success) 
+                        {
                             return www.downloadHandler.data;
+                        }
                     }
-                    catch { }
+                    catch (Exception e)
+                    {
+                        Debug.LogWarning($"[FileTransferManager] 사진 다운로드 실패: {e.Message}");
+                    }
                 }
             }
             
@@ -337,7 +367,10 @@ namespace My.Scripts.Global
                             if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
                             await File.WriteAllBytesAsync(fullPath, data);
                         }
-                        catch { }
+                        catch (Exception e)
+                        {
+                            Debug.LogWarning($"[FileTransferManager] 누락 사진 동기화 저장 실패: {e.Message}");
+                        }
                     }
                 }
             }
@@ -345,17 +378,50 @@ namespace My.Scripts.Global
         }
 
         /// <summary>
+        /// 유니티 에디터/앱 강제 종료 시 포트 점유를 확실히 해제함.
+        /// </summary>
+        private void OnApplicationQuit()
+        {
+            CleanupServer();
+        }
+
+        /// <summary>
         /// 객체 파괴 시 가동 중인 HTTP 서버와 이벤트를 해제함.
         /// </summary>
         private void OnDestroy()
         {
-            _isRunning = false;
+            CleanupServer();
+        }
+
+        /// <summary>
+        /// 실행 중인 파일 서버 스레드 및 소켓을 안전하게 닫고 리소스를 반환함.
+        /// 에디터 재실행 시 포트가 묶여 발생하는 에러를 방지하기 위함.
+        /// </summary>
+        private void CleanupServer()
+        {
+            _cts?.Cancel();
             if (TcpManager.Instance) TcpManager.Instance.onMessageReceived -= OnNetworkMessageReceived;
             
-            if (_listener != null)
+            try
             {
-                _listener.Stop();
-                _listener.Close();
+                if (_listener != null)
+                {
+                    if (_listener.IsListening) _listener.Stop();
+                    _listener.Close();
+                    _listener = null;
+                }
+
+                if (_serverThread != null && _serverThread.IsAlive)
+                {
+                    _serverThread.Join(TimeSpan.FromSeconds(2));
+                    _serverThread = null;
+                }
+                _cts?.Dispose();
+                _cts = null;
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[FileTransferManager] 서버 정리 중 예외 발생: {e.Message}");
             }
         }
     }

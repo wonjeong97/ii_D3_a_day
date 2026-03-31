@@ -329,8 +329,6 @@ namespace My.Scripts.Core
                         SessionManager.Instance.ClearedEndCount = endCount;
                         SessionManager.Instance.IsOtherCartridgeContentsCleared = (endCount >= 3);
 
-                        Debug.Log($"[APIManager] 유저 데이터 로드 완료: {userData.IDX_USER}, {combinedTypeStr}");
-
                         return true; 
                     }
                 }

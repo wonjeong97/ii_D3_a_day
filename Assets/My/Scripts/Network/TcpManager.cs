@@ -20,7 +20,9 @@ namespace My.Scripts.Network
     {
         public bool isServer;
         public string serverIP;
-        public int port;
+        public int port; 
+        public int httpPort; 
+        public string localSaveRoot; 
     }
 
     /// <summary>

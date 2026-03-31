@@ -1,5 +1,7 @@
 {
   "isServer": true,
-  "serverIP": "192.168.0.143",
-  "port": 7777
+  "serverIP": "192.168.0.7",
+  "port": 7777,
+  "httpPort": 8080,
+  "localSaveRoot": "C:\\UnitySharedPicture"
 }
