@@ -112,6 +112,10 @@ namespace My.Scripts._07_Ending.Pages
 
             if (GameManager.Instance)
             {
+                // 이번 모듈(D3)에서 획득한 보상 조각 5개를 각 PC의 유저 DB에 업데이트함.
+                GameManager.Instance.SendPieceUpdateAPI(5);
+
+                // DB 트랜잭션 경합을 방지하기 위해 세션 종료 시간 업데이트는 서버 PC에서만 1회 전담하여 호출함.
                 if (TcpManager.Instance && TcpManager.Instance.IsServer)
                 {
                     GameManager.Instance.SendTimeUpdateAPI();

@@ -302,7 +302,6 @@ MonoBehaviour:
   mainGroupCanvas: {fileID: 910097258}
   descriptionUI: {fileID: 1270010483}
   waitUI: {fileID: 1246274902}
-  localFadeDuration: 0.5
 --- !u!1 &263106008
 GameObject:
   m_ObjectHideFlags: 0

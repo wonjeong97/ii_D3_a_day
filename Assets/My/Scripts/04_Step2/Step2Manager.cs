@@ -292,7 +292,7 @@ namespace My.Scripts._04_Step2
                     bool hasOverrideDesc = setting.questionSets[i].textDescription != null && 
                                            !string.IsNullOrEmpty(setting.questionSets[i].textDescription.text);
 
-                    TextSetting targetDescription = hasOverrideDesc 
+                   TextSetting targetDescription = hasOverrideDesc 
                         ? setting.questionSets[i].textDescription 
                         : setting.commonQuestionUI.textDescription;
 

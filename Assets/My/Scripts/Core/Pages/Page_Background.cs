@@ -56,7 +56,13 @@ namespace My.Scripts.Core.Pages
                 if (TcpManager.Instance) isServer = TcpManager.Instance.IsServer;
 
                 SetUIText(textName, isServer ? _cachedData.nameA : _cachedData.nameB);
-                textName.text = UIUtils.ReplacePlayerNamePlaceholders(textName.text);
+                
+                // JSON 파일 내부에 {nameA}, {nameB} 태그가 잘못 복사된 경우를 대비한 강제 보정
+                string rawText = textName.text;
+                if (isServer && rawText.Contains("{nameB}")) rawText = rawText.Replace("{nameB}", "{nameA}");
+                if (!isServer && rawText.Contains("{nameA}")) rawText = rawText.Replace("{nameA}", "{nameB}");
+
+                textName.text = UIUtils.ReplacePlayerNamePlaceholders(rawText);
             }
         }
 
