@@ -20,8 +20,8 @@ namespace My.Scripts.Core.Pages
         [SerializeField] private Text text2UI;
 
         [Header("Settings")]
-        [SerializeField] private float waitTime;
-        [SerializeField] private float fadeDuration;
+        [SerializeField] private float waitTime = 5;
+        [SerializeField] private float fadeDuration = 0.5f;
 
         private CommonLoadingData _cachedData;
         private Coroutine _loadingCoroutine;

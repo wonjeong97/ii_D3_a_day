@@ -110,13 +110,12 @@ namespace My.Scripts._02_PlayTutorial.Pages
                 RfidManager.Instance.onAnswerReceived -= OnRfidAnswerReceived;
             }
 
-            if (!ReferenceEquals(_fadeCoroutine, null)) StopCoroutine(_fadeCoroutine);
-            if (!ReferenceEquals(_countdownCoroutine, null)) StopCoroutine(_countdownCoroutine);
+            if (_fadeCoroutine != null) StopCoroutine(_fadeCoroutine);
+            if (_countdownCoroutine != null) StopCoroutine(_countdownCoroutine);
         }
 
         /// <summary>
         /// 매 프레임 키보드 디버그 입력을 검사함.
-        /// Why: Update 루프 내부이므로 object.ReferenceEquals를 사용하여 극단적 최적화를 적용함.
         /// </summary>
         private void Update()
         {
@@ -133,7 +132,7 @@ namespace My.Scripts._02_PlayTutorial.Pages
                 }
                 else if (_holdingAnswerIndex != newlyPressedIndex)
                 {
-                    // Why: 카운트 진행 중 다른 키/카드를 누르면 페널티를 부과하기 위함.
+                    // 카운트 진행 중 다른 키/카드를 누르면 다시 시작하기 위함
                     InterruptCountdown(newlyPressedIndex); 
                 }
             }
@@ -167,7 +166,7 @@ namespace My.Scripts._02_PlayTutorial.Pages
         {
             bool isServer = false;
             
-            if (!ReferenceEquals(TcpManager.Instance, null)) 
+            if (TcpManager.Instance) 
             {
                 isServer = TcpManager.Instance.IsServer;
             }
@@ -218,7 +217,7 @@ namespace My.Scripts._02_PlayTutorial.Pages
         /// <param name="newAnswerIndex">새로 인식된 응답 인덱스.</param>
         private void InterruptCountdown(int newAnswerIndex)
         {
-            if (!ReferenceEquals(_countdownCoroutine, null))
+            if (_countdownCoroutine != null)
             {
                 StopCoroutine(_countdownCoroutine);
                 _countdownCoroutine = null;

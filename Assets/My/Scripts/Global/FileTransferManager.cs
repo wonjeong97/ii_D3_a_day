@@ -21,7 +21,7 @@ namespace My.Scripts.Global
         [Header("Server Settings")]
         public string serverIp;
         public int port;
-        public string localSaveRoot;
+        public string localSaveRoot = @"C:\UnitySharedPicture";
 
         private HttpListener _listener;
         private Thread _serverThread;
@@ -52,6 +52,7 @@ namespace My.Scripts.Global
             if (loadedSetting != null && !string.IsNullOrEmpty(loadedSetting.serverIP))
             {
                 serverIp = loadedSetting.serverIP;
+                port = loadedSetting.port;
             }
 
             if (TcpManager.Instance)

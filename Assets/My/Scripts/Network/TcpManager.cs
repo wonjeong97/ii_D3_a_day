@@ -133,7 +133,7 @@ namespace My.Scripts.Network
                 {
                     Debug.LogError("[TcpManager] 연결 유실 임계치 도달로 인한 타이틀 이동");
                     
-                    if (!ReferenceEquals(GameManager.Instance, null)) 
+                    if (GameManager.Instance) 
                     {
                         GameManager.Instance.ReturnToTitle();
                     }

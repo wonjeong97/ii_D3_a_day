@@ -309,7 +309,7 @@ namespace My.Scripts.Core.Pages
             if (_currentPhase == Phase.Completed || _isAnimating) return;
 
             bool isServer = false;
-            if (!ReferenceEquals(TcpManager.Instance, null)) isServer = TcpManager.Instance.IsServer;
+            if (TcpManager.Instance) isServer = TcpManager.Instance.IsServer;
 
             if (_canAcceptInput)
             {

@@ -36,8 +36,8 @@ namespace My.Scripts.Global
         public Sprite[] playerColorSprites;
 
         [Header("API Retry Settings")]
-        [SerializeField] private int maxRetries;
-        [SerializeField] private float retryDelay;
+        [SerializeField] private int maxRetries = 10;
+        [SerializeField] private float retryDelay = 1.0f;
 
         /// <summary>
         /// 싱글톤 인스턴스를 초기화하고 타임스탬프 로그 핸들러를 등록함.

@@ -63,12 +63,12 @@ namespace My.Scripts.Core
         private string userUid;
 
         [Header("API Retry Settings")]
-        [SerializeField] private int maxRetries;
-        [SerializeField] private float retryDelay;
+        [SerializeField] private int maxRetries = 3;
+        [SerializeField] private float retryDelay = 1.0f;
         
         [Header("Upload Retry Settings")]
-        [SerializeField] private int uploadMaxRetries;
-        [SerializeField] private float uploadRetryDelay;
+        [SerializeField] private int uploadMaxRetries = 3;
+        [SerializeField] private float uploadRetryDelay = 2.0f;
         
         /// <summary>
         /// 싱글톤 인스턴스를 생성하고 씬 전환 시 파괴되지 않도록 설정함.

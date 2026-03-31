@@ -256,7 +256,7 @@ namespace My.Scripts._02_PlayTutorial.Pages
             if (_isCompleted || !_canAcceptInput) return;
 
             bool isServer = false;
-            if (!ReferenceEquals(TcpManager.Instance, null)) 
+            if (TcpManager.Instance) 
             {
                 isServer = TcpManager.Instance.IsServer;
             }
