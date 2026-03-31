@@ -46,8 +46,16 @@ namespace My.Scripts.Core.Pages
         
         private static WebCamTexture _sharedWebCamTexture;
         private static Texture2D _sharedCapturedPhoto;
+        private static int _instanceCount = 0;
+        
 
         public void SetSyncCommand(string command) { }
+
+        protected override void Awake()
+        {
+            base.Awake();
+            _instanceCount++;
+        }
 
         public override void SetupData(object data)
         {
@@ -92,10 +100,7 @@ namespace My.Scripts.Core.Pages
             StopWebCam();
         }
 
-        private void OnDestroy()
-        {
-            StopWebCam();
-        }
+       
 
         private void ApplyDataToUI()
         {
@@ -315,6 +320,27 @@ private async UniTask<bool> CapturePhotoAsync()
             }
 
             if (onStepComplete != null) onStepComplete.Invoke(0);
+        }
+        
+        private void OnDestroy()
+        {
+            StopWebCam();
+            _instanceCount--;
+
+            if (_instanceCount <= 0)
+            {
+                if (_sharedWebCamTexture)
+                {
+                    Destroy(_sharedWebCamTexture);
+                    _sharedWebCamTexture = null;
+                }
+                if (_sharedCapturedPhoto)
+                {
+                    Destroy(_sharedCapturedPhoto);
+                    _sharedCapturedPhoto = null;
+                }
+                _instanceCount = 0;
+            }
         }
     }
 }
