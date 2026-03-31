@@ -280,6 +280,17 @@ namespace My.Scripts.Core
                         userData.PIECE_D2 = ParseIntSafe(colMap, firstRow, "PIECE_D2");
                         userData.PIECE_D3 = ParseIntSafe(colMap, firstRow, "PIECE_D3");
                         
+                        Debug.Log($"유저 데이터 로드 완료\n" +
+                                  $"- 유저 인덱스(IDX_USER): {userData.IDX_USER}\n" +
+                                  $"- 이름 (L/R): {userData.RESERVATION_FIRST_NAME_LEFT} / {userData.RESERVATION_FIRST_NAME_RIGHT}\n" +
+                                  $"- UID (L/R): {userData.UID_LEFT} / {userData.UID_RIGHT}\n" +
+                                  $"- 컬러 (L/R): {userData.COLOR_LEFT} / {userData.COLOR_RIGHT}\n" +
+                                  $"- 언어/관계: {userData.LANG} / {userData.RELATION}\n" +
+                                  $"- 카트리지: {userData.CARTRIDGE}\n" +
+                                  $"- 블록 코드: {userData.BLOCK_CODE}");
+                        
+                        if (!SessionManager.Instance) Debug.Log("[APIManager]: SessionManager is not valid.");
+                        
                         SessionManager.Instance.PieceA1 = Mathf.Max(0, userData.PIECE_A1);
                         SessionManager.Instance.PieceA2 = Mathf.Max(0, userData.PIECE_A2);
                         SessionManager.Instance.PieceA3 = Mathf.Max(0, userData.PIECE_A3);
@@ -460,7 +471,11 @@ namespace My.Scripts.Core
         /// <returns>업로드 성공 여부.</returns>
         public async UniTask<bool> UploadVideoAsync(string filePath, int idxUser, string uid, string moduleCode, CancellationToken cancellationToken = default)
         {
-            if (string.IsNullOrEmpty(filePath) || !System.IO.File.Exists(filePath)) return false;
+            if (string.IsNullOrEmpty(filePath) || !System.IO.File.Exists(filePath))
+            {   
+                Debug.LogWarning("[APIManager] 업로드할 비디오 파일을 찾지 못했습니다.");
+                return false;
+            }
 
             string baseUrl = string.Empty;
             if (GameManager.Instance && GameManager.Instance.ApiConfig != null)
