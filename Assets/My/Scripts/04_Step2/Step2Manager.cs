@@ -16,6 +16,9 @@ using Wonjeong.Utils;
 
 namespace My.Scripts._04_Step2
 {
+    /// <summary>
+    /// JSON에서 로드되는 Step2 씬의 전체 데이터 구조체.
+    /// </summary>
     [Serializable]
     public class Step2Setting
     {
@@ -30,8 +33,8 @@ namespace My.Scripts._04_Step2
     }
 
     /// <summary>
-    /// Step2 씬의 페이지 흐름을 제어하는 매니저.
-    /// Why: 여러 질문과 카메라 촬영 페이지를 순환하며 배경 이미지를 동적으로 교체함.
+    /// Step2 씬의 전체 페이지 흐름을 제어하는 매니저.
+    /// 여러 질문과 카메라 촬영 페이지를 순환하며 배경 이미지를 동적으로 교체함.
     /// </summary>
     public class Step2Manager : BaseFlowManager
     {
@@ -48,6 +51,9 @@ namespace My.Scripts._04_Step2
         
         private int _currentBgQuestionNum = -1; 
 
+        /// <summary>
+        /// 씬 진입 시 배경 캔버스를 투명하게 초기화하고 첫 페이지 페이드 인 연출을 생략함.
+        /// </summary>
         protected override void Start()
         {
             skipFirstPageFade = true;
@@ -59,24 +65,24 @@ namespace My.Scripts._04_Step2
             base.Start();
         }
 
+        /// <summary>
+        /// 특정 페이지로 전환하기 전 이전 페이지의 응답 데이터를 전송하고 배경 전환을 수행함.
+        /// 질문 결과값을 역순으로 매핑하여 서버에 동기화함. 예: 입력 5 -> 전송 1
+        /// </summary>
+        /// <param name="index">전환할 페이지의 인덱스 번호.</param>
         public override void TransitionToPage(int index)
         {
-            //  다음 페이지로 넘어가기 직전, 현재 페이지가 질문 페이지였다면 답변 데이터를 API로 전송함
             if (currentPageIndex >= 0 && currentPageIndex < pages.Count)
             {
                 Page_Question qPage = pages[currentPageIndex] as Page_Question;
                 if (qPage)
                 {
-                    // 질문 번호 계산 (Q1=1, Q2=2 ... Q15=15)
                     int qNo = (currentPageIndex - 1) / 2 + 1;
-                    
-                    // 답변 값 매핑 (ㄱ->5, ㄴ2->4, ㄷ->3, ㄹ->2, ㅁ->1)
                     int rawSelection = qPage.SelectedIndex;
+                    
                     if (rawSelection >= 1 && rawSelection <= 5)
                     {
                         int mappedValue = 6 - rawSelection;
-                        
-                        // 서버면 left, 클라이언트면 right
                         string side = (TcpManager.Instance && TcpManager.Instance.IsServer) ? "left" : "right";
                         
                         if (GameManager.Instance)
@@ -88,7 +94,6 @@ namespace My.Scripts._04_Step2
                 }
             }
 
-            // 기존 배경 처리 및 페이지 전환 로직 실행
             base.TransitionToPage(index);
 
             if (index > 0 && index < pages.Count)
@@ -101,7 +106,8 @@ namespace My.Scripts._04_Step2
         }
 
         /// <summary>
-        /// 배경 화면 전환 시퀀스를 비동기로 처리함.
+        /// 대상 페이지 유형에 맞춰 배경 이미지 갱신과 페이드 연출 순서를 다르게 적용함.
+        /// 카메라 촬영 화면에서는 촬영 대상 확보를 위해 이미지를 먼저 교체함.
         /// </summary>
         private async UniTaskVoid ProcessBackgroundSequenceAsync(int questionNum, bool isCameraPage)
         {
@@ -117,6 +123,10 @@ namespace My.Scripts._04_Step2
             }
         }
 
+        /// <summary>
+        /// 배경 캔버스 그룹의 알파값을 조절하여 부드러운 전환을 연출함.
+        /// 기존 진행 중인 연출을 취소하여 애니메이션 충돌을 방지함.
+        /// </summary>
         private async UniTask FadeSubCanvasBackgroundAsync(bool fadeIn)
         {
             if (!subCanvasBgCg) return;
@@ -154,13 +164,16 @@ namespace My.Scripts._04_Step2
             catch (OperationCanceledException) { }
         }
 
+        /// <summary>
+        /// 이전 스텝에서 확정된 테마와 현재 질문 번호에 맞는 배경 이미지를 로드함.
+        /// 어드레서블 자원을 비동기로 호출하여 메인 스레드 부하를 줄임.
+        /// </summary>
         private async UniTask UpdateSubCanvasBackgroundAsync(int questionNum)
         {
             if (!subCanvasBgImage) return;
-
             if (questionNum > 15) return;
-
             if (_currentBgQuestionNum == questionNum) return;
+            
             _currentBgQuestionNum = questionNum;
 
             string mainTheme = "Sea";
@@ -185,19 +198,19 @@ namespace My.Scripts._04_Step2
             }
             catch (Exception e)
             {
-                UnityEngine.Debug.LogError($"[Step2Manager] 배경 로드 실패: {bgKey}, {e.Message}");
+                Debug.LogError($"[Step2Manager] 배경 로드 실패: {bgKey}, {e.Message}");
             }
         }
 
         /// <summary>
-        /// 공통 JSON과 개별 JSON을 깊은 복사(Deep Merge) 방식으로 병합함.
-        /// Why: C# 직렬화 과정에서 빈 객체로 인해 속성값이 누락되는 현상을 완벽히 방어하기 위함.
+        /// 공통 설정과 개별 설정을 깊은 복사 방식으로 병합하여 페이지 데이터를 구성함.
+        /// 직렬화 과정에서 발생하는 빈 객체 누락 현상을 방어하기 위함.
         /// </summary>
         protected override void LoadSettings()
         {
             if (!SessionManager.Instance)
             {
-                UnityEngine.Debug.LogError("[Step2Manager] SessionManager가 없습니다.");
+                Debug.LogError("[Step2Manager] SessionManager가 없습니다.");
                 return;
             }
 
@@ -205,7 +218,7 @@ namespace My.Scripts._04_Step2
             
             if (typeStr.Length < 2 || typeStr == "None")
             {
-                UnityEngine.Debug.LogError($"[Step2Manager] 유효하지 않은 UserType입니다: {typeStr}");
+                Debug.LogError($"[Step2Manager] 유효하지 않은 UserType입니다: {typeStr}");
                 return;
             }
 
@@ -217,18 +230,16 @@ namespace My.Scripts._04_Step2
 
             if (specificSetting == null)
             {
-                UnityEngine.Debug.LogWarning($"[Step2Manager] {dynamicPath} 로드 실패. 데이터를 확인할 수 없습니다.");
+                Debug.LogWarning($"[Step2Manager] {dynamicPath} 로드 실패. 데이터를 확인할 수 없습니다.");
                 return;
             }
 
-            // 일반 C# 객체이므로 명시적 null 검사 사용
             if (commonSetting != null)
             {
                 if (specificSetting.background == null) specificSetting.background = commonSetting.background;
                 if (specificSetting.introPage == null) specificSetting.introPage = commonSetting.introPage;
                 if (specificSetting.outroPage == null) specificSetting.outroPage = commonSetting.outroPage;
                 
-                // 질문 페이지 공통 UI 병합
                 if (specificSetting.commonQuestionUI == null) 
                 {
                     specificSetting.commonQuestionUI = commonSetting.commonQuestionUI;
@@ -238,9 +249,10 @@ namespace My.Scripts._04_Step2
                     if (specificSetting.commonQuestionUI.textSelected == null) specificSetting.commonQuestionUI.textSelected = commonSetting.commonQuestionUI.textSelected;
                     if (specificSetting.commonQuestionUI.textDescription == null) specificSetting.commonQuestionUI.textDescription = commonSetting.commonQuestionUI.textDescription;
                     if (specificSetting.commonQuestionUI.textWait == null) specificSetting.commonQuestionUI.textWait = commonSetting.commonQuestionUI.textWait;
+                    if (specificSetting.commonQuestionUI.textPopupWarning == null) specificSetting.commonQuestionUI.textPopupWarning = commonSetting.commonQuestionUI.textPopupWarning;
+                    if (specificSetting.commonQuestionUI.textPopupTimeout == null) specificSetting.commonQuestionUI.textPopupTimeout = commonSetting.commonQuestionUI.textPopupTimeout;
                 }
 
-                // 결과 페이지 공통 UI 병합 (에러 발생 원인 해결부)
                 if (specificSetting.commonResultUI == null) 
                 {
                     specificSetting.commonResultUI = commonSetting.commonResultUI;
@@ -254,7 +266,6 @@ namespace My.Scripts._04_Step2
 
             Step2Setting setting = specificSetting;
 
-            // Unity 객체이므로 암시적 boolean 검사 사용
             if (backgroundPage)
             {
                 backgroundPage.SetupData(setting.background);
@@ -335,6 +346,9 @@ namespace My.Scripts._04_Step2
             }
         }
 
+        /// <summary>
+        /// 모든 질문 및 촬영 절차가 종료되면 다음 씬으로 전환함.
+        /// </summary>
         protected override void OnAllFinished()
         {
             if (GameManager.Instance)
@@ -343,6 +357,10 @@ namespace My.Scripts._04_Step2
             }
         }
 
+        /// <summary>
+        /// 매니저 파괴 시 할당된 어드레서블 핸들과 비동기 토큰을 해제함.
+        /// 씬 전환 시 메모리 누수를 방어하기 위함.
+        /// </summary>
         private void OnDestroy()
         {
             if (_bgHandle.IsValid()) Addressables.Release(_bgHandle);

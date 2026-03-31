@@ -11,8 +11,14 @@ using Wonjeong.Utils;
 
 namespace My.Scripts.Core
 {
+    /// <summary>
+    /// 컬러 데이터 구분을 위한 열거형.
+    /// </summary>
     public enum ColorData { NotSet = -1, Cyan = 0, Pink = 1, Orange = 2, Green = 3, Red = 4, Yellow = 5 }
     
+    /// <summary>
+    /// 서버로부터 수신된 유저 정보를 담는 구조체.
+    /// </summary>
     public struct UserData
     {
         public string CARTRIDGE;
@@ -37,12 +43,19 @@ namespace My.Scripts.Core
         public int PIECE_D1; public int PIECE_D2; public int PIECE_D3;
     }
 
+    /// <summary>
+    /// API 응답 테이블 형식을 파싱하기 위한 클래스.
+    /// </summary>
     public class ApiTableResponse
     {
         public List<string> COLUMNS { get; set; }
         public List<List<object>> DATA { get; set; } 
     }
 
+    /// <summary>
+    /// 서버와의 REST API 통신을 전담하는 매니저 클래스.
+    /// 유저 데이터 조회, 이미지 및 영상 업로드 시 재시도 로직과 예외 처리를 수행함.
+    /// </summary>
     public class APIManager : MonoBehaviour
     {   
         public static APIManager Instance { get; private set; }
@@ -50,13 +63,16 @@ namespace My.Scripts.Core
         private string userUid;
 
         [Header("API Retry Settings")]
-        [SerializeField] private int maxRetries = 10;
-        [SerializeField] private float retryDelay = 1.0f;
+        [SerializeField] private int maxRetries;
+        [SerializeField] private float retryDelay;
         
         [Header("Upload Retry Settings")]
-        [SerializeField] private int uploadMaxRetries = 3;
-        [SerializeField] private float uploadRetryDelay = 2.0f;
+        [SerializeField] private int uploadMaxRetries;
+        [SerializeField] private float uploadRetryDelay;
         
+        /// <summary>
+        /// 싱글톤 인스턴스를 생성하고 씬 전환 시 파괴되지 않도록 설정함.
+        /// </summary>
         private void Awake()
         {
             if (!Instance)
@@ -70,13 +86,25 @@ namespace My.Scripts.Core
             }
         }
 
+        /// <summary>
+        /// 비동기 데이터 조회를 시작함.
+        /// </summary>
+        /// <param name="uid">조회할 유저의 고유 식별자.</param>
         public void FetchData(string uid) 
         { 
-            FetchDataAsync(uid, CancellationToken.None).Forget(); 
+            FetchDataAsync(uid, 15.0f, CancellationToken.None).Forget(); 
         }
         
+        /// <summary>
+        /// 서버로부터 유저 데이터를 비동기로 조회하고 세션 매니저에 반영함.
+        /// 에디터 환경에서는 통신 없이 가상 데이터를 생성하여 개발 편의성을 높임.
+        /// </summary>
+        /// <param name="uid">유저 UID.</param>
+        /// <param name="timeoutSeconds">타임아웃 시간.</param>
+        /// <param name="cancellationToken">취소 토큰.</param>
+        /// <returns>성공 여부.</returns>
        [ContextMenu("Fetch API Data")]
-        public async UniTask<bool> FetchDataAsync(string uid, CancellationToken cancellationToken = default)
+        public async UniTask<bool> FetchDataAsync(string uid, float timeoutSeconds = 15.0f, CancellationToken cancellationToken = default)
         {
 #if UNITY_EDITOR
             if (SessionManager.Instance)
@@ -93,7 +121,7 @@ namespace My.Scripts.Core
                 }
                 SessionManager.Instance.IsOtherCartridgeContentsCleared = true; 
             }
-            Debug.Log("[APIManager] 에디터 모드: 유저 데이터 통신을 생략하고 가상 세션을 생성/유지했습니다.");
+            Debug.Log("[APIManager] 에디터 모드: 가상 세션 유지");
             return true;
 #endif
 
@@ -111,51 +139,52 @@ namespace My.Scripts.Core
 
             if (config == null)
             {
-                Debug.LogError("[APIManager] API 설정을 찾을 수 없습니다.");
+                Debug.LogError("[APIManager] API 설정 로드 실패");
                 return false;
             }
 
             string requestUrl = $"{config.GetUserUrl}?uid={userUid}";
             
-            // Why: 서버 부하 또는 네트워크 지연으로 인한 1회성 통신 실패를 방지함
-            for (int attempt = 0; attempt < maxRetries; attempt++)
+            using (CancellationTokenSource timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
             {
-                cancellationToken.ThrowIfCancellationRequested();
+                timeoutCts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
+                CancellationToken linkedToken = timeoutCts.Token;
 
-                using (UnityWebRequest webRequest = UnityWebRequest.Get(requestUrl))
+                for (int attempt = 0; attempt < maxRetries; attempt++)
                 {
-                    webRequest.timeout = 10; 
-                    
-                    try
-                    {
-                        await webRequest.SendWebRequest().ToUniTask(cancellationToken: cancellationToken);
+                    linkedToken.ThrowIfCancellationRequested();
 
-                        if (webRequest.result == UnityWebRequest.Result.Success)
+                    using (UnityWebRequest webRequest = UnityWebRequest.Get(requestUrl))
+                    {
+                        webRequest.timeout = 10; 
+                        
+                        try
                         {
-                            return await ParseAndProcessDataAsync(webRequest.downloadHandler.text);
-                        }
+                            await webRequest.SendWebRequest().ToUniTask(cancellationToken: linkedToken);
 
-                        if (attempt < maxRetries - 1)
-                        {
-                            Debug.LogWarning($"[APIManager] 유저 데이터 조회 실패 ({attempt + 1}/{maxRetries}): {webRequest.error}. {retryDelay}초 후 재시도");
-                            await UniTask.Delay(TimeSpan.FromSeconds(retryDelay), cancellationToken: cancellationToken);
+                            if (webRequest.result == UnityWebRequest.Result.Success)
+                            {
+                                return await ParseAndProcessDataAsync(webRequest.downloadHandler.text);
+                            }
+
+                            if (attempt < maxRetries - 1)
+                            {
+                                Debug.LogWarning($"[APIManager] 조회 실패 ({attempt + 1}/{maxRetries}): {retryDelay}초 후 재시도");
+                                await UniTask.Delay(TimeSpan.FromSeconds(retryDelay), cancellationToken: linkedToken);
+                            }
                         }
-                        else
+                        catch (OperationCanceledException)
                         {
-                            Debug.LogError($"[APIManager] 유저 데이터 조회 최종 실패: {webRequest.error}");
+                            Debug.LogWarning("[APIManager] 작업 취소됨");
+                            throw;
                         }
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        Debug.LogWarning("[APIManager] FetchDataAsync 작업이 취소되었습니다.");
-                        throw;
-                    }
-                    catch (Exception e)
-                    {
-                        Debug.LogWarning($"[APIManager] FetchDataAsync 통신 예외 발생 ({attempt + 1}/{maxRetries}): {e.Message}");
-                        if (attempt < maxRetries - 1) 
+                        catch (Exception e)
                         {
-                            await UniTask.Delay(TimeSpan.FromSeconds(retryDelay), cancellationToken: cancellationToken);
+                            Debug.LogWarning($"[APIManager] 통신 예외 발생 ({attempt + 1}/{maxRetries}): {e.Message}");
+                            if (attempt < maxRetries - 1) 
+                            {
+                                await UniTask.Delay(TimeSpan.FromSeconds(retryDelay), cancellationToken: linkedToken);
+                            }
                         }
                     }
                 }
@@ -164,6 +193,12 @@ namespace My.Scripts.Core
             return false;
         }
 
+        /// <summary>
+        /// 수신된 JSON을 파싱하여 세션 매니저의 각 필드에 값을 할당함.
+        /// 카트리지 정보와 관계 정보를 조합하여 유저 타입을 결정하고 콘텐츠 클리어 여부를 계산함.
+        /// </summary>
+        /// <param name="jsonString">서버 응답 JSON 문자열.</param>
+        /// <returns>파싱 및 처리 성공 여부.</returns>
         public async UniTask<bool> ParseAndProcessDataAsync(string jsonString)
         {
             try
@@ -219,7 +254,6 @@ namespace My.Scripts.Core
                         SessionManager.Instance.PlayerAColor = userData.COLOR_LEFT;
                         SessionManager.Instance.PlayerBColor = userData.COLOR_RIGHT;
 
-                        // Why: 카트리지 누락이나 유효하지 않은 관계 값(1~6 외)이 들어올 경우를 대비한 안전 장치
                         string cartridgeStr = string.IsNullOrWhiteSpace(userData.CARTRIDGE) ? "A" : userData.CARTRIDGE.Trim().ToUpper();
                         int relationNum = userData.RELATION;
                         if (relationNum < 1 || relationNum > 6) relationNum = 1; 
@@ -232,7 +266,6 @@ namespace My.Scripts.Core
                         }
                         else
                         {
-                            Debug.LogWarning($"[APIManager] 알 수 없는 타입 조합({combinedTypeStr})입니다. 기본값(A1)으로 설정합니다.");
                             SessionManager.Instance.CurrentUserType = UserType.A1;
                         }
 
@@ -262,7 +295,6 @@ namespace My.Scripts.Core
                         SessionManager.Instance.PieceD2 = Mathf.Max(0, userData.PIECE_D2);
                         SessionManager.Instance.PieceD3 = Mathf.Max(0, userData.PIECE_D3);
 
-                        // Why: 현재 진행 중인 모듈 외 다른 컨텐츠의 완료 현황을 확인하기 위함
                         int endCount = 0;
                         string currentModuleEnd = $"END_{SessionManager.Instance.CurrentModuleCode.ToUpper()}"; 
 
@@ -288,23 +320,7 @@ namespace My.Scripts.Core
                         SessionManager.Instance.ClearedEndCount = endCount;
                         SessionManager.Instance.IsOtherCartridgeContentsCleared = (endCount >= 3);
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                        Debug.Log($"[APIManager] 유저 데이터 로드 완료!\n" +
-                                  $"- 유저 인덱스(IDX_USER): {userData.IDX_USER}\n" +
-                                  $"- 이름 (L/R): {userData.RESERVATION_FIRST_NAME_LEFT} / {userData.RESERVATION_FIRST_NAME_RIGHT}\n" +
-                                  $"- 유저 타입 (카트리지+관계): {combinedTypeStr}\n" +
-                                  $"- 컬러 (L/R): {userData.COLOR_LEFT} / {userData.COLOR_RIGHT}\n" +
-                                  $"- 블록 코드: {userData.BLOCK_CODE}\n" +
-                                  $"- 타 콘텐츠 완료 개수: {endCount}개");
-#else
-                         Debug.Log($"[APIManager] 유저 데이터 로드 완료!\n" +
-                                  $"- 유저 인덱스(IDX_USER): {userData.IDX_USER}\n" +
-                                  $"- 이름 (L/R): {userData.RESERVATION_FIRST_NAME_LEFT} / {userData.RESERVATION_FIRST_NAME_RIGHT}\n" +
-                                  $"- 유저 타입 (카트리지+관계): {combinedTypeStr}\n" +
-                                  $"- 컬러 (L/R): {userData.COLOR_LEFT} / {userData.COLOR_RIGHT}\n" +
-                                  $"- 블록 코드: {userData.BLOCK_CODE}\n" +
-                                  $"- 타 콘텐츠 완료 개수: {endCount}개");
-#endif
+                        Debug.Log($"[APIManager] 유저 데이터 로드 완료: {userData.IDX_USER}, {combinedTypeStr}");
 
                         return true; 
                     }
@@ -313,11 +329,14 @@ namespace My.Scripts.Core
             }
             catch (Exception e)
             {
-                Debug.LogError($"[APIManager] JSON 파싱 중 에러 발생: {e.Message}");
+                Debug.LogError($"[APIManager] JSON 파싱 에러: {e.Message}");
                 return false;
             }
         }
 
+        /// <summary>
+        /// 응답 로우에서 지정된 컬럼명에 해당하는 정수값을 안전하게 추출함.
+        /// </summary>
         private int ParseIntSafe(Dictionary<string, int> map, List<object> row, string col)
         {
             if (map.TryGetValue(col, out int idx) && row.Count > idx && row[idx] != null)
@@ -328,6 +347,9 @@ namespace My.Scripts.Core
             return 0; 
         }
 
+        /// <summary>
+        /// 응답 로우에서 지정된 컬럼명에 해당하는 문자열을 안전하게 추출함.
+        /// </summary>
         private string ParseStringSafe(Dictionary<string, int> map, List<object> row, string col)
         {
             if (map.TryGetValue(col, out int idx) && row.Count > idx && row[idx] != null) 
@@ -337,6 +359,9 @@ namespace My.Scripts.Core
             return string.Empty; 
         }
 
+        /// <summary>
+        /// 응답 로우의 정수값을 컬러 데이터 열거형으로 변환함.
+        /// </summary>
         private ColorData ParseColorSafe(Dictionary<string, int> map, List<object> row, string col)
         {
             if (map.TryGetValue(col, out int idx) && row.Count > idx && row[idx] != null)
@@ -352,10 +377,15 @@ namespace My.Scripts.Core
             return ColorData.NotSet; 
         }
         
-        /// <summary> 
-        /// 서버 업로드를 UniTask 기반으로 처리하며, 제공해주신 A1 로직을 D3 프로젝트 규격에 맞게 적용함.
-        /// Why: Step3의 결과물(D3)을 서버로 전송할 때 Raw 바이너리 POST 방식을 사용하기 위함.
+        /// <summary>
+        /// 촬영된 이미지 바이트 데이터를 서버로 업로드함.
         /// </summary>
+        /// <param name="imageBytes">이미지 데이터.</param>
+        /// <param name="idxUser">유저 인덱스.</param>
+        /// <param name="uid">유저 UID.</param>
+        /// <param name="moduleCode">모듈 코드.</param>
+        /// <param name="cancellationToken">취소 토큰.</param>
+        /// <returns>업로드 성공 여부.</returns>
         public async UniTask<bool> UploadImageAsync(byte[] imageBytes, int idxUser, string uid, string moduleCode, CancellationToken cancellationToken = default)
         {
             if (imageBytes == null || imageBytes.Length == 0) return false;
@@ -363,28 +393,24 @@ namespace My.Scripts.Core
             string baseUrl = string.Empty;
             if (GameManager.Instance && GameManager.Instance.ApiConfig != null)
             {
-                // API 설정에서 uploadFile 경로를 가져옴
                 baseUrl = GameManager.Instance.ApiConfig.UploadFileUrl;
             }
 
             if (string.IsNullOrEmpty(baseUrl) || idxUser <= 0 || string.IsNullOrWhiteSpace(uid))
             {
-                Debug.LogWarning($"[APIManager] 업로드 중단: 필수 정보 부족 (idx_user: {idxUser}, uid: {uid})");
+                Debug.LogWarning("[APIManager] 업로드 필수 정보 부족");
                 return false;
             }
 
             string encodedUid = UnityWebRequest.EscapeURL(uid);
-            // D3 프로젝트 규격에 따른 URL 파라미터 구성 (A1 로직 참조)
-            string url = $"{baseUrl}?idx_user={idxUser}&uid={encodedUid}&code={moduleCode.ToLower()}&type=png";
+            string url = $"{baseUrl}?idx_user={idxUser}&uid={encodedUid}&code={moduleCode}&type=png";
 
-            // 수정됨: maxRetries -> uploadMaxRetries 적용
             for (int attempt = 0; attempt < uploadMaxRetries; attempt++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
                 using (UnityWebRequest webRequest = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
                 {
-                    // Why: 제공해주신 예시와 같이 Raw 바이너리 데이터를 직접 업로드함
                     webRequest.uploadHandler = new UploadHandlerRaw(imageBytes);
                     webRequest.uploadHandler.contentType = "image/png"; 
                     webRequest.downloadHandler = new DownloadHandlerBuffer();
@@ -402,23 +428,18 @@ namespace My.Scripts.Core
 
                         if (attempt < uploadMaxRetries - 1)
                         {
-                            // 수정됨: retryDelay -> uploadRetryDelay 적용
-                            Debug.LogWarning($"[APIManager] 업로드 실패 ({attempt + 1}/{uploadMaxRetries}): {webRequest.error}. {uploadRetryDelay}초 후 재시도...");
+                            Debug.LogWarning($"[APIManager] 업로드 실패 ({attempt + 1}/{uploadMaxRetries}): {uploadRetryDelay}초 후 재시도");
                             await UniTask.Delay(TimeSpan.FromSeconds(uploadRetryDelay), cancellationToken: cancellationToken);
-                        }
-                        else
-                        {
-                            Debug.LogError($"[APIManager] 업로드 최종 실패: {webRequest.error}");
                         }
                     }
                     catch (OperationCanceledException)
                     {
-                        Debug.LogWarning("[APIManager] 업로드 작업이 취소되었습니다.");
+                        Debug.LogWarning("[APIManager] 업로드 작업 취소됨");
                         throw;
                     }
                     catch (Exception e)
                     {
-                        Debug.LogError($"[APIManager] 업로드 중 예외 발생 ({attempt + 1}/{uploadMaxRetries}): {e.Message}");
+                        Debug.LogError($"[APIManager] 업로드 중 예외 발생: {e.Message}");
                         if (attempt < uploadMaxRetries - 1)
                         {
                             await UniTask.Delay(TimeSpan.FromSeconds(uploadRetryDelay), cancellationToken: cancellationToken);
@@ -429,13 +450,19 @@ namespace My.Scripts.Core
             return false;
         }
         
-        /// <summary> 
-        /// 완성된 MP4 영상을 서버로 업로드합니다.
-        /// Why: 동영상 파일은 용량이 커 타임아웃을 300초로 길게 잡고, 콘텐츠 타입을 video/mp4로 지정하여 전송하기 위함.
+        /// <summary>
+        /// 생성된 비디오 파일을 서버로 업로드함.
+        /// 대용량 파일이므로 타임아웃을 길게 설정하여 안정성을 확보함.
         /// </summary>
-        public async UniTask<bool> UploadVideoAsync(byte[] videoBytes, int idxUser, string uid, string moduleCode, CancellationToken cancellationToken = default)
+        /// <param name="filePath">로컬 비디오 파일 경로.</param>
+        /// <param name="idxUser">유저 인덱스.</param>
+        /// <param name="uid">유저 UID.</param>
+        /// <param name="moduleCode">모듈 코드.</param>
+        /// <param name="cancellationToken">취소 토큰.</param>
+        /// <returns>업로드 성공 여부.</returns>
+        public async UniTask<bool> UploadVideoAsync(string filePath, int idxUser, string uid, string moduleCode, CancellationToken cancellationToken = default)
         {
-            if (videoBytes == null || videoBytes.Length == 0) return false;
+            if (string.IsNullOrEmpty(filePath) || !System.IO.File.Exists(filePath)) return false;
 
             string baseUrl = string.Empty;
             if (GameManager.Instance && GameManager.Instance.ApiConfig != null)
@@ -445,25 +472,23 @@ namespace My.Scripts.Core
 
             if (string.IsNullOrEmpty(baseUrl) || idxUser <= 0 || string.IsNullOrWhiteSpace(uid))
             {
-                Debug.LogWarning($"[APIManager] 영상 업로드 중단: 필수 정보 부족 (idx_user: {idxUser}, uid: {uid})");
+                Debug.LogWarning("[APIManager] 영상 업로드 필수 정보 부족");
                 return false;
             }
 
             string encodedUid = UnityWebRequest.EscapeURL(uid);
-            // URL 파라미터에 type=mp4 를 적용
-            string url = $"{baseUrl}?idx_user={idxUser}&uid={encodedUid}&code={moduleCode.ToLower()}&type=mp4";
+            string url = $"{baseUrl}?idx_user={idxUser}&uid={encodedUid}&code={moduleCode}&type=mp4";
 
-            // 수정됨: maxRetries -> uploadMaxRetries 적용
             for (int attempt = 0; attempt < uploadMaxRetries; attempt++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
                 using (UnityWebRequest webRequest = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
                 {
-                    webRequest.uploadHandler = new UploadHandlerRaw(videoBytes);
+                    webRequest.uploadHandler = new UploadHandlerFile(filePath);
                     webRequest.uploadHandler.contentType = "video/mp4"; 
                     webRequest.downloadHandler = new DownloadHandlerBuffer();
-                    webRequest.timeout = 300; // 타임아웃 300초 적용
+                    webRequest.timeout = 300; 
 
                     try
                     {
@@ -477,23 +502,18 @@ namespace My.Scripts.Core
 
                         if (attempt < uploadMaxRetries - 1)
                         {
-                            // 수정됨: retryDelay -> uploadRetryDelay 적용
-                            Debug.LogWarning($"[APIManager] 영상 업로드 실패 ({attempt + 1}/{uploadMaxRetries}): {webRequest.error}. {uploadRetryDelay}초 후 재시도...");
+                            Debug.LogWarning($"[APIManager] 영상 업로드 실패 ({attempt + 1}/{uploadMaxRetries}): {uploadRetryDelay}초 후 재시도");
                             await UniTask.Delay(TimeSpan.FromSeconds(uploadRetryDelay), cancellationToken: cancellationToken);
-                        }
-                        else
-                        {
-                            Debug.LogError($"[APIManager] 영상 업로드 최종 실패: {webRequest.error}");
                         }
                     }
                     catch (OperationCanceledException)
                     {
-                        Debug.LogWarning("[APIManager] 영상 업로드 작업이 취소되었습니다.");
+                        Debug.LogWarning("[APIManager] 영상 업로드 작업 취소됨");
                         throw;
                     }
                     catch (Exception e)
                     {
-                        Debug.LogError($"[APIManager] 영상 업로드 중 예외 발생 ({attempt + 1}/{uploadMaxRetries}): {e.Message}");
+                        Debug.LogError($"[APIManager] 영상 업로드 중 예외 발생: {e.Message}");
                         if (attempt < uploadMaxRetries - 1)
                         {
                             await UniTask.Delay(TimeSpan.FromSeconds(uploadRetryDelay), cancellationToken: cancellationToken);

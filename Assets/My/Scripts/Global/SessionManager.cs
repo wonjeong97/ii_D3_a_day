@@ -5,6 +5,9 @@ using UnityEngine;
 
 namespace My.Scripts.Global
 {
+    /// <summary>
+    /// 카트리지 테마와 관계 번호를 조합한 유저 타입 정의.
+    /// </summary>
     public enum UserType
     {
         A1, A2, A3, A4, A5, A6,
@@ -13,47 +16,51 @@ namespace My.Scripts.Global
         D1, D2, D3, D4, D5, D6
     }
 
+    /// <summary>
+    /// 현재 체험 중인 유저의 세션 데이터와 진행 상태를 전역적으로 관리하는 매니저.
+    /// 서버에서 받은 유저 정보, 컬러, 획득 조각 수 등을 씬 간에 유지하기 위함.
+    /// </summary>
     public class SessionManager : MonoBehaviour
     {
         public static SessionManager Instance { get; private set; }
 
-        public string SessionFolderPath { get; set; } = string.Empty;
+        public string SessionFolderPath { get; set; }
         
         [Header("Editor Test Mode")]
-        public bool useEditorTestData = false;
+        public bool useEditorTestData;
         
-        public string testNameA = "PlayerA";
-        public string testNameB = "PlayerB";
+        public string testNameA;
+        public string testNameB;
         
-        public ColorData testColorA = ColorData.Cyan;
-        public ColorData testColorB = ColorData.Pink;
+        public ColorData testColorA;
+        public ColorData testColorB;
         
-        public string testCartridge = "A";
+        public string testCartridge;
         
         [Range(1, 6)] 
-        public int testRelation = 1;
+        public int testRelation;
 
         public int CurrentUserIdx { get; set; } 
-        public string PlayerAUid { get; set; } = string.Empty;
-        public string PlayerBUid { get; set; } = string.Empty;
-        public string CurrentLanguage { get; set; } = "ko";
-        public string BlockCode { get; set; } = string.Empty;
+        public string PlayerAUid { get; set; }
+        public string PlayerBUid { get; set; }
+        public string CurrentLanguage { get; set; }
+        public string BlockCode { get; set; }
         
-        public string PlayerAFirstName { get; set; } = "NoNameA";
-        public string PlayerBFirstName { get; set; } = "NoNameB";
+        public string PlayerAFirstName { get; set; }
+        public string PlayerBFirstName { get; set; }
         
-        public ColorData PlayerAColor { get; set; } = ColorData.NotSet;
-        public ColorData PlayerBColor { get; set; } = ColorData.NotSet;
+        public ColorData PlayerAColor { get; set; }
+        public ColorData PlayerBColor { get; set; }
         
-        public UserType CurrentUserType { get; set; } = UserType.A1;
-        public string CurrentModuleCode { get; set; } = "d3"; 
-        public string Cartridge { get; set; } = string.Empty;
+        public UserType CurrentUserType { get; set; }
+        public string CurrentModuleCode { get; set; }
+        public string Cartridge { get; set; }
         
-        public bool IsOtherCartridgeContentsCleared { get; set; } = false;
-        public int ClearedEndCount { get; set; } = 0; 
+        public bool IsOtherCartridgeContentsCleared { get; set; }
+        public int ClearedEndCount { get; set; } 
 
-        public string Step2MainTheme { get; set; } = "Sea";
-        public int Step2SubTheme { get; set; } = 1;
+        public string Step2MainTheme { get; set; }
+        public int Step2SubTheme { get; set; }
 
         public int PieceA1 { get; set; } public int PieceA2 { get; set; } public int PieceA3 { get; set; }
         public int PieceB1 { get; set; } public int PieceB2 { get; set; } public int PieceB3 { get; set; }
@@ -61,8 +68,8 @@ namespace My.Scripts.Global
         public int PieceD1 { get; set; } public int PieceD2 { get; set; } public int PieceD3 { get; set; }
         
         /// <summary>
-        /// 데이터베이스의 블록 코드를 기반으로 획득한 조각의 총합을 반환합니다.
-        /// Why: 유저가 겪은 컨텐츠(BlockCode)의 조각만 유효하며, 현재 진행 중인 모듈(D3)은 합산에서 제외하기 위함.
+        /// 데이터베이스의 블록 코드를 기반으로 이전에 획득한 조각의 총합을 계산함.
+        /// 현재 진행 중인 모듈(D3) 결과는 아직 확정 전이므로 합산에서 제외하여 누적 보상 연출에 활용함.
         /// </summary>
         public int TotalPieces
         {
@@ -109,6 +116,9 @@ namespace My.Scripts.Global
             }
         }
 
+        /// <summary>
+        /// 싱글톤 초기화 및 세션 상태를 초기 상태로 리셋함.
+        /// </summary>
         private void Awake()
         {
             if (!Instance)
@@ -124,6 +134,9 @@ namespace My.Scripts.Global
             }
         }
 
+        /// <summary>
+        /// 유니티 에디터 환경에서 테스트를 위한 가상 유저 데이터를 주입함.
+        /// </summary>
         private void ApplyEditorTestData()
         {
 #if UNITY_EDITOR
@@ -149,6 +162,10 @@ namespace My.Scripts.Global
 #endif
         }
 
+        /// <summary>
+        /// 모든 세션 필드와 진행 데이터를 기본값으로 비움.
+        /// 이전 체험자의 데이터가 다음 체험자에게 노출되지 않도록 철저히 초기화하기 위함.
+        /// </summary>
         public void ClearSession()
         {
             CurrentUserIdx = 0;
@@ -178,6 +195,7 @@ namespace My.Scripts.Global
             PieceC1 = 0; PieceC2 = 0; PieceC3 = 0;
             PieceD1 = 0; PieceD2 = 0; PieceD3 = 0;
 
+            // # TODO: 로컬 사진 저장 경로(C:\UnitySharedPicture)를 하드코딩하지 않고 설정 파일에서 관리하도록 개선할 것.
             string rootPath = @"C:\UnitySharedPicture";
             SessionFolderPath = Path.Combine(rootPath, DateTime.Now.ToString("yyyy-MM-dd"));
 

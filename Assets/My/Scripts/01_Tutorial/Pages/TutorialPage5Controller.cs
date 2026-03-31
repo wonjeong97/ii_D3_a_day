@@ -9,6 +9,9 @@ using Wonjeong.Utils;
 
 namespace My.Scripts._01_Tutorial.Pages
 {
+    /// <summary>
+    /// JSON에서 로드되는 튜토리얼 5페이지 데이터 구조체.
+    /// </summary>
     [Serializable]
     public class TutorialPage5Data
     {
@@ -18,7 +21,7 @@ namespace My.Scripts._01_Tutorial.Pages
 
     /// <summary>
     /// 다섯 번째 튜토리얼 페이지 컨트롤러.
-    /// 세 개의 레고 이미지를 순차적으로 크로스 페이드하며 가이드 연출을 수행함.
+    /// 기기 조작 방식을 시각적으로 안내하기 위해 3단계 레고 이미지를 크로스 페이드 연출함.
     /// </summary>
     public class TutorialPage5Controller : GamePage
     {
@@ -29,10 +32,10 @@ namespace My.Scripts._01_Tutorial.Pages
         [SerializeField] private CanvasGroup cameraImageCanvas; 
 
         [Header("Lego Images")]
-        [SerializeField] private RectTransform legoTransform; // 레고 1 이동/회전용
-        [SerializeField] private CanvasGroup lego1ImageCanvas; // 첫 번째 레고 이미지
-        [SerializeField] private CanvasGroup lego2ImageCanvas; // 두 번째 레고 이미지
-        [SerializeField] private CanvasGroup lego3ImageCanvas; // 세 번째 레고 이미지
+        [SerializeField] private RectTransform legoTransform; 
+        [SerializeField] private CanvasGroup lego1ImageCanvas; 
+        [SerializeField] private CanvasGroup lego2ImageCanvas; 
+        [SerializeField] private CanvasGroup lego3ImageCanvas; 
 
         [Header("Animation Settings")]
         [SerializeField] private float fadeDuration = 1.0f;
@@ -40,15 +43,18 @@ namespace My.Scripts._01_Tutorial.Pages
         [SerializeField] private float waitBetweenSteps = 1.0f;
         [SerializeField] private float finalHoldTime = 3.0f;
 
-        // 레고 시작/종료 트랜스폼 데이터
-        private readonly Vector2 _legoStartPos = new Vector2(1150f, -345f);
+        private Vector2 _legoStartPos;
+        private Vector2 _legoEndPos;
         private readonly Quaternion _legoStartRot = Quaternion.Euler(0, 0, -30f);
-        private readonly Vector2 _legoEndPos = new Vector2(905f, -530f);
         private readonly Quaternion _legoEndRot = Quaternion.Euler(0, 0, 0);
 
         private TutorialPage5Data _cachedData;
         private Coroutine _animationCoroutine;
 
+        /// <summary>
+        /// 매니저로부터 전달받은 페이지 데이터를 메모리에 캐싱함.
+        /// </summary>
+        /// <param name="data">TutorialPage5Data 타입의 데이터 객체.</param>
         public override void SetupData(object data)
         {
             TutorialPage5Data pageData = data as TutorialPage5Data;
@@ -58,11 +64,16 @@ namespace My.Scripts._01_Tutorial.Pages
             }
         }
 
+        /// <summary>
+        /// 페이지 진입 시 연출 요소들을 초기화하고 시퀀스를 시작함.
+        /// 화면에 노출되기 전 모든 UI의 투명도와 위치를 시작 상태로 리셋하기 위함.
+        /// </summary>
         public override void OnEnter()
         {
             base.OnEnter();
 
-            // 모든 연출 요소를 투명하게 초기화함
+            CalculateDynamicPositions();
+
             if (mainGroupCanvas) mainGroupCanvas.alpha = 0f;
             if (cameraImageCanvas) cameraImageCanvas.alpha = 0f;
             if (lego1ImageCanvas) lego1ImageCanvas.alpha = 0f;
@@ -87,6 +98,10 @@ namespace My.Scripts._01_Tutorial.Pages
             _animationCoroutine = StartCoroutine(PageSequenceRoutine());
         }
 
+        /// <summary>
+        /// 페이지 이탈 시 실행 중인 애니메이션 코루틴을 중단함.
+        /// 메모리 누수 및 백그라운드 연산 낭비를 방지하기 위함.
+        /// </summary>
         public override void OnExit()
         {
             base.OnExit();
@@ -97,46 +112,62 @@ namespace My.Scripts._01_Tutorial.Pages
             }
         }
 
+        /// <summary>
+        /// 화면 해상도 비율에 맞춰 레고 애니메이션 좌표를 동적으로 계산함.
+        /// 1920x1080 기준으로 하드코딩된 좌표를 다양한 종횡비 환경에서도 동일한 비율로 렌더링하기 위함.
+        /// </summary>
+        private void CalculateDynamicPositions()
+        {
+            RectTransform rt = transform as RectTransform;
+            if (rt && rt.rect.width > 0 && rt.rect.height > 0)
+            {
+                float scaleX = rt.rect.width / 1920f;
+                float scaleY = rt.rect.height / 1080f;
+
+                _legoStartPos = new Vector2(1150f * scaleX, -345f * scaleY);
+                _legoEndPos = new Vector2(905f * scaleX, -530f * scaleY);
+            }
+            else
+            {
+                _legoStartPos = new Vector2(1150f, -345f);
+                _legoEndPos = new Vector2(905f, -530f);
+            }
+        }
+
+        /// <summary>
+        /// 텍스트, 이미지 이동, 크로스 페이드 연출을 순차적으로 제어함.
+        /// 기획된 가이드 흐름에 맞춰 단계별 시각적 피드백을 제공하기 위함.
+        /// </summary>
         private IEnumerator PageSequenceRoutine()
         {
-            // 1. 메인 그룹 페이드인 (1.0초) -> 대기 (1.0초)
             if (mainGroupCanvas) yield return StartCoroutine(FadeCanvasGroupRoutine(mainGroupCanvas, 0f, 1f, fadeDuration));
             yield return CoroutineData.GetWaitForSeconds(waitBetweenSteps);
 
-            // 2. 첫 번째 레고 페이드인 (1.0초) -> 레고 이동 및 안착 (1.0초)
             if (lego1ImageCanvas) yield return StartCoroutine(FadeCanvasGroupRoutine(lego1ImageCanvas, 0f, 1f, fadeDuration));
             if (legoTransform) yield return StartCoroutine(LegoMoveRoutine());
-            yield return CoroutineData.GetWaitForSeconds(5.0f); // 화면 전환 5초 대기
+            yield return CoroutineData.GetWaitForSeconds(5.0f); 
 
-            // 3. 기존 설명 텍스트 단독 페이드 아웃 (0.5초)
             if (descriptionCanvasGroup) yield return StartCoroutine(FadeCanvasGroupRoutine(descriptionCanvasGroup, 1f, 0f, 0.5f));
 
-            // 4. 두 번째 텍스트로 내용 변경
             if (_cachedData != null && _cachedData.descriptionText2 != null && descriptionUI)
             {
                 descriptionUI.text = _cachedData.descriptionText2.text;
             }
 
-            // 5. 새로운 설명 텍스트 페이드 인 (0.5초) -> 대기 (1.0초)
             if (descriptionCanvasGroup) yield return StartCoroutine(FadeCanvasGroupRoutine(descriptionCanvasGroup, 0f, 1f, 0.5f));
             yield return CoroutineData.GetWaitForSeconds(1.0f);
 
-            // 6. ImageCamera 페이드 인 (0.5초) -> 대기 (1.0초)
             if (cameraImageCanvas) yield return StartCoroutine(FadeCanvasGroupRoutine(cameraImageCanvas, 0f, 1f, 0.5f));
-            SoundManager.Instance?.PlaySFX("공통_11");
+            if (SoundManager.Instance) SoundManager.Instance.PlaySFX("공통_11");
             yield return CoroutineData.GetWaitForSeconds(1.0f);
 
-            // 7. 레고 1 -> 레고 2 크로스 페이드
             yield return StartCoroutine(CrossFadeRoutine(lego1ImageCanvas, lego2ImageCanvas, 0.3f));
 
-            // 8. 두 번째 이미지를 사용자가 인식할 수 있도록 잠시 대기
             yield return CoroutineData.GetWaitForSeconds(0.5f);
 
-            // 9. 레고 2 -> 레고 3 크로스 페이드
             yield return StartCoroutine(CrossFadeRoutine(lego2ImageCanvas, lego3ImageCanvas, 0.3f));
-            SoundManager.Instance?.PlaySFX("레고_1");
+            if (SoundManager.Instance) SoundManager.Instance.PlaySFX("레고_1");
 
-            // 10. 연출 종료 대기
             yield return CoroutineData.GetWaitForSeconds(finalHoldTime);
 
             if (onStepComplete != null)
@@ -145,6 +176,9 @@ namespace My.Scripts._01_Tutorial.Pages
             }
         }
 
+        /// <summary>
+        /// 레고 UI 객체의 위치와 회전값을 목표 지점까지 선형 보간함.
+        /// </summary>
         private IEnumerator LegoMoveRoutine()
         {
             float elapsed = 0f;
@@ -170,7 +204,12 @@ namespace My.Scripts._01_Tutorial.Pages
             }
         }
 
-        /// <summary> 두 캔버스 그룹의 알파값을 동시에 교차시켜 부드러운 화면 전환을 연출함. </summary>
+        /// <summary>
+        /// 두 캔버스 그룹의 알파값을 교차하여 화면 전환을 연출함.
+        /// </summary>
+        /// <param name="fadeOutTarget">사라질 캔버스 그룹.</param>
+        /// <param name="fadeInTarget">나타날 캔버스 그룹.</param>
+        /// <param name="duration">전환에 걸리는 시간.</param>
         private IEnumerator CrossFadeRoutine(CanvasGroup fadeOutTarget, CanvasGroup fadeInTarget, float duration)
         {
             float elapsed = 0f;
@@ -180,7 +219,7 @@ namespace My.Scripts._01_Tutorial.Pages
                 elapsed += Time.deltaTime;
                 float t = elapsed / duration;
 
-                // Why: 하나의 코루틴 안에서 두 대상의 알파를 동시에 조절하여 완벽히 동기화된 크로스 페이드를 구현함
+                // 하나의 코루틴 안에서 두 대상의 알파를 동시에 조절하여 동기화된 크로스 페이드를 구현함.
                 if (fadeOutTarget) fadeOutTarget.alpha = Mathf.Lerp(1f, 0f, t);
                 if (fadeInTarget) fadeInTarget.alpha = Mathf.Lerp(0f, 1f, t);
 
@@ -191,6 +230,13 @@ namespace My.Scripts._01_Tutorial.Pages
             if (fadeInTarget) fadeInTarget.alpha = 1f;
         }
 
+        /// <summary>
+        /// 단일 캔버스 그룹의 투명도를 목표값까지 변경함.
+        /// </summary>
+        /// <param name="target">알파값을 변경할 캔버스 그룹.</param>
+        /// <param name="start">시작 알파값.</param>
+        /// <param name="end">목표 알파값.</param>
+        /// <param name="duration">변경에 걸리는 시간.</param>
         private IEnumerator FadeCanvasGroupRoutine(CanvasGroup target, float start, float end, float duration)
         {
             float elapsed = 0f;

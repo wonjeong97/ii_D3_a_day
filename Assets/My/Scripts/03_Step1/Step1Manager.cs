@@ -11,6 +11,9 @@ using Cysharp.Threading.Tasks;
 
 namespace My.Scripts._03_Step1
 {
+    /// <summary>
+    /// JSON에서 로드되는 Step1 씬의 전체 데이터 구조체.
+    /// </summary>
     [Serializable]
     public class Step1Setting
     {
@@ -24,6 +27,9 @@ namespace My.Scripts._03_Step1
         public List<DynamicAnswerSet> q2DynamicAnswers;
     }
     
+    /// <summary>
+    /// 첫 번째 질문의 결과에 따라 동적으로 변하는 두 번째 질문의 답변 데이터 구조체.
+    /// </summary>
     [Serializable]
     public class DynamicAnswerSet
     {
@@ -34,6 +40,10 @@ namespace My.Scripts._03_Step1
         public TextSetting textAnswer5;
     }
 
+    /// <summary>
+    /// Step1 씬의 전체 페이지 흐름을 제어하는 매니저.
+    /// 첫 번째와 두 번째 질문의 연계 논리 및 세션 저장을 담당함.
+    /// </summary>
     public class Step1Manager : BaseFlowManager
     {
         [Header("Background Setup")]
@@ -44,14 +54,23 @@ namespace My.Scripts._03_Step1
         private CommonQuestionPageData _q2Data;
         private List<DynamicAnswerSet> _q2DynamicAnswers;
         
+        // 첫 번째 질문의 응답 인덱스를 배경 테마 키워드로 변환하는 매핑 배열. 예: 인덱스 0 입력 시 "Sea" 반환.
         private readonly string[] _q1KeywordMap = new string[] { "Sea", "Mt", "River", "Sky", "Forest" };
 
+        /// <summary>
+        /// 매니저 초기화 시 부모 클래스의 로직을 호출함.
+        /// 씬 진입 시 첫 페이지가 페이드 없이 즉시 노출되도록 플래그를 설정함.
+        /// </summary>
         protected override void Start()
         {
             skipFirstPageFade = true;
             base.Start(); 
         }
 
+        /// <summary>
+        /// 외부 JSON 파일에서 데이터를 로드하여 각 페이지 컴포넌트에 분배함.
+        /// 반복되는 공통 UI 데이터와 개별 페이지 데이터를 결합하여 메모리에 할당함.
+        /// </summary>
         protected override void LoadSettings()
         {
             Step1Setting settings = JsonLoader.Load<Step1Setting>(GameConstants.Path.Step1);
@@ -151,6 +170,11 @@ namespace My.Scripts._03_Step1
             }
         }
         
+        /// <summary>
+        /// 특정 페이지로 전환하기 전 필요한 사전 작업을 수행함.
+        /// 두 번째 질문으로 넘어갈 때 첫 번째 질문의 결과에 맞춰 텍스트와 이미지를 동적으로 교체함.
+        /// </summary>
+        /// <param name="index">전환할 페이지의 인덱스 번호.</param>
         public override void TransitionToPage(int index)
         {
             if (pages != null && index >= 0 && index < pages.Count)
@@ -167,6 +191,11 @@ namespace My.Scripts._03_Step1
             base.TransitionToPage(index);
         }
 
+        /// <summary>
+        /// 첫 번째 질문의 결과에 따라 두 번째 질문의 답변 텍스트를 교체함.
+        /// Q1의 응답 인덱스에 매칭되는 하위 답변 세트를 찾아 Q2의 UI 데이터에 덮어씌움.
+        /// </summary>
+        /// <param name="q1AnsIdx">첫 번째 질문에서 선택한 답변의 인덱스 (0부터 시작).</param>
         private void ApplyDynamicQ2Text(int q1AnsIdx)
         {
             if (_q2DynamicAnswers != null && q1AnsIdx >= 0 && q1AnsIdx < _q2DynamicAnswers.Count)
@@ -184,6 +213,11 @@ namespace My.Scripts._03_Step1
             }
         }
 
+        /// <summary>
+        /// 첫 번째 질문의 결과에 따라 두 번째 질문의 답변 이미지를 교체함.
+        /// 어드레서블 시스템을 사용하여 맞춤형 배경 이미지를 비동기로 불러옴.
+        /// </summary>
+        /// <param name="q1AnsIdx">첫 번째 질문에서 선택한 답변의 인덱스 (0부터 시작).</param>
         private async UniTaskVoid ApplyDynamicQ2ImagesAsync(int q1AnsIdx)
         {
             if (q1AnsIdx < 0 || q1AnsIdx >= _q1KeywordMap.Length) return;
@@ -199,9 +233,12 @@ namespace My.Scripts._03_Step1
             await _q2Page.LoadAndSetSpecificImagesAsync(specificKeys);
         }
 
+        /// <summary>
+        /// Step1의 모든 페이지 시퀀스가 끝났을 때 호출됨.
+        /// 유저가 선택한 결과를 세션에 저장하여 Step2의 배경 테마로 활용하고 다음 씬으로 전환함.
+        /// </summary>
         protected override void OnAllFinished()
         {
-            // Step1이 모두 끝나면 Q1과 Q2의 최종 답변을 가져와 세션 매니저의 인게임 진행 데이터로 확정함.
             if (_q1Page && _q2Page && SessionManager.Instance)
             {
                 int q1Idx = _q1Page.SelectedIndex - 1;

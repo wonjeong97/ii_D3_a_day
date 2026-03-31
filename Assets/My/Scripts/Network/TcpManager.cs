@@ -13,7 +13,7 @@ using Wonjeong.Utils;
 namespace My.Scripts.Network
 {
     /// <summary>
-    /// TCP 통신 설정을 저장하는 데이터 클래스입니다.
+    /// 외부 JSON 파일에서 로드되는 TCP 통신 설정 모델.
     /// </summary>
     [Serializable]
     public class TcpSetting
@@ -24,7 +24,7 @@ namespace My.Scripts.Network
     }
 
     /// <summary>
-    /// TCP 네트워크를 통해 전달되는 메시지 규격입니다.
+    /// 서버와 클라이언트 간에 송수신되는 메시지 데이터 규격.
     /// </summary>
     [Serializable]
     public class TcpMessage
@@ -34,15 +34,14 @@ namespace My.Scripts.Network
     }
 
     /// <summary>
-    /// 서버와 클라이언트 간의 TCP 통신을 관리하는 매니저 클래스입니다.
-    /// 비동기 스레드를 사용하여 연결 및 수신을 처리하며, 메인 스레드 안전을 위해 큐 방식을 사용합니다.
+    /// 서버와 클라이언트 간의 1대1 TCP 통신을 관리하는 매니저.
+    /// 비동기 스레드로 수신된 데이터를 ConcurrentQueue에 적재하여 메인 스레드에서 안전하게 처리함.
     /// </summary>
     public class TcpManager : MonoBehaviour
     {
         public static TcpManager Instance { get; private set; }
         public Action<TcpMessage> onMessageReceived;
 
-    
         private readonly int _maxMessagesPerFrame = 30;
         
         private TcpSetting _tcpSetting;
@@ -70,9 +69,11 @@ namespace My.Scripts.Network
             get { return _tcpSetting != null && _tcpSetting.isServer; }
         }
 
+        /// <summary>
+        /// 싱글톤 인스턴스를 초기화하고 네트워크 설정을 로드함.
+        /// </summary>
         private void Awake()
         {
-            // Unity Object Null 검사 시 암시적 불리언 변환 사용
             if (!Instance)
             {
                 Instance = this;
@@ -86,7 +87,8 @@ namespace My.Scripts.Network
         }
 
         /// <summary>
-        /// 네트워크 설정을 로드하고 서버 또는 클라이언트를 시작합니다.
+        /// 설정값에 따라 서버 대기 또는 클라이언트 접속 스레드를 가동함.
+        /// 연결 상태를 주기적으로 확인하기 위해 하트비트 모니터링 코루틴을 실행함.
         /// </summary>
         private void InitializeNetwork()
         {
@@ -94,7 +96,7 @@ namespace My.Scripts.Network
 
             if (loadedSetting == null)
             {
-                Debug.LogError("[TcpManager] TcpSetting.json 로드 실패.");
+                Debug.LogError("[TcpManager] TcpSetting 로드 실패");
                 return;
             }
 
@@ -107,6 +109,9 @@ namespace My.Scripts.Network
             _heartbeatCoroutine = StartCoroutine(ConnectionMonitorRoutine());
         }
 
+        /// <summary>
+        /// 매 프레임 수신된 메시지 큐를 처리하고 연결 유실에 따른 씬 전환 여부를 확인함.
+        /// </summary>
         private void Update()
         {
             HandleSceneTransitionRequest();
@@ -114,7 +119,8 @@ namespace My.Scripts.Network
         }
 
         /// <summary>
-        /// 타이틀 씬으로의 복귀 요청이 있는지 확인하고 처리합니다.
+        /// 네트워크 연결 임계치 도달 시 타이틀 씬으로 강제 이동함.
+        /// Update 내부 성능 최적화를 위해 Unity Object 비교 시 ReferenceEquals를 활용함.
         /// </summary>
         private void HandleSceneTransitionRequest()
         {
@@ -125,10 +131,9 @@ namespace My.Scripts.Network
                 string currentSceneName = SceneManager.GetActiveScene().name;
                 if (currentSceneName != GameConstants.Scene.Title)
                 {
-                    Debug.LogError("[TcpManager] 연결 실패 임계치 도달. 타이틀로 이동합니다.");
+                    Debug.LogError("[TcpManager] 연결 유실 임계치 도달로 인한 타이틀 이동");
                     
-                    // Update 내부 성능 최적화를 위해 ReferenceEquals 사용
-                    if (!object.ReferenceEquals(GameManager.Instance, null)) 
+                    if (!ReferenceEquals(GameManager.Instance, null)) 
                     {
                         GameManager.Instance.ReturnToTitle();
                     }
@@ -140,17 +145,18 @@ namespace My.Scripts.Network
             }
         }
 
-        /// <summary> 수신 큐에 쌓인 메시지를 처리합니다. </summary>
+        /// <summary>
+        /// 스레드 안전 큐(ConcurrentQueue)에서 메시지를 꺼내 등록된 액션을 실행함.
+        /// 과도한 메시지 처리가 메인 스레드 프레임 드랍을 유발하지 않도록 처리 개수를 제한함.
+        /// </summary>
         private void ProcessMessageQueue()
         {
             int processedThisFrame = 0;
 
-            // Why: 한 프레임에 너무 많은 메시지를 처리하면 메인 스레드 병목이 발생하므로 개수를 제한함
             while (processedThisFrame < _maxMessagesPerFrame && _messageQueue.TryDequeue(out TcpMessage message))
             {
                 if (message != null)
                 {
-                    // 하트비트는 로직 연산에서 제외
                     if (message.command == "HEARTBEAT") 
                     {
                         processedThisFrame++;
@@ -167,7 +173,8 @@ namespace My.Scripts.Network
         }
 
         /// <summary>
-        /// 연결 상태를 주기적으로 감시하고 하트비트를 전송합니다.
+        /// 연결된 상대방에게 주기적으로 신호를 보내 생존 여부를 확인함.
+        /// 하트비트 응답이 일정 시간 부재하거나 물리적 연결이 끊기면 재접속 또는 종료 시퀀스를 트리거함.
         /// </summary>
         private IEnumerator ConnectionMonitorRoutine()
         {
@@ -177,7 +184,6 @@ namespace My.Scripts.Network
                 
                 if (_isConnectionActive)
                 {
-                    // 10초 이상 무응답 시 연결 끊김으로 간주
                     if (DateTime.UtcNow - _lastMessageReceivedTime > _timeoutThreshold)
                     {
                         HandleDisconnect();
@@ -201,6 +207,9 @@ namespace My.Scripts.Network
             }
         }
 
+        /// <summary>
+        /// 서버 모드로 리스너 스레드를 생성하여 실행함.
+        /// </summary>
         private void StartServer()
         {
             _serverThread = new Thread(ServerListenRoutine);
@@ -209,7 +218,7 @@ namespace My.Scripts.Network
         }
 
         /// <summary>
-        /// 서버 모드에서 클라이언트의 접속을 대기하는 루틴입니다.
+        /// 클라이언트의 접속을 무한 대기하며 연결 시 수신 전전담 스레드를 가동함.
         /// </summary>
         private void ServerListenRoutine()
         {
@@ -247,6 +256,9 @@ namespace My.Scripts.Network
             catch (SocketException) { }
         }
 
+        /// <summary>
+        /// 클라이언트 모드로 서버 접속 시도 스레드를 실행함.
+        /// </summary>
         private void StartClient()
         {
             _connectThread = new Thread(ClientConnectRoutine);
@@ -255,7 +267,7 @@ namespace My.Scripts.Network
         }
 
         /// <summary>
-        /// 클라이언트 모드에서 서버 접속을 시도하는 루틴입니다.
+        /// 서버에 연결될 때까지 주기적으로 접속을 재시도함.
         /// </summary>
         private void ClientConnectRoutine()
         {
@@ -289,7 +301,8 @@ namespace My.Scripts.Network
         }
 
         /// <summary>
-        /// 소켓으로부터 데이터를 읽어 메시지 큐에 삽입합니다.
+        /// 소켓 버퍼에서 데이터를 읽어 JSON 객체로 역직렬화한 뒤 큐에 삽입함.
+        /// 블로킹 메서드인 Read를 별도 스레드에서 수행하여 메인 루프 지연을 방지함.
         /// </summary>
         private void ReceiveDataRoutine()
         {
@@ -328,10 +341,10 @@ namespace My.Scripts.Network
         }
 
         /// <summary>
-        /// 대상에게 JSON 형식의 메시지를 전송합니다.
+        /// 명령어와 데이터를 JSON 문자열로 변환하여 상대방에게 전송함.
         /// </summary>
-        /// <param name="command">명령어 키</param>
-        /// <param name="payload">데이터 내용</param>
+        /// <param name="command">식별 명령어</param>
+        /// <param name="payload">전달할 데이터 내용</param>
         public void SendMessageToTarget(string command, string payload = "")
         {
             if (_isConnectionActive && _networkStream != null)
@@ -353,7 +366,7 @@ namespace My.Scripts.Network
         }
 
         /// <summary>
-        /// 현재 활성화된 연결과 스트림을 안전하게 닫습니다.
+        /// 활성화된 스트림과 소켓 연결을 종료하고 리소스를 정리함.
         /// </summary>
         private void HandleDisconnect()
         {
@@ -373,6 +386,9 @@ namespace My.Scripts.Network
             }
         }
 
+        /// <summary>
+        /// 객체 파괴 시 모든 통신 스레드와 리스너를 강제 중단하고 정리함.
+        /// </summary>
         private void OnDestroy()
         {
             _isRunning = false;
@@ -384,7 +400,6 @@ namespace My.Scripts.Network
             if (_connectedClient != null) _connectedClient.Close();
             if (_serverListener != null) _serverListener.Stop();
             
-            // Background Thread 종료 대기
             if (_receiveThread != null && _receiveThread.IsAlive) _receiveThread.Abort();
             if (_serverThread != null && _serverThread.IsAlive) _serverThread.Abort();
             if (_connectThread != null && _connectThread.IsAlive) _connectThread.Abort();

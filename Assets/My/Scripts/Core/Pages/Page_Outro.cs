@@ -29,7 +29,6 @@ namespace My.Scripts.Core.Pages
 
         /// <summary>
         /// 동기화 명령어 설정.
-        /// Why: 이전 코드 호환성을 위해 인터페이스만 남겨둠.
         /// </summary>
         /// <param name="command">동기화 명령어.</param>
         public void SetSyncCommand(string command) { }

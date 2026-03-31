@@ -7,6 +7,9 @@ using Wonjeong.Utils;
 
 namespace My.Scripts._01_Tutorial
 {
+    /// <summary>
+    /// 튜토리얼 씬의 각 페이지별 JSON 데이터를 매핑하기 위한 데이터 구조체.
+    /// </summary>
     [Serializable]
     public class TutorialSetting
     {
@@ -19,11 +22,15 @@ namespace My.Scripts._01_Tutorial
     }
 
     /// <summary>
-    /// 튜토리얼 씬의 페이지 전환을 관리하는 매니저.
-    /// 흐름: 모든 페이지 완료 시 다른 PC를 기다리지 않고 각자 PlayTutorial 씬으로 넘어갑니다.
+    /// 튜토리얼 씬의 전반적인 페이지 전환 흐름을 제어하는 매니저.
+    /// 모든 페이지 완료 시 다른 PC와의 동기화 대기 없이 즉각적으로 PlayTutorial 씬으로 이동함.
     /// </summary>
     public class TutorialManager : BaseFlowManager
     {
+        /// <summary>
+        /// 외부 JSON 파일에서 튜토리얼 데이터를 로드하여 각 페이지에 할당함.
+        /// 씬 로드 시 하드코딩된 데이터 대신 최신 기획 데이터로 화면을 구성하기 위함.
+        /// </summary>
         protected override void LoadSettings()
         {
             TutorialSetting setting = JsonLoader.Load<TutorialSetting>(GameConstants.Path.Tutorial);
@@ -42,13 +49,17 @@ namespace My.Scripts._01_Tutorial
             if (pages.Count > 5 && pages[5]) pages[5].SetupData(setting.page6);
         }
 
+        /// <summary>
+        /// 전체 페이지 시퀀스가 끝났을 때 호출되어 다음 씬으로 전환함.
+        /// 마지막 페이지 UI가 화면에 남은 상태로 자연스럽게 넘어가도록 전역 페이드 아웃을 비활성화함.
+        /// </summary>
         protected override void OnAllFinished()
         {
             Debug.Log("[TutorialManager] 내 PC 튜토리얼 완료. PlayTutorial로 각자 이동합니다.");
 
             if (GameManager.Instance)
             {
-                GameManager.Instance.ChangeScene(GameConstants.Scene.PlayTutorial, true);
+                GameManager.Instance.ChangeScene(GameConstants.Scene.PlayTutorial, false);
             }
         }
     }

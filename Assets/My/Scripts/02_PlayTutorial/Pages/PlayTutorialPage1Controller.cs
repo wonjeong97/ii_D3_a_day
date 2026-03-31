@@ -17,6 +17,9 @@ using Wonjeong.Utils;
 
 namespace My.Scripts._02_PlayTutorial.Pages
 {
+    /// <summary>
+    /// JSON에서 로드되는 조작 튜토리얼 1페이지 데이터 구조체.
+    /// </summary>
     [Serializable]
     public class PlayTutorialPage1Data
     {
@@ -26,6 +29,10 @@ namespace My.Scripts._02_PlayTutorial.Pages
         public TextSetting textPopupTimeout; 
     }
 
+    /// <summary>
+    /// 조작 튜토리얼의 첫 번째 페이지 컨트롤러.
+    /// 카드를 한 번 올려놓는 기본 조작 방식을 학습시키기 위함.
+    /// </summary>
     public class PlayTutorialPage1Controller : GamePage
     {
         [Header("UI Components")]
@@ -67,8 +74,7 @@ namespace My.Scripts._02_PlayTutorial.Pages
         public int PressedAnswerIndex { get; private set; } = -1; 
 
         /// <summary>
-        /// 페이지 데이터 초기화.
-        /// Why: 전달된 UI 세팅 데이터를 캐싱하여 페이지 활성화 시 사용하기 위함.
+        /// 전달된 UI 세팅 데이터를 캐싱하여 페이지 활성화 시 렌더링에 활용함.
         /// </summary>
         /// <param name="data">JSON에서 역직렬화된 데이터 객체.</param>
         public override void SetupData(object data)
@@ -81,13 +87,13 @@ namespace My.Scripts._02_PlayTutorial.Pages
             }
             else 
             {
-                UnityEngine.Debug.LogWarning("[PlayTutorialPage1Controller] 전달된 데이터가 PlayTutorialPage1Data 타입이 아닙니다.");
+                Debug.LogWarning("[PlayTutorialPage1Controller] 전달된 데이터가 PlayTutorialPage1Data 타입이 아닙니다.");
             }
         }
 
         /// <summary>
-        /// 페이지 진입 시 초기화 및 연출 시작.
-        /// Why: 컴포넌트를 초기화하고 RFID 이벤트 구독 및 비동기 이미지 로드를 시작함.
+        /// 화면에 노출되기 전 이전 상태를 리셋하고 시퀀스를 시작함.
+        /// 컴포넌트를 초기화하고 RFID 이벤트 구독 및 비동기 이미지 로드를 수행함.
         /// </summary>
         public override void OnEnter()
         {
@@ -145,8 +151,8 @@ namespace My.Scripts._02_PlayTutorial.Pages
         }
 
         /// <summary>
-        /// 페이지 이탈 시 자원 정리.
-        /// Why: 코루틴 중단 및 RFID 폴링 취소, 메모리 해제를 수행함.
+        /// 코루틴 중단 및 RFID 폴링 취소, 메모리 해제를 수행함.
+        /// 백그라운드 연산 낭비 및 메모리 누수를 방지하기 위함.
         /// </summary>
         public override void OnExit()
         {
@@ -183,8 +189,8 @@ namespace My.Scripts._02_PlayTutorial.Pages
         }
 
         /// <summary>
-        /// 카트리지 이미지 비동기 로드 및 적용.
-        /// Why: 동기적 로드로 인한 프레임 드랍을 막고 안전하게 스프라이트를 적용함.
+        /// 카트리지 이미지를 비동기로 로드하고 화면에 적용함.
+        /// 동기적 로드로 인한 프레임 드랍을 막고 안전하게 스프라이트를 적용하기 위함.
         /// </summary>
         /// <param name="cart">로드할 카트리지 문자열.</param>
         /// <param name="token">작업 취소를 위한 토큰.</param>
@@ -219,15 +225,15 @@ namespace My.Scripts._02_PlayTutorial.Pages
             {
                 if (!token.IsCancellationRequested)
                 {
-                    UnityEngine.Debug.LogError("[PlayTutorialPage1Controller] 어드레서블 로드 실패: " + e.Message);
+                    Debug.LogError("[PlayTutorialPage1Controller] 어드레서블 로드 실패: " + e.Message);
                     ReleaseLoadedImages();
                 }
             }
         }
 
         /// <summary>
-        /// 로드된 어드레서블 핸들 해제.
-        /// Why: 불필요해진 메모리를 명시적으로 반환함.
+        /// 로드된 어드레서블 핸들을 해제함.
+        /// 불필요해진 메모리를 명시적으로 반환하기 위함.
         /// </summary>
         private void ReleaseLoadedImages()
         {
@@ -241,15 +247,16 @@ namespace My.Scripts._02_PlayTutorial.Pages
         }
 
         /// <summary>
-        /// 매 프레임 키보드 디버그 입력 검사.
-        /// Why: 물리 하드웨어 없이 개발 환경에서도 원활한 테스트가 가능하도록 입력을 보조함. 극단적 최적화 연산 적용.
+        /// 매 프레임 키보드 디버그 입력을 검사함.
+        /// 물리 하드웨어 없이 개발 환경에서도 원활한 테스트가 가능하도록 입력을 보조함. 
+        /// 극단적 최적화를 위해 객체 검사 시 ReferenceEquals를 사용함.
         /// </summary>
         private void Update()
         {
             if (_isCompleted || !_canAcceptInput) return;
 
             bool isServer = false;
-            if (!object.ReferenceEquals(TcpManager.Instance, null)) 
+            if (!ReferenceEquals(TcpManager.Instance, null)) 
             {
                 isServer = TcpManager.Instance.IsServer;
             }
@@ -278,8 +285,7 @@ namespace My.Scripts._02_PlayTutorial.Pages
         }
 
         /// <summary>
-        /// RFID 응답 수신 이벤트 핸들러.
-        /// Why: 폴링 중 카드가 인식되면 해당 인덱스로 상태를 갱신하고 입력을 완료함.
+        /// 폴링 중 카드가 인식되면 해당 인덱스로 상태를 갱신하고 입력을 확정함.
         /// </summary>
         /// <param name="index">인식된 응답 인덱스 번호 (1~5).</param>
         private void OnRfidAnswerReceived(int index)
@@ -291,8 +297,8 @@ namespace My.Scripts._02_PlayTutorial.Pages
         }
 
         /// <summary>
-        /// 현재 PC 역할에 따른 유효 키 추출.
-        /// Why: 서버와 클라이언트가 서로 다른 입력 키 세트를 사용하도록 분리함.
+        /// 현재 PC 역할에 따른 유효 키를 추출함.
+        /// 서버와 클라이언트가 서로 다른 키 세트를 사용하게 분리하여 하나의 키보드로 양쪽 PC를 시뮬레이션하기 위함.
         /// </summary>
         /// <param name="isServer">서버 여부.</param>
         /// <returns>눌린 KeyCode 반환.</returns>
@@ -310,8 +316,7 @@ namespace My.Scripts._02_PlayTutorial.Pages
         }
 
         /// <summary>
-        /// 화면 UI 페이드 인 연출.
-        /// Why: 텍스트와 이미지를 순차적으로 노출시킨 후 입력 대기 상태로 전환함.
+        /// 텍스트와 이미지를 순차적으로 노출시킨 후 입력 대기 상태로 전환함.
         /// </summary>
         private IEnumerator SequenceFadeRoutine()
         {
@@ -331,14 +336,13 @@ namespace My.Scripts._02_PlayTutorial.Pages
                 RfidManager.Instance.StartPolling();
             }
 
-            // 입력을 받을 수 있는 상태가 되면 무응답 감지 코루틴을 시작함
             if (_inactivityMonitorCoroutine != null) StopCoroutine(_inactivityMonitorCoroutine);
             _inactivityMonitorCoroutine = StartCoroutine(InactivityMonitorRoutine());
         }
 
         /// <summary>
-        /// 2단계 무응답 감지 코루틴.
-        /// Why: 일정 시간 입력이 없을 시 팝업을 띄우고, 끝까지 응답이 없으면 타이틀로 강제 초기화함.
+        /// 일정 시간 입력이 없을 시 경고 팝업을 띄우고 끝까지 응답이 없으면 타이틀로 강제 초기화함.
+        /// 기기 방치 시 원래 대기 상태로 복구하기 위함.
         /// </summary>
         private IEnumerator InactivityMonitorRoutine()
         {
@@ -369,15 +373,14 @@ namespace My.Scripts._02_PlayTutorial.Pages
 
             if (_isCompleted) yield break;
             
-            UnityEngine.Debug.LogWarning("[PlayTutorialPage1Controller] 장시간 무응답으로 인해 타이틀 화면으로 초기화합니다.");
+            Debug.LogWarning("[PlayTutorialPage1Controller] 장시간 무응답으로 인해 타이틀 화면으로 초기화합니다.");
 
             if (TcpManager.Instance) TcpManager.Instance.SendMessageToTarget("RETURN_TO_TITLE", "");
             if (GameManager.Instance) GameManager.Instance.ReturnToTitle();
         }
 
         /// <summary>
-        /// 입력 처리 완료.
-        /// Why: 입력을 확정짓고 폴링을 중단한 후 매니저로 이벤트를 전달함.
+        /// 입력을 확정짓고 폴링을 중단한 후 매니저로 완료 이벤트를 전달함.
         /// </summary>
         private void OnValidInputReceived()
         {
@@ -404,7 +407,7 @@ namespace My.Scripts._02_PlayTutorial.Pages
         }
 
         /// <summary>
-        /// 네트워크 메시지 수신 처리 (타이틀 강제 복귀 동기화).
+        /// 상대 PC의 강제 종료 또는 타임아웃 발생 시 현재 씬도 타이틀로 강제 복귀시켜 상태를 동기화함.
         /// </summary>
         private void OnNetworkMessageReceived(TcpMessage msg)
         {
@@ -415,7 +418,7 @@ namespace My.Scripts._02_PlayTutorial.Pages
         }
 
         /// <summary>
-        /// 캔버스 그룹 페이드 처리 유틸 코루틴.
+        /// 캔버스 그룹의 알파값을 선형 보간하여 페이드 연출을 수행함.
         /// </summary>
         private IEnumerator FadeCanvasGroupRoutine(CanvasGroup target, float start, float end, float duration)
         {

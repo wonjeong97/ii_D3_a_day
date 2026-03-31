@@ -10,8 +10,8 @@ using Wonjeong.Utils;
 namespace My.Scripts._07_Ending.Pages
 {
     /// <summary>
-    /// 엔딩 페이지 3의 JSON 데이터를 담는 모델.
-    /// 일반 엔딩과 특별 엔딩 각각의 텍스트 데이터를 가집니다.
+    /// JSON에서 로드되는 엔딩 페이지 3의 데이터 구조체.
+    /// 일반 엔딩과 특별 엔딩 각각의 텍스트 데이터를 관리함.
     /// </summary>
     [Serializable]
     public class EndingPage3Data
@@ -21,7 +21,8 @@ namespace My.Scripts._07_Ending.Pages
     }
 
     /// <summary>
-    /// 엔딩의 세 번째 페이지 컨트롤러 (엔딩 분기 페이지).
+    /// 엔딩의 세 번째 페이지 컨트롤러.
+    /// 다른 카트리지의 클리어 여부에 따라 일반 또는 특별 엔딩 문구를 분기하여 출력함.
     /// </summary>
     public class EndingPage3Controller : GamePage<EndingPage3Data>
     {
@@ -39,27 +40,33 @@ namespace My.Scripts._07_Ending.Pages
 
         private EndingPage3Data _cachedData;
         private Coroutine _sequenceCoroutine;
-        private bool _isCompleted = false;
-        private bool _isSpecialEnding = false;
+        private bool _isCompleted;
+        private bool _isSpecialEnding;
 
+        /// <summary>
+        /// 전달받은 엔딩 데이터를 메모리에 캐싱함.
+        /// </summary>
+        /// <param name="data">EndingPage3Data 타입의 데이터 객체.</param>
         protected override void SetupData(EndingPage3Data data)
         {
             _cachedData = data;
         }
 
+        /// <summary>
+        /// 페이지 진입 시 유저의 전체 클리어 상태를 확인하여 엔딩 분기를 결정함.
+        /// 모든 카트리지 콘텐츠 클리어 여부에 따라 시각적 연출과 텍스트를 확정하기 위함.
+        /// </summary>
         public override void OnEnter()
         {
             base.OnEnter();
             _isCompleted = false;
 
-            // 진입 시 빨간 선 이미지를 0으로 초기화
             if (redLineImage)
             {
                 redLineImage.type = Image.Type.Filled;
                 redLineImage.fillAmount = 0f;
             }
 
-            // Why: 유저가 다른 카트리지 콘텐츠를 모두 클리어했는지(IsOtherCartridgeContentsCleared) 여부에 따라 일반/특별 엔딩을 확정함.
             _isSpecialEnding = false;
             if (SessionManager.Instance)
             {
@@ -76,6 +83,9 @@ namespace My.Scripts._07_Ending.Pages
             _sequenceCoroutine = StartCoroutine(SequenceRoutine());
         }
 
+        /// <summary>
+        /// 페이지 이탈 시 진행 중인 애니메이션 코루틴을 중단함.
+        /// </summary>
         public override void OnExit()
         {
             base.OnExit();
@@ -87,11 +97,13 @@ namespace My.Scripts._07_Ending.Pages
             }
         }
 
+        /// <summary>
+        /// 결정된 엔딩 분기에 맞춰 UI 텍스트를 갱신함.
+        /// </summary>
         private void ApplyDataToUI()
         {
             if (_cachedData == null) return;
 
-            // 결정된 분기에 따라 보여줄 텍스트 데이터를 선택
             TextSetting targetText = _isSpecialEnding ? _cachedData.specialEndingText : _cachedData.normalEndingText;
             
             if (endingTextUI)
@@ -100,9 +112,11 @@ namespace My.Scripts._07_Ending.Pages
             }
         }
 
+        /// <summary>
+        /// 화면 페이드 인 후 특별 엔딩일 경우 라인 드로잉 연출을 추가로 수행함.
+        /// </summary>
         private IEnumerator SequenceRoutine()
         {
-            // 1. 부드러운 페이드 인 연출
             if (mainCg)
             {
                 float elapsed = 0f;
@@ -115,21 +129,18 @@ namespace My.Scripts._07_Ending.Pages
                 mainCg.alpha = 1f;
             }
 
-            // 2. 특별 엔딩일 경우 빨간 선이 채워지는 애니메이션 추가
             if (_isSpecialEnding && redLineImage)
             {
                 yield return StartCoroutine(FillImageRoutine(redLineImage, 0f, 1f, redLineFillDuration));
             }
 
-            // 3. 지정된 시간 동안 엔딩 문구 대기
             yield return CoroutineData.GetWaitForSeconds(waitTime);
 
-            // 4. 완료 처리 후 다음 페이지로 넘김
             CompletePage();
         }
 
         /// <summary>
-        /// 이미지의 FillAmount를 시간에 따라 선형 보간하는 코루틴.
+        /// 이미지의 FillAmount 속성을 시간에 따라 선형 보간하여 채워지는 효과를 연출함.
         /// </summary>
         private IEnumerator FillImageRoutine(Image t, float s, float e, float d)
         {
@@ -147,6 +158,9 @@ namespace My.Scripts._07_Ending.Pages
             t.fillAmount = e;
         }
 
+        /// <summary>
+        /// 페이지 완료 플래그를 설정하고 매니저에게 시퀀스 종료를 알림.
+        /// </summary>
         private void CompletePage()
         {
             if (_isCompleted) return;
