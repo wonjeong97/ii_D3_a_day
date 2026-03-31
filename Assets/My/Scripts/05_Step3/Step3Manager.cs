@@ -161,65 +161,6 @@ namespace My.Scripts._05_Step3
                 pages[pageIndex].SetupData(setting.outroPage);
             }
         }
-        
-        public override void TransitionToPage(int index)
-        {
-            if (isTransitioning || isFinished) return;
-            
-            if (currentPageIndex >= 0 && currentPageIndex < pages.Count && index >= 0 && index < pages.Count)
-            {
-                GamePage prevPage = pages[currentPageIndex];
-                GamePage nextPage = pages[index];
-
-                // Why: 로딩 페이지에서 아웃트로 페이지로 넘어갈 때 배경이 검게 보이지 않도록 크로스 페이드 연출 적용
-                if (prevPage is Page_Loading && nextPage is Page_Outro)
-                {
-                    StartCoroutine(CrossFadeTransitionRoutine(prevPage, nextPage, index));
-                    return;
-                }
-            }
-
-            base.TransitionToPage(index);
-        }
-
-        private IEnumerator CrossFadeTransitionRoutine(GamePage prevPage, GamePage nextPage, int nextIndex)
-        {
-            isTransitioning = true;
-            currentPageIndex = nextIndex;
-
-            if (nextPage)
-            {
-                nextPage.onStepComplete = (trigger) => TransitionToNext();
-                nextPage.OnEnter();
-                nextPage.SetAlpha(0f);
-            }
-
-            float elapsed = 0f;
-            CanvasGroup prevCg = prevPage ? prevPage.GetComponent<CanvasGroup>() : null;
-            CanvasGroup nextCg = nextPage ? nextPage.GetComponent<CanvasGroup>() : null;
-
-            while (elapsed < fadeDuration)
-            {
-                elapsed += Time.deltaTime;
-                float t = elapsed / fadeDuration;
-
-                if (prevCg) prevCg.alpha = Mathf.Lerp(1f, 0f, t);
-                if (nextCg) nextCg.alpha = Mathf.Lerp(0f, 1f, t);
-
-                yield return null;
-            }
-
-            if (prevCg) prevCg.alpha = 0f;
-            if (nextCg) nextCg.alpha = 1f;
-
-            if (prevPage)
-            {
-                prevPage.onStepComplete = null;
-                prevPage.OnExit();
-            }
-
-            isTransitioning = false;
-        }
 
         /// <summary>
         /// 지정된 인덱스의 페이지로 전환함.

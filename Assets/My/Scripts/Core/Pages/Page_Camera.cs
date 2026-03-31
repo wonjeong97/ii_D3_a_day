@@ -109,19 +109,6 @@ namespace My.Scripts.Core.Pages
         }
 
         /// <summary>
-        /// 객체 파괴 시 웹캠을 정지하고 캡처된 텍스처 메모리를 해제함.
-        /// </summary>
-        private void OnDestroy()
-        {
-            StopWebCam();
-            if (_capturedPhoto != null)
-            {
-                Destroy(_capturedPhoto);
-                _capturedPhoto = null;
-            }
-        }
-
-        /// <summary>
         /// 캐싱된 데이터를 UI 텍스트 컴포넌트에 적용함.
         /// </summary>
         private void ApplyDataToUI()
@@ -289,7 +276,7 @@ namespace My.Scripts.Core.Pages
                 if (questionId.ToUpper() == "D3" && SessionManager.Instance)
                 {
                     string uid = isServer ? SessionManager.Instance.PlayerAUid : SessionManager.Instance.PlayerBUid;
-
+                    string currentModule = SessionManager.Instance ? SessionManager.Instance.CurrentModuleCode : "D3";
                     if (APIManager.Instance)
                     {
                         APIManager.Instance.UploadImageAsync(bytes, userIdx, uid, currentModule).Forget();
@@ -369,6 +356,9 @@ namespace My.Scripts.Core.Pages
             if (onStepComplete != null) onStepComplete.Invoke(0);
         }
         
+        /// <summary>
+        /// 객체 파괴 시 웹캠을 정지하고 캡처된 텍스처 메모리를 해제함.
+        /// </summary>
         private void OnDestroy()
         {
             StopWebCam();

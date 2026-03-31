@@ -149,14 +149,12 @@ namespace My.Scripts.Core
             {
                 timeoutCts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
                 CancellationToken linkedToken = timeoutCts.Token;
-
                 for (int attempt = 0; attempt < maxRetries; attempt++)
                 {
                     linkedToken.ThrowIfCancellationRequested();
-
                     using (UnityWebRequest webRequest = UnityWebRequest.Get(requestUrl))
                     {
-                        webRequest.timeout = 10; 
+                        webRequest.timeout = Mathf.Max(1, Mathf.CeilToInt(timeoutSeconds));
                         
                         try
                         {

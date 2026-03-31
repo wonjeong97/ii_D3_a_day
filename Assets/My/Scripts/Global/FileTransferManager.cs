@@ -49,10 +49,17 @@ namespace My.Scripts.Global
         private void Start()
         {
             TcpSetting loadedSetting = JsonLoader.Load<TcpSetting>(GameConstants.Path.TcpSetting);
-            if (loadedSetting != null && !string.IsNullOrEmpty(loadedSetting.serverIP))
+            if (loadedSetting != null)
             {
-                serverIp = loadedSetting.serverIP;
-                port = loadedSetting.port;
+                if (!string.IsNullOrWhiteSpace(loadedSetting.serverIP)) serverIp = loadedSetting.serverIP;
+                if (loadedSetting.port > 0 && loadedSetting.port <= 65535) port = loadedSetting.port;
+            }
+            
+            if (string.IsNullOrWhiteSpace(serverIp) || port <= 0 || port > 65535)
+            {
+                Debug.LogError("[FileTransferManager] 유효한 serverIp/port 설정이 없어 비활성화합니다.");
+                enabled = false;
+                return;
             }
 
             if (TcpManager.Instance)

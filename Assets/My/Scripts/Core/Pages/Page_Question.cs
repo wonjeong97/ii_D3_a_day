@@ -426,6 +426,11 @@ namespace My.Scripts.Core.Pages
         /// </summary>
         private void SelectAnswer(int index)
         {
+            if (_cgsCache == null || index < 1 || index > _cgsCache.Length)
+            {
+                Debug.LogWarning($"[Page_Question] 유효하지 않은 선택 인덱스: {index}");
+                return;
+            }
             if (_selectedIndex == index) return;
             _selectedIndex = index;
 

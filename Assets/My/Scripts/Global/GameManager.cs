@@ -36,8 +36,8 @@ namespace My.Scripts.Global
         public Sprite[] playerColorSprites;
 
         [Header("API Retry Settings")]
-        [SerializeField] private int maxRetries = 10;
-        [SerializeField] private float retryDelay = 1.0f;
+        [SerializeField] private int maxRetries;
+        [SerializeField] private float retryDelay;
 
         /// <summary>
         /// 싱글톤 인스턴스를 초기화하고 타임스탬프 로그 핸들러를 등록함.
@@ -195,7 +195,8 @@ namespace My.Scripts.Global
         /// 현재 유저 세션을 정리하고 타이틀 화면으로 복귀함.
         /// 서버에 유저 퇴장 및 방 리셋 신호를 발송하여 다음 체험자가 원활히 시작하게 함.
         /// </summary>
-        public void ReturnToTitle()
+        /// <param name="isClear">정상적인 엔딩 시나리오 완료 여부.</param>
+        public void ReturnToTitle(bool isClear = false)
         {
             if (_isTransitioning) return;
             _isTransitioning = true;
@@ -205,7 +206,8 @@ namespace My.Scripts.Global
         /// <summary>
         /// 세션 데이터 초기화 및 서버 API 호출 후 씬을 전환함.
         /// </summary>
-        private IEnumerator ReturnToTitleRoutine()
+        /// <param name="isClear">정상적인 완료 여부.</param>
+        private IEnumerator ReturnToTitleRoutine(bool isClear)
         {
             Debug.Log("[GameManager] 타이틀 복귀 시퀀스 시작");
 
