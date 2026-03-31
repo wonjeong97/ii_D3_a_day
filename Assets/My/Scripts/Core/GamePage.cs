@@ -37,7 +37,16 @@ namespace My.Scripts.Core
         /// </summary>
         public virtual void OnEnter() 
         { 
-            gameObject.SetActive(true);
+            Transform current = transform;
+            while (current)
+            {
+                if (!current.gameObject.activeSelf)
+                {
+                    current.gameObject.SetActive(true);
+                }
+                current = current.parent;
+            }
+            
             SetAlpha(1f);
         }
 

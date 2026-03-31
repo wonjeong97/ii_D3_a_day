@@ -181,7 +181,7 @@ namespace My.Scripts.Global
             PlayerBColor = ColorData.NotSet;
 
             CurrentUserType = UserType.A1;
-            CurrentModuleCode = "d3"; 
+            CurrentModuleCode = "D3"; 
             Cartridge = string.Empty;
             
             IsOtherCartridgeContentsCleared = false;

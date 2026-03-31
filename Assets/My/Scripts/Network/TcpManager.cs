@@ -64,9 +64,19 @@ namespace My.Scripts.Network
         private DateTime _lastMessageReceivedTime;
         private readonly TimeSpan _timeoutThreshold = TimeSpan.FromSeconds(10); 
         
+        [Header("Debug Settings")]
+        [Tooltip("체크하면 JSON 설정을 무시하고 아래의 inspectorIsServer 값을 사용합니다.")]
+        [SerializeField] private bool overrideSettings = false;
+        [Tooltip("overrideSettings가 true일 때 적용되는 서버/클라이언트 여부")]
+        [SerializeField] private bool inspectorIsServer = true;
+
         public bool IsServer 
         {
-            get { return _tcpSetting != null && _tcpSetting.isServer; }
+            get 
+            { 
+                if (overrideSettings) return inspectorIsServer;
+                return _tcpSetting != null && _tcpSetting.isServer; 
+            }
         }
 
         /// <summary>
@@ -103,7 +113,8 @@ namespace My.Scripts.Network
             _tcpSetting = loadedSetting;
             _isRunning = true;
 
-            if (_tcpSetting.isServer) StartServer();
+            // IsServer 프로퍼티를 통해 인스펙터 오버라이드 여부를 확인하여 서버/클라이언트를 구동함
+            if (IsServer) StartServer();
             else StartClient();
             
             _heartbeatCoroutine = StartCoroutine(ConnectionMonitorRoutine());
@@ -196,12 +207,16 @@ namespace My.Scripts.Network
                 }
                 else
                 {
-                    _failedConnectionCount++;
-                    
-                    if (_failedConnectionCount >= 10)
+                    // Why: 디버그 모드에서는 혼자 테스트하는 경우가 많으므로 통신 무응답으로 인한 타이틀 강제 복귀를 방지함.
+                    if (!GameManager.Instance || !GameManager.Instance.isDebugMode)
                     {
-                        _failedConnectionCount = 0; 
-                        _needsToReturnToTitle = true;
+                        _failedConnectionCount++;
+                        
+                        if (_failedConnectionCount >= 10)
+                        {
+                            _failedConnectionCount = 0; 
+                            _needsToReturnToTitle = true;
+                        }
                     }
                 }
             }
@@ -231,10 +246,12 @@ namespace My.Scripts.Network
                 {
                     if (!_isConnectionActive)
                     {
+                        Debug.Log("[TcpManager] 클라이언트 접속을 기다리는 중...");
                         TcpClient incomingClient = _serverListener.AcceptTcpClient(); 
                         
                         if (incomingClient != null)
                         {
+                            Debug.Log("[TcpManager] 클라이언트 접속 완료.");
                             _connectedClient = incomingClient;
                             _networkStream = _connectedClient.GetStream();
                             
@@ -271,15 +288,26 @@ namespace My.Scripts.Network
         /// </summary>
         private void ClientConnectRoutine()
         {
+            bool isWaitingLogPrinted = false;
+
             while (_isRunning)
             {
                 if (!_isConnectionActive)
                 {
                     try
                     {
+                        if (!isWaitingLogPrinted)
+                        {
+                            Debug.Log("[TcpManager] 서버 접속을 기다리는 중...");
+                            isWaitingLogPrinted = true;
+                        }
+
                         _connectedClient = new TcpClient(_tcpSetting.serverIP, _tcpSetting.port);
                         _networkStream = _connectedClient.GetStream();
                         
+                        Debug.Log("[TcpManager] 서버 접속 완료.");
+                        isWaitingLogPrinted = false;
+
                         _lastMessageReceivedTime = DateTime.UtcNow;
                         _failedConnectionCount = 0;
                         _isConnectionActive = true;
