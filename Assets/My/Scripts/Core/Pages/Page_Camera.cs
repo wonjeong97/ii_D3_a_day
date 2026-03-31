@@ -251,7 +251,8 @@ private async UniTask<bool> CapturePhotoAsync()
                 byte[] bytes = await UniTask.RunOnThreadPool(() => UnityEngine.ImageConversion.EncodeArrayToPNG(rawData, format, (uint)width, (uint)height));
 
                 // Why: Step3의 최종 결과물인 현재 모듈 사진인 경우에만 API 업로드 메서드 실행
-                string currentModule = SessionManager.Instance ? SessionManager.Instance.CurrentModuleCode : "D3";
+                string currentModule = SessionManager.Instance &&
+                                       !string.IsNullOrEmpty(SessionManager.Instance.CurrentModuleCode) ? SessionManager.Instance.CurrentModuleCode : "D3";
                 
                 if (questionId.ToUpper() == currentModule.ToUpper() && SessionManager.Instance)
                 {
