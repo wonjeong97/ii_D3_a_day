@@ -16,13 +16,25 @@ namespace My.Scripts.Core
         protected CanvasGroup canvasGroup; 
 
         /// <summary>
+        /// 해당 페이지의 비동기 로드(이미지 프리로드 등)가 완료되어 렌더링 준비가 되었는지 여부.
+        /// BaseFlowManager가 페이드 인 연출을 시작하기 전에 이 값을 검사하여 깜빡임을 방지함.
+        /// </summary>
+        public virtual bool IsReady 
+        { 
+            get { return true; } 
+        }
+
+        /// <summary>
         /// 컴포넌트 초기화 시 CanvasGroup을 확보함.
         /// 알파값 제어를 통한 페이드 연출을 보장하기 위함.
         /// </summary>
         protected virtual void Awake()
         {
             canvasGroup = GetComponent<CanvasGroup>();
-            if (!canvasGroup) canvasGroup = gameObject.AddComponent<CanvasGroup>();
+            if (!canvasGroup) 
+            {
+                canvasGroup = gameObject.AddComponent<CanvasGroup>();
+            }
         }
 
         /// <summary>
@@ -61,10 +73,13 @@ namespace My.Scripts.Core
         /// <summary>
         /// CanvasGroup의 투명도를 조절함.
         /// </summary>
-        /// <param name="alpha">설정할 알파값(0~1).</param>
+        /// <param name="alpha">설정할 알파값.</param>
         public void SetAlpha(float alpha)
         {
-            if (canvasGroup) canvasGroup.alpha = alpha;
+            if (canvasGroup) 
+            {
+                canvasGroup.alpha = alpha;
+            }
         }
 
         /// <summary>
@@ -73,7 +88,10 @@ namespace My.Scripts.Core
         /// <param name="triggerInfo">완료 시 전달할 추가 정보 값.</param>
         protected void CompleteStep(int triggerInfo = 0)
         {
-            onStepComplete?.Invoke(triggerInfo);
+            if (onStepComplete != null) 
+            {
+                onStepComplete.Invoke(triggerInfo);
+            }
         }
 
         /// <summary> 
@@ -85,7 +103,11 @@ namespace My.Scripts.Core
         protected void SetUIText(Text uiText, TextSetting setting)
         {
             if (!uiText || setting == null) return;
-            UIManager.Instance.SetText(uiText.gameObject, setting);
+            
+            if (UIManager.Instance) 
+            {
+                UIManager.Instance.SetText(uiText.gameObject, setting);
+            }
         }
     }
 
@@ -103,13 +125,15 @@ namespace My.Scripts.Core
         /// <param name="data">입력 데이터 객체.</param>
         public sealed override void SetupData(object data)
         {
-            if (data is T typedData)
+            T typedData = data as T;
+            if (typedData != null)
             {
                 SetupData(typedData);
             }
             else
             {
-                Debug.LogError($"[{GetType().Name}] SetupData 타입 불일치: expected={typeof(T).Name}, actual={data?.GetType().Name ?? "null"}");
+                string actualType = data != null ? data.GetType().Name : "null";
+                Debug.LogError($"[{GetType().Name}] SetupData 타입 불일치: expected={typeof(T).Name}, actual={actualType}");
             }
         }
 

@@ -56,74 +56,171 @@ namespace My.Scripts._02_PlayTutorial.Pages
         [SerializeField] private Text popupTextUI;
 
         [Header("Animation Settings")]
-        [SerializeField] private float fadeDuration = 0.5f;
-        [SerializeField] private float waitBetweenFades = 0.5f;
+        [SerializeField] private float fadeDuration;
+        [SerializeField] private float waitBetweenFades;
 
         private PlayTutorialPage1Data _cachedData;
         private Coroutine _animationCoroutine;
         private Coroutine _inactivityMonitorCoroutine;
         private Coroutine _popupFadeOutCoroutine;
+        private Coroutine _waitAndInitCoroutine;
 
         private bool _isCompleted;
         private bool _canAcceptInput;
+        private bool _isPreloadFinished;
         
-        private readonly List<AsyncOperationHandle<Sprite>> _loadedImageHandles = new List<AsyncOperationHandle<Sprite>>();
+        private List<AsyncOperationHandle<Sprite>> _loadedImageHandles;
         private CancellationTokenSource _cts;
+        
+        private string _cartridge;
+        private Sprite[] _preloadedSprites;
 
-        public KeyCode PressedKey { get; private set; } = KeyCode.None;
-        public int PressedAnswerIndex { get; private set; } = -1; 
+        public KeyCode PressedKey { get; private set; }
+        public int PressedAnswerIndex { get; private set; }
+
+        /// <summary>
+        /// BaseFlowManager가 연출을 시작하기 전에 확인할 수 있는 페이지 준비 상태.
+        /// 이미지가 완전히 준비될 때까지 화면 페이드 인을 지연시켜 깜빡임을 차단하기 위함.
+        /// </summary>
+        public override bool IsReady 
+        {
+            get { return _isPreloadFinished; }
+        }
+        
+        /// <summary>
+        /// 컴포넌트 활성화 시 핸들 관리 리스트를 초기화함.
+        /// 필드 선언부의 리스트 초기화를 지양하고 생명주기에 맞춰 안전하게 메모리를 할당하기 위함.
+        /// </summary>
+        protected override void Awake()
+        {
+            base.Awake();
+            _loadedImageHandles = new List<AsyncOperationHandle<Sprite>>();
+        }
 
         /// <summary>
         /// 전달된 UI 세팅 데이터를 캐싱하여 페이지 활성화 시 렌더링에 활용함.
+        /// 데이터 할당과 동시에 비동기 이미지 로드를 시작하여 대기 시간을 최소화하기 위함.
         /// </summary>
-        /// <param name="data">JSON에서 역직렬화된 데이터 객체.</param>
+        /// <param name="data">JSON에서 역직렬화된 객체.</param>
         public override void SetupData(object data)
         {
             PlayTutorialPage1Data pageData = data as PlayTutorialPage1Data;
-            
-            if (pageData != null) 
-            {
-                _cachedData = pageData;
+            if (pageData != null) _cachedData = pageData;
+
+            _isPreloadFinished = false;
+
+            if (_cts != null) 
+            { 
+                _cts.Cancel(); 
+                _cts.Dispose(); 
             }
-            else 
+            _cts = new CancellationTokenSource();
+            
+            PreloadLegoImagesAsync(_cts.Token).Forget();
+        }
+        
+        /// <summary>
+        /// 어드레서블에서 카트리지 이미지를 비동기로 불러옴.
+        /// 비활성화 상태에서 호출될 경우를 대비해 리스트를 직접 검사하고 초기화함.
+        /// </summary>
+        /// <param name="token">작업 취소를 위한 토큰.</param>
+        private async UniTaskVoid PreloadLegoImagesAsync(CancellationToken token)
+        {
+            if (_loadedImageHandles == null)
             {
-                Debug.LogWarning("[PlayTutorialPage1Controller] 전달된 데이터가 PlayTutorialPage1Data 타입이 아닙니다.");
+                _loadedImageHandles = new List<AsyncOperationHandle<Sprite>>();
+            }
+
+            bool isServer = false;
+            if (TcpManager.Instance) isServer = TcpManager.Instance.IsServer;
+            
+            string roleStr = isServer ? "Server" : "Client";
+            string cartStr = "A";
+
+            if (SessionManager.Instance && !string.IsNullOrEmpty(SessionManager.Instance.Cartridge))
+            {
+                cartStr = SessionManager.Instance.Cartridge.ToUpper();
+            }
+
+            string[] keys = new string[5];
+            for (int i = 0; i < 5; i++) 
+            {
+                keys[i] = $"Lego_{cartStr}_{roleStr}_{i + 1}";
+            }
+
+            ReleaseLoadedImages();
+            _preloadedSprites = new Sprite[5];
+            UniTask<Sprite>[] loadTasks = new UniTask<Sprite>[5];
+
+            for (int i = 0; i < 5; i++)
+            {
+                AsyncOperationHandle<Sprite> handle = Addressables.LoadAssetAsync<Sprite>(keys[i]);
+                _loadedImageHandles.Add(handle);
+                loadTasks[i] = handle.Task.AsUniTask();
+            }
+
+            try
+            {
+                _preloadedSprites = await UniTask.WhenAll(loadTasks);
+            }
+            catch (Exception e)
+            {
+                if (!token.IsCancellationRequested)
+                {
+                    Debug.LogError($"[PlayTutorialPage1] 프리로드 실패: {e.Message}");
+                }
+            }
+            finally
+            {
+                _isPreloadFinished = true;
             }
         }
 
         /// <summary>
-        /// 화면에 노출되기 전 이전 상태를 리셋하고 시퀀스를 시작함.
-        /// 컴포넌트를 초기화하고 RFID 이벤트 구독 및 비동기 이미지 로드를 수행함.
+        /// 캐싱된 스프라이트를 안전하게 UI에 적용함.
+        /// </summary>
+        private void ApplyCachedSprites()
+        {
+            if (_preloadedSprites == null || _preloadedSprites.Length < 5) return;
+            
+            if (imgAnswer1 && _preloadedSprites[0]) imgAnswer1.sprite = _preloadedSprites[0];
+            if (imgAnswer2 && _preloadedSprites[1]) imgAnswer2.sprite = _preloadedSprites[1];
+            if (imgAnswer3 && _preloadedSprites[2]) imgAnswer3.sprite = _preloadedSprites[2];
+            if (imgAnswer4 && _preloadedSprites[3]) imgAnswer4.sprite = _preloadedSprites[3];
+            if (imgAnswer5 && _preloadedSprites[4]) imgAnswer5.sprite = _preloadedSprites[4];
+        }
+
+        /// <summary>
+        /// 페이지 진입 시 연출 요소들을 초기화하고 이미지 로딩 대기 코루틴을 가동함.
         /// </summary>
         public override void OnEnter()
         {
             base.OnEnter();
+            
             _isCompleted = false;
             _canAcceptInput = false; 
             PressedKey = KeyCode.None;
             PressedAnswerIndex = -1;
+            _cartridge = "A";
 
-            if (RfidManager.Instance) 
+            if (_loadedImageHandles == null)
             {
-                RfidManager.Instance.onAnswerReceived += OnRfidAnswerReceived;
+                _loadedImageHandles = new List<AsyncOperationHandle<Sprite>>();
             }
 
-            if (TcpManager.Instance)
-            {
-                TcpManager.Instance.onMessageReceived += OnNetworkMessageReceived;
-            }
+            if (RfidManager.Instance) RfidManager.Instance.onAnswerReceived += OnRfidAnswerReceived;
+            if (TcpManager.Instance) TcpManager.Instance.onMessageReceived += OnNetworkMessageReceived;
 
             if (text1Canvas) text1Canvas.alpha = 0f;
             if (imageGroupCanvas) imageGroupCanvas.alpha = 0f;
             if (text2Canvas) text2Canvas.alpha = 0f;
             if (popupCanvasGroup) popupCanvasGroup.alpha = 0f;
-
-            string cart = "A";
+            
             if (SessionManager.Instance)
             {
                 if (!string.IsNullOrEmpty(SessionManager.Instance.Cartridge))
                 {
-                    cart = SessionManager.Instance.Cartridge;
+                    _cartridge = SessionManager.Instance.Cartridge;
                 }
             }
 
@@ -132,21 +229,27 @@ namespace My.Scripts._02_PlayTutorial.Pages
                 if (text1UI) SetUIText(text1UI, _cachedData.text1);
                 if (text2UI) SetUIText(text2UI, _cachedData.text2);
 
-                if (text1UI)
-                {
-                    text1UI.text = text1UI.text.Replace("{Cartridge}", cart + " 카트리지");
-                }
+                if (text1UI) text1UI.text = text1UI.text.Replace("{Cartridge}", _cartridge + " 카트리지");
             }
 
-            if (_cts != null)
+            if (_waitAndInitCoroutine != null) StopCoroutine(_waitAndInitCoroutine);
+            _waitAndInitCoroutine = StartCoroutine(WaitAndInitRoutine());
+        }
+
+        /// <summary>
+        /// 이미지가 완전히 로드될 때까지 대기한 후 화면 페이드 인을 시작함.
+        /// 리소스가 비어있는 상태에서 애니메이션이 일어나는 것을 차단하기 위함.
+        /// </summary>
+        private IEnumerator WaitAndInitRoutine()
+        {
+            while (!_isPreloadFinished)
             {
-                _cts.Cancel();
-                _cts.Dispose();
+                yield return null;
             }
-            _cts = new CancellationTokenSource();
 
-            LoadAndSetCartridgeImagesAsync(cart, _cts.Token).Forget();
+            ApplyCachedSprites();
 
+            if (_animationCoroutine != null) StopCoroutine(_animationCoroutine);
             _animationCoroutine = StartCoroutine(SequenceFadeRoutine());
         }
 
@@ -178,57 +281,10 @@ namespace My.Scripts._02_PlayTutorial.Pages
 
             ReleaseLoadedImages();
 
-            if (_animationCoroutine != null)
-            {
-                StopCoroutine(_animationCoroutine);
-                _animationCoroutine = null;
-            }
-
+            if (_waitAndInitCoroutine != null) StopCoroutine(_waitAndInitCoroutine);
+            if (_animationCoroutine != null) StopCoroutine(_animationCoroutine);
             if (_inactivityMonitorCoroutine != null) StopCoroutine(_inactivityMonitorCoroutine);
             if (_popupFadeOutCoroutine != null) StopCoroutine(_popupFadeOutCoroutine);
-        }
-
-        /// <summary>
-        /// 카트리지 이미지를 비동기로 로드하고 화면에 적용함.
-        /// 동기적 로드로 인한 프레임 드랍을 막고 안전하게 스프라이트를 적용하기 위함.
-        /// </summary>
-        /// <param name="cart">로드할 카트리지 문자열.</param>
-        /// <param name="token">작업 취소를 위한 토큰.</param>
-        private async UniTaskVoid LoadAndSetCartridgeImagesAsync(string cart, CancellationToken token)
-        {
-            string legoCartKey = "Lego_cart_" + cart.ToLower();
-            string[] keys = new string[] { legoCartKey, legoCartKey, legoCartKey, legoCartKey, legoCartKey };
-
-            ReleaseLoadedImages();
-
-            UniTask<Sprite>[] loadTasks = new UniTask<Sprite>[5];
-
-            for (int i = 0; i < 5; i++)
-            {
-                AsyncOperationHandle<Sprite> handle = Addressables.LoadAssetAsync<Sprite>(keys[i]);
-                _loadedImageHandles.Add(handle); 
-                loadTasks[i] = handle.Task.AsUniTask();
-            }
-
-            try
-            {
-                Sprite[] results = await UniTask.WhenAll(loadTasks);
-                if (token.IsCancellationRequested) return;
-
-                if (imgAnswer1 && results[0]) imgAnswer1.sprite = results[0];
-                if (imgAnswer2 && results[1]) imgAnswer2.sprite = results[1];
-                if (imgAnswer3 && results[2]) imgAnswer3.sprite = results[2];
-                if (imgAnswer4 && results[3]) imgAnswer4.sprite = results[3];
-                if (imgAnswer5 && results[4]) imgAnswer5.sprite = results[4];
-            }
-            catch (Exception e)
-            {
-                if (!token.IsCancellationRequested)
-                {
-                    Debug.LogError("[PlayTutorialPage1Controller] 어드레서블 로드 실패: " + e.Message);
-                    ReleaseLoadedImages();
-                }
-            }
         }
 
         /// <summary>
@@ -249,7 +305,6 @@ namespace My.Scripts._02_PlayTutorial.Pages
         /// <summary>
         /// 매 프레임 키보드 디버그 입력을 검사함.
         /// 물리 하드웨어 없이 개발 환경에서도 원활한 테스트가 가능하도록 입력을 보조함. 
-        /// 극단적 최적화를 위해 객체 검사 시 ReferenceEquals를 사용함.
         /// </summary>
         private void Update()
         {
@@ -320,13 +375,16 @@ namespace My.Scripts._02_PlayTutorial.Pages
         /// </summary>
         private IEnumerator SequenceFadeRoutine()
         {
-            if (text1Canvas) yield return StartCoroutine(FadeCanvasGroupRoutine(text1Canvas, 0f, 1f, fadeDuration));
-            yield return CoroutineData.GetWaitForSeconds(waitBetweenFades);
+            float fDuration = fadeDuration > 0f ? fadeDuration : 0.5f;
+            float waitDuration = waitBetweenFades > 0f ? waitBetweenFades : 0.5f;
 
-            if (imageGroupCanvas) yield return StartCoroutine(FadeCanvasGroupRoutine(imageGroupCanvas, 0f, 1f, fadeDuration));
-            yield return CoroutineData.GetWaitForSeconds(waitBetweenFades);
+            if (text1Canvas) yield return StartCoroutine(FadeCanvasGroupRoutine(text1Canvas, 0f, 1f, fDuration));
+            yield return CoroutineData.GetWaitForSeconds(waitDuration);
 
-            if (text2Canvas) yield return StartCoroutine(FadeCanvasGroupRoutine(text2Canvas, 0f, 1f, fadeDuration));
+            if (imageGroupCanvas) yield return StartCoroutine(FadeCanvasGroupRoutine(imageGroupCanvas, 0f, 1f, fDuration));
+            yield return CoroutineData.GetWaitForSeconds(waitDuration);
+
+            if (text2Canvas) yield return StartCoroutine(FadeCanvasGroupRoutine(text2Canvas, 0f, 1f, fDuration));
 
             yield return CoroutineData.GetWaitForSeconds(0.5f);
             

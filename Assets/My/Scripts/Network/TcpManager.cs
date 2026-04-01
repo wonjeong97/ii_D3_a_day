@@ -68,7 +68,7 @@ namespace My.Scripts.Network
         
         [Header("Debug Settings")]
         [Tooltip("체크하면 JSON 설정을 무시하고 아래의 inspectorIsServer 값을 사용합니다.")]
-        [SerializeField] private bool overrideSettings = false;
+        [SerializeField] private bool overrideSettings;
         [Tooltip("overrideSettings가 true일 때 적용되는 서버/클라이언트 여부")]
         [SerializeField] private bool inspectorIsServer = true;
 

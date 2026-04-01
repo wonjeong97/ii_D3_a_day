@@ -133,6 +133,7 @@ namespace My.Scripts._03_Step1
                             {
                                 _q2Page = qPage;
                                 _q2Data = qData;
+                                _q2Page.SetDynamicImageMode(true);
                             }
 
                             qPage.SetSyncCommand($"STEP1_Q_{i}_COMPLETE");
@@ -172,9 +173,8 @@ namespace My.Scripts._03_Step1
         
         /// <summary>
         /// 특정 페이지로 전환하기 전 필요한 사전 작업을 수행함.
-        /// 두 번째 질문으로 넘어갈 때 첫 번째 질문의 결과에 맞춰 텍스트와 이미지를 동적으로 교체함.
+        /// Q1 답변이 완료된 시점에 즉시 Q2 이미지를 로드하여 유저가 페이지를 보기 전 준비를 마침.
         /// </summary>
-        /// <param name="index">전환할 페이지의 인덱스 번호.</param>
         public override void TransitionToPage(int index)
         {
             if (pages != null && index >= 0 && index < pages.Count)
@@ -182,12 +182,10 @@ namespace My.Scripts._03_Step1
                 if (_q2Page && _q1Page && pages[index] == _q2Page)
                 {
                     int q1AnsIdx = _q1Page.SelectedIndex - 1; 
-                    
                     ApplyDynamicQ2Text(q1AnsIdx);
                     ApplyDynamicQ2ImagesAsync(q1AnsIdx).Forget();
                 }
             }
-            
             base.TransitionToPage(index);
         }
 
