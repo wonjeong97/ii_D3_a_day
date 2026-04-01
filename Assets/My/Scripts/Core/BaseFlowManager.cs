@@ -52,11 +52,23 @@ namespace My.Scripts.Core
             {
                 if (skipFirstPageFade)
                 {
-                    currentPageIndex = 0;
-                    GamePage firstPage = pages[0];
-                    if (firstPage)
+                    int validIndex = 0;
+                    while (validIndex < pages.Count && pages[validIndex] == null)
                     {
+                        Debug.LogWarning($"[BaseFlowManager] {validIndex}번 페이지가 null입니다. 다음 페이지로 넘어갑니다.");
+                        validIndex++;
+                    }
+
+                    if (validIndex < pages.Count)
+                    {
+                        currentPageIndex = validIndex;
+                        GamePage firstPage = pages[validIndex];
                         StartCoroutine(StartFirstPageRoutine(firstPage));
+                    }
+                    else
+                    {
+                        Debug.LogError("[BaseFlowManager] 유효한 페이지가 없어 종료합니다.");
+                        OnAllFinished();
                     }
                 }
                 else

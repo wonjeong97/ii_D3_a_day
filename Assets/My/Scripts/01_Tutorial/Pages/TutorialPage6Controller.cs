@@ -140,7 +140,6 @@ namespace My.Scripts._01_Tutorial.Pages
             string[] keys = new string[] { $"Lego_A_{suffix}_0", $"Lego_B_{suffix}_0", $"Lego_C_{suffix}_0" };
 
             ReleaseLoadedImages();
-            _preloadedSprites = new Sprite[3];
             UniTask<Sprite>[] loadTasks = new UniTask<Sprite>[3];
 
             for (int i = 0; i < 3; i++)
@@ -152,18 +151,19 @@ namespace My.Scripts._01_Tutorial.Pages
 
             try
             {
-                _preloadedSprites = await UniTask.WhenAll(loadTasks);
+                Sprite[] results = await UniTask.WhenAll(loadTasks);
+                if (token.IsCancellationRequested) return;
+
+                _preloadedSprites = results;
+                _isPreloadFinished = true;
             }
             catch (Exception e)
             {
                 if (!token.IsCancellationRequested)
                 {
                     Debug.LogError($"[TutorialPage6] 프리로드 실패: {e.Message}");
+                    _isPreloadFinished = true;
                 }
-            }
-            finally
-            {
-                _isPreloadFinished = true;
             }
         }
 

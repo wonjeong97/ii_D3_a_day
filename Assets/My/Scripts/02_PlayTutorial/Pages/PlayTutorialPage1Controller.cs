@@ -149,7 +149,6 @@ namespace My.Scripts._02_PlayTutorial.Pages
             }
 
             ReleaseLoadedImages();
-            _preloadedSprites = new Sprite[5];
             UniTask<Sprite>[] loadTasks = new UniTask<Sprite>[5];
 
             for (int i = 0; i < 5; i++)
@@ -161,18 +160,19 @@ namespace My.Scripts._02_PlayTutorial.Pages
 
             try
             {
-                _preloadedSprites = await UniTask.WhenAll(loadTasks);
+                Sprite[] results = await UniTask.WhenAll(loadTasks);
+                if (token.IsCancellationRequested) return;
+
+                _preloadedSprites = results;
+                _isPreloadFinished = true;
             }
             catch (Exception e)
             {
                 if (!token.IsCancellationRequested)
                 {
                     Debug.LogError($"[PlayTutorialPage1] 프리로드 실패: {e.Message}");
+                    _isPreloadFinished = true;
                 }
-            }
-            finally
-            {
-                _isPreloadFinished = true;
             }
         }
 

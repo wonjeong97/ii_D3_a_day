@@ -24,9 +24,9 @@ namespace My.Scripts.Utils
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void RunCleanupOnStartup()
         {
-            try
+            UniTask.RunOnThreadPool(() =>
             {
-                UniTask.RunOnThreadPool(() =>
+                try
                 {
                     Debug.Log($"[StorageCleaner] 백그라운드 자동 정리 시작 (보관 기준: {MaxKeepDays}일)");
 
@@ -42,13 +42,12 @@ namespace My.Scripts.Utils
                     DateTime thresholdDate = DateTime.Now.AddDays(-MaxKeepDays);
 
                     CleanOldFolders(rootPath, thresholdDate);
-
-                }).Forget();
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"[StorageCleaner] 정리 작업 중 예외 발생: {e.Message}");
-            }
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"[StorageCleaner] 정리 작업 중 예외 발생: {e.Message}");
+                }
+            }).Forget();
         }
 
         /// <summary> 

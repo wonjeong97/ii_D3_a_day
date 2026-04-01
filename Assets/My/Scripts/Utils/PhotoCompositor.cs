@@ -48,7 +48,7 @@ namespace My.Scripts.Utils
         public void DebugProcessAndSave()
         {
             // 인스펙터 테스트용 (디버그 모드로 로컬 저장만 수행)
-            ProcessAndSave(1, true);
+            ProcessAndSave(1, true).Forget();
         }
 
         /// <summary> 
@@ -57,23 +57,23 @@ namespace My.Scripts.Utils
         /// </summary>
         /// <param name="answerIndex">유저가 선택한 1~5번 사이의 응답 인덱스.</param>
         /// <param name="isDebug">true일 경우 서버 업로드를 생략함.</param>
-        public void ProcessAndSave(int answerIndex, bool isDebug)
+        public async UniTask<bool> ProcessAndSave(int answerIndex, bool isDebug)
         {
             if (!captureCamera || !synthesisCanvas)
             {
                 Debug.LogError("[PhotoCompositor] 합성 캔버스 또는 카메라 컴포넌트 누락");
-                return;
+                return false;
             }
 
             IsProcessing = true;
-            ExecuteCompositeAsync(answerIndex, isDebug).Forget();
+            return await ExecuteCompositeAsync(answerIndex, isDebug);
         }
 
         /// <summary> 
         /// UI 세팅, 렌더링, 인코딩, 파일 저장을 비동기로 순차 처리합니다. 
         /// 메인 스레드 프리징을 최소화하기 위함.
         /// </summary>
-        private async UniTaskVoid ExecuteCompositeAsync(int answerIndex, bool isDebug)
+        private async UniTask<bool> ExecuteCompositeAsync(int answerIndex, bool isDebug)
         {
             bool isServer = false;
             if (TcpManager.Instance)
@@ -153,7 +153,7 @@ namespace My.Scripts.Utils
                 if (pngBytes == null || pngBytes.Length == 0)
                 {
                     Debug.LogError("[PhotoCompositor] PNG 인코딩 실패");
-                    return;
+                    return false;
                 }
 
                 // 6. 로컬 디스크 비동기 쓰기 (Step2 사진들과 동일한 폴더 경로에 저장)
@@ -167,16 +167,18 @@ namespace My.Scripts.Utils
                 // 7. 서버 업로드
                 if (!isDebug)
                 {
-                    await UploadImageAsync(pngBytes, idxUser, uid, moduleCode);
+                    return await UploadImageAsync(pngBytes, idxUser, uid, moduleCode);
                 }
                 else
                 {
                     Debug.Log($"<color=cyan>[PhotoCompositor] 디버그 모드 완료: {finalFileName} 생성됨.</color>");
+                    return true;
                 }
             }
             catch (Exception e)
             {
                 Debug.LogError($"[PhotoCompositor] 합성 중 예외: {e.Message}");
+                return false;
             }
             finally
             {
@@ -236,10 +238,21 @@ namespace My.Scripts.Utils
                     faceImage.SetNativeSize(); 
                     return true;
                 }
+                
+                if (faceImage)
+                {
+                    faceImage.sprite = null;
+                }
+                if (_faceImageHandle.IsValid()) Addressables.Release(_faceImageHandle);
             }
             catch (Exception e)
             {
                 Debug.LogError($"[PhotoCompositor] 어드레서블 로드 에러 ({key}): {e.Message}");
+                if (faceImage)
+                {
+                    faceImage.sprite = null;
+                }
+                if (_faceImageHandle.IsValid()) Addressables.Release(_faceImageHandle);
             }
             return false;
         }
@@ -247,7 +260,7 @@ namespace My.Scripts.Utils
         /// <summary> 
         /// 합성된 PNG 바이트 데이터를 서버 API를 통해 업로드함.
         /// </summary>
-        private async UniTask UploadImageAsync(byte[] imageBytes, int idxUser, string uid, string moduleCode)
+        private async UniTask<bool> UploadImageAsync(byte[] imageBytes, int idxUser, string uid, string moduleCode)
         {
             string baseUrl = string.Empty;
 
@@ -256,12 +269,14 @@ namespace My.Scripts.Utils
                 baseUrl = GameManager.Instance.ApiConfig.UploadFileUrl;
             }
 
-            if (string.IsNullOrEmpty(baseUrl) || idxUser <= 0 || string.IsNullOrWhiteSpace(uid)) return;
+            if (string.IsNullOrEmpty(baseUrl) || idxUser <= 0 || string.IsNullOrWhiteSpace(uid)) return false;
             
             string encodedUid = UnityWebRequest.EscapeURL(uid);
             string url = $"{baseUrl}?idx_user={idxUser}&uid={encodedUid}&code={moduleCode}&type=png";
-
-            for (int attempt = 0; attempt < maxRetries; attempt++)
+            
+            int attempts = Mathf.Max(1, maxRetries);
+            float delaySeconds = Mathf.Max(0f, retryDelay);
+            for (int attempt = 0; attempt < attempts; attempt++)
             {
                 using (UnityWebRequest webRequest = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
                 {
@@ -275,13 +290,13 @@ namespace My.Scripts.Utils
                     if (webRequest.result == UnityWebRequest.Result.Success)
                     {
                         Debug.Log($"[PhotoCompositor] 업로드 성공: {webRequest.responseCode}");
-                        return; 
+                        return true; 
                     }
 
-                    if (attempt < maxRetries - 1)
+                    if (attempt < attempts - 1)
                     {
-                        Debug.LogWarning($"[PhotoCompositor] 업로드 실패 ({attempt + 1}/{maxRetries}): {webRequest.error}. {retryDelay}초 후 재시도...");
-                        await UniTask.Delay(TimeSpan.FromSeconds(retryDelay));
+                        Debug.LogWarning($"[PhotoCompositor] 업로드 실패 ({attempt + 1}/{attempts}): {webRequest.error}. {delaySeconds}초 후 재시도...");
+                        await UniTask.Delay(TimeSpan.FromSeconds(delaySeconds));
                     }
                     else
                     {
@@ -289,6 +304,7 @@ namespace My.Scripts.Utils
                     }
                 }
             }
+            return false;
         }
 
         /// <summary>

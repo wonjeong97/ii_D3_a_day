@@ -125,6 +125,11 @@ namespace My.Scripts.Core
         /// <param name="data">입력 데이터 객체.</param>
         public sealed override void SetupData(object data)
         {
+            if (data == null)
+            {
+                SetupData(null);
+                return;
+            }
             T typedData = data as T;
             if (typedData != null)
             {

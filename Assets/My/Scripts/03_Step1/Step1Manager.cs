@@ -173,7 +173,7 @@ namespace My.Scripts._03_Step1
         
         /// <summary>
         /// 특정 페이지로 전환하기 전 필요한 사전 작업을 수행함.
-        /// Q1 답변이 완료된 시점에 즉시 Q2 이미지를 로드하여 유저가 페이지를 보기 전 준비를 마침.
+        /// Q1 답변이 완료된 시점에 즉시 Q2 이미지와 텍스트를 로드하여 유저가 페이지를 보기 전 준비를 마침.
         /// </summary>
         public override void TransitionToPage(int index)
         {

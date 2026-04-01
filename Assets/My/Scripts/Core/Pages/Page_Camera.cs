@@ -4,6 +4,7 @@ using Cysharp.Threading.Tasks;
 using My.Scripts.Core.Data;
 using My.Scripts.Global;
 using My.Scripts.Network;
+using My.Scripts.Utils;
 using UnityEngine;
 using UnityEngine.SceneManagement; 
 using UnityEngine.UI;
@@ -160,11 +161,13 @@ namespace My.Scripts.Core.Pages
 
             if (isStep3)
             {
-                My.Scripts.Utils.PhotoCompositor compositor = FindFirstObjectByType<My.Scripts.Utils.PhotoCompositor>();
+                PhotoCompositor compositor = FindFirstObjectByType<PhotoCompositor>();
                 if (compositor)
                 {
-                    compositor.ProcessAndSave(_selectedAnswerIndex, false);
-                    while (compositor.IsProcessing) yield return null;
+                    isSuccess = false;
+                    yield return UniTask.ToCoroutine(async () => {
+                        isSuccess = await compositor.ProcessAndSave(_selectedAnswerIndex, false);
+                    });
                 }
                 else
                 {
@@ -221,13 +224,13 @@ namespace My.Scripts.Core.Pages
             if (!cam || !cam.isPlaying) return false;
 
             RenderTexture rt = null;
+            RenderTexture prev = RenderTexture.active;
             try
             {
                 rt = RenderTexture.GetTemporary(CamWidth, CamHeight, 0, RenderTextureFormat.ARGB32);
                 Graphics.Blit(cam, rt);
                 
                 Texture2D photo = CameraManager.Instance.GetSharedCapturedPhoto();
-                RenderTexture prev = RenderTexture.active;
                 RenderTexture.active = rt;
                 
                 int startX = (CamWidth - SaveWidth) / 2;
@@ -235,7 +238,6 @@ namespace My.Scripts.Core.Pages
                 
                 photo.ReadPixels(new Rect(startX, startY, SaveWidth, SaveHeight), 0, 0);
                 photo.Apply();
-                RenderTexture.active = prev;
                 
                 return await SavePhotoAsync(photo);
             }
@@ -245,6 +247,7 @@ namespace My.Scripts.Core.Pages
             }
             finally 
             { 
+                RenderTexture.active = prev;
                 if (rt) RenderTexture.ReleaseTemporary(rt); 
             }
         }
