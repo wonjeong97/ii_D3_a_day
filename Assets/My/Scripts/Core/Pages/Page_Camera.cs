@@ -68,9 +68,24 @@ namespace My.Scripts.Core.Pages
         /// <param name="id">문항 식별자 문자열.</param>
         public void SetQuestionId(string id)
         {
-            questionId = id?.Trim();
+            questionId = NormalizeQuestionId(id);
         }
 
+        /// <summary>
+        /// 식별자를 경로에 안전한 문자열로 정규화함.
+        /// 경로 이탈 문자 및 유효하지 않은 파일명 문자를 제거하기 위함.
+        /// </summary>
+        private string NormalizeQuestionId(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id)) return string.Empty;
+            string clean = id.Trim().Replace("..", "");
+            foreach (char c in System.IO.Path.GetInvalidFileNameChars())
+            {
+                clean = clean.Replace(c.ToString(), "");
+            }
+            return clean;
+        }
+        
         /// <summary>
         /// 외부로부터 전달받은 결과 페이지 데이터를 메모리에 캐싱함.
         /// </summary>
