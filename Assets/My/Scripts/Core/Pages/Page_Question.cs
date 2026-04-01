@@ -10,6 +10,7 @@ using My.Scripts.Hardware;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using Wonjeong.UI;
 using Wonjeong.Utils;
@@ -66,8 +67,8 @@ namespace My.Scripts.Core.Pages
         [SerializeField] private Font countdownFont;
         
         private CommonQuestionPageData _cachedData; 
-        private Phase _currentPhase = Phase.None;
-        private int _selectedIndex = -1;
+        private Phase _currentPhase;
+        private int _selectedIndex;
         private bool _isFirstSelectionDone;
         private Coroutine _sequenceCoroutine;
         
@@ -77,34 +78,166 @@ namespace My.Scripts.Core.Pages
         private bool _isAnimating;
         private bool _canAcceptInput;
         private bool _hasCompleted;
+        private bool _isPreloadFinished;
 
-        private readonly List<AsyncOperationHandle<Sprite>> _loadedImageHandles = new List<AsyncOperationHandle<Sprite>>();
+        private List<AsyncOperationHandle<Sprite>> _loadedImageHandles;
         private bool _skipDefaultCartridgeLoad;
         private CancellationTokenSource _cts;
 
         private Coroutine _inactivityMonitorCoroutine;
         private Coroutine _popupFadeOutCoroutine;
+        private Coroutine _waitAndInitCoroutine;
         
         private GameObject[] _cgObjectsCache;
         private CanvasGroup[] _cgsCache;
+                
+        private Sprite[] _preloadedSprites;
+        private bool _isDynamicImageMode;
 
-        public int SelectedIndex => _selectedIndex;
+        public int SelectedIndex 
+        { 
+            get { return _selectedIndex; } 
+        }
+
+        /// <summary>
+        /// BaseFlowManager가 연출을 시작하기 전에 확인할 수 있는 페이지 준비 상태.
+        /// 이미지가 완전히 준비될 때까지 화면 페이드 인을 지연시켜 깜빡임을 차단하기 위함.
+        /// </summary>
+        public override bool IsReady 
+        {
+            get { return _isPreloadFinished; }
+        }
+
+        /// <summary>
+        /// 컴포넌트 초기화 시 핸들 관리 리스트를 생성함.
+        /// 비동기 로직 호출 전 리스트가 비어있어 발생하는 널 참조 예외를 완벽히 차단하기 위함.
+        /// </summary>
+        protected override void Awake()
+        {
+            base.Awake(); 
+            _loadedImageHandles = new List<AsyncOperationHandle<Sprite>>();
+        }
 
         public void SetSyncCommand(string command) { }
 
         /// <summary>
-        /// 외부로부터 전달받은 질문 데이터를 메모리에 캐싱함.
+        /// 외부로부터 전달받은 질문 데이터를 메모리에 캐싱하고, 사용할 이미지를 즉시 미리 로드함.
+        /// OnEnter 시점에 로드하면 지연이 발생하므로 SetupData 단계에서 비동기 로드를 시작함.
         /// </summary>
-        /// <param name="data">CommonQuestionPageData 타입의 데이터 객체.</param>
+        /// <param name="data">JSON에서 역직렬화된 객체.</param>
         public override void SetupData(object data)
         {
             CommonQuestionPageData pageData = data as CommonQuestionPageData;
             if (pageData != null) _cachedData = pageData;
+
+            _isPreloadFinished = false;
+
+            if (_cts != null)
+            {
+                _cts.Cancel();
+                _cts.Dispose();
+            }
+            _cts = new CancellationTokenSource();
+            
+            PreloadImagesAsync(_cts.Token).Forget();
+        }
+        
+        /// <summary>
+        /// 씬 시작 시점에 이미지 로드를 미리 시작하여 OnEnter 시의 지연과 깜빡임을 방지함.
+        /// 비활성화 상태에서 호출되어 Awake가 실행되지 않은 경우를 대비해 핸들 리스트를 직접 초기화함.
+        /// </summary>
+        /// <param name="token">작업 취소를 위한 토큰.</param>
+        private async UniTaskVoid PreloadImagesAsync(CancellationToken token)
+        {
+            if (_isDynamicImageMode) 
+            {
+                _isPreloadFinished = true;
+                return;
+            }
+
+            if (_loadedImageHandles == null)
+            {
+                _loadedImageHandles = new List<AsyncOperationHandle<Sprite>>();
+            }
+
+            bool isServer = false;
+            if (TcpManager.Instance) isServer = TcpManager.Instance.IsServer;
+
+            string roleStr = isServer ? "Server" : "Client";
+            string cartStr = "A";
+            
+            if (SessionManager.Instance && !string.IsNullOrEmpty(SessionManager.Instance.Cartridge)) 
+            {
+                cartStr = SessionManager.Instance.Cartridge.ToUpper();
+            }
+
+            string currentScene = SceneManager.GetActiveScene().name;
+            string[] keys = new string[5];
+
+            for (int i = 0; i < 5; i++)
+            {
+                keys[i] = (currentScene == GameConstants.Scene.Step3) 
+                    ? $"Lego_Face_{roleStr}_{i + 1}" 
+                    : $"Lego_{cartStr}_{roleStr}_{i + 1}";
+            }
+
+            ReleaseLoadedImages();
+            UniTask<Sprite>[] loadTasks = new UniTask<Sprite>[5];
+
+            for (int i = 0; i < 5; i++)
+            {
+                AsyncOperationHandle<Sprite> handle = Addressables.LoadAssetAsync<Sprite>(keys[i]);
+                _loadedImageHandles.Add(handle);
+                loadTasks[i] = handle.Task.AsUniTask();
+            }
+
+            try
+            {
+                Sprite[] results = await UniTask.WhenAll(loadTasks);
+                if (token.IsCancellationRequested) return;
+
+                _preloadedSprites = results;
+                _isPreloadFinished = true;
+            }
+            catch (Exception e)
+            {
+                if (!token.IsCancellationRequested) 
+                {
+                    Debug.LogError($"[Page_Question] 프리로드 실패: {e.Message}");
+                    _isPreloadFinished = true;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 캐싱된 스프라이트 배열을 실제 UI Image 컴포넌트에 할당함.
+        /// </summary>
+        private void ApplyCachedSprites()
+        {
+            if (_preloadedSprites == null || _preloadedSprites.Length < 5) return;
+            if (imgAnswer1 && _preloadedSprites[0]) imgAnswer1.sprite = _preloadedSprites[0];
+            if (imgAnswer2 && _preloadedSprites[1]) imgAnswer2.sprite = _preloadedSprites[1];
+            if (imgAnswer3 && _preloadedSprites[2]) imgAnswer3.sprite = _preloadedSprites[2];
+            if (imgAnswer4 && _preloadedSprites[3]) imgAnswer4.sprite = _preloadedSprites[3];
+            if (imgAnswer5 && _preloadedSprites[4]) imgAnswer5.sprite = _preloadedSprites[4];
+        }
+        
+        /// <summary>
+        /// 해당 페이지가 외부에서 이미지를 주입받는 동적 모드인지 설정함.
+        /// Step1 Q2처럼 레고가 아닌 배경 이미지를 사용해야 하는 경우 활성화함.
+        /// </summary>
+        /// <param name="enb">동적 모드 활성화 여부.</param>
+        public void SetDynamicImageMode(bool enb)
+        {
+            _isDynamicImageMode = enb;
+            _skipDefaultCartridgeLoad = enb;
         }
 
         /// <summary>
         /// 배경 UI에 표시될 현재 진행도 정보를 할당함.
         /// </summary>
+        /// <param name="bg">배경 페이지 참조.</param>
+        /// <param name="progress">진행도 텍스트.</param>
         public void SetProgressInfo(Page_Background bg, string progress)
         {
             _background = bg;
@@ -112,14 +245,17 @@ namespace My.Scripts.Core.Pages
         }
 
         /// <summary>
-        /// 페이지 진입 시 연출 요소들을 초기화하고 입력 감지를 시작함.
+        /// 페이지 진입 시 연출 요소들을 초기화하고 입력 감지를 준비함.
         /// 매 진입 시 배열을 새로 생성하지 않도록 UI 컴포넌트들을 최초 1회 캐싱함.
         /// </summary>
         public override void OnEnter()
         {
             base.OnEnter();
             
-            if (_background && !string.IsNullOrEmpty(_progressText)) _background.SetQuestionText(_progressText);
+            if (_background && !string.IsNullOrEmpty(_progressText)) 
+            {
+                _background.SetQuestionText(_progressText);
+            }
             
             _currentPhase = Phase.None;
             _isFirstSelectionDone = false;
@@ -132,7 +268,15 @@ namespace My.Scripts.Core.Pages
             {
                 _cgObjectsCache = new GameObject[] { cgA, cgB, cgC, cgD, cgE };
                 _cgsCache = new CanvasGroup[5];
-                for (int i = 0; i < 5; i++) _cgsCache[i] = GetOrAddCanvasGroup(_cgObjectsCache[i]);
+                for (int i = 0; i < 5; i++) 
+                {
+                    _cgsCache[i] = GetOrAddCanvasGroup(_cgObjectsCache[i]);
+                }
+            }
+
+            for (int i = 0; i < 5; i++)
+            {
+                if (_cgsCache[i]) _cgsCache[i].alpha = 1f;
             }
 
             if (legoArrowCg) legoArrowCg.alpha = 0f;
@@ -143,16 +287,24 @@ namespace My.Scripts.Core.Pages
 
             ApplyDataToUI();
 
-            if (_cts != null)
-            {
-                _cts.Cancel();
-                _cts.Dispose();
-            }
-            _cts = new CancellationTokenSource();
+            if (_waitAndInitCoroutine != null) StopCoroutine(_waitAndInitCoroutine);
+            _waitAndInitCoroutine = StartCoroutine(WaitAndInitRoutine());
+        }
 
-            if (!_skipDefaultCartridgeLoad)
+        /// <summary>
+        /// 이미지가 완전히 로드될 때까지 대기한 후 화면 페이드 인 흐름을 유지함.
+        /// 리소스가 비어있는 상태에서 애니메이션이 일어나는 것을 차단하기 위함.
+        /// </summary>
+        private IEnumerator WaitAndInitRoutine()
+        {
+            while (!_isPreloadFinished)
             {
-                LoadAndSetCartridgeImagesAsync(_cts.Token).Forget();
+                yield return null;
+            }
+
+            if (!_isDynamicImageMode) 
+            {
+                ApplyCachedSprites();
             }
 
             StartCoroutine(InputDelayRoutine());
@@ -186,38 +338,23 @@ namespace My.Scripts.Core.Pages
             ReleaseLoadedImages();
             _skipDefaultCartridgeLoad = false;
 
-            if (_sequenceCoroutine != null)
-            {
-                StopCoroutine(_sequenceCoroutine);
-                _sequenceCoroutine = null;
-            }
-
+            if (_waitAndInitCoroutine != null) StopCoroutine(_waitAndInitCoroutine);
+            if (_sequenceCoroutine != null) StopCoroutine(_sequenceCoroutine);
             if (_inactivityMonitorCoroutine != null) StopCoroutine(_inactivityMonitorCoroutine);
             if (_popupFadeOutCoroutine != null) StopCoroutine(_popupFadeOutCoroutine);
         }
 
         /// <summary>
-        /// 세션에 기록된 현재 카트리지 정보를 바탕으로 답변 이미지를 비동기 로드함.
-        /// </summary>
-        private async UniTaskVoid LoadAndSetCartridgeImagesAsync(CancellationToken token)
-        {
-            if (!SessionManager.Instance || string.IsNullOrEmpty(SessionManager.Instance.Cartridge)) return;
-
-            string cartridge = SessionManager.Instance.Cartridge.ToLower();
-            string legoCartKey = "Lego_cart_" + cartridge; 
-            string[] keys = new string[] { legoCartKey, legoCartKey, legoCartKey, legoCartKey, legoCartKey };
-            
-            await LoadAndSetImagesInternalAsync(keys, token);
-        }
-
-        /// <summary>
         /// 특정 테마에 맞춘 답변 이미지 키들을 주입받아 로드를 시작함.
+        /// Step1 Q2와 같이 동적으로 이미지가 결정되는 케이스를 지원하기 위함.
         /// </summary>
+        /// <param name="addressableKeys">불러올 어드레서블 키 배열.</param>
         public async UniTask LoadAndSetSpecificImagesAsync(string[] addressableKeys)
         {
             if (addressableKeys == null || addressableKeys.Length < 5) return;
             
             _skipDefaultCartridgeLoad = true;
+            _isPreloadFinished = false;
             
             if (_cts != null)
             {
@@ -226,16 +363,30 @@ namespace My.Scripts.Core.Pages
             }
             _cts = new CancellationTokenSource();
 
-            await LoadAndSetImagesInternalAsync(addressableKeys, _cts.Token);
+            try
+            {
+                await LoadAndSetImagesInternalAsync(addressableKeys, _cts.Token);
+            }
+            finally
+            {
+                _isPreloadFinished = true;
+            }
         }
 
         /// <summary>
         /// 어드레서블 핸들을 통해 이미지들을 로드하고 UI Image 컴포넌트에 할당함.
+        /// 외부에서 동적으로 이미지를 주입할 때(Step1 Q2 등) Null 참조가 발생하지 않도록 리스트를 검사함.
         /// </summary>
+        /// <param name="keys">불러올 키 배열.</param>
+        /// <param name="token">작업 취소를 위한 토큰.</param>
         private async UniTask LoadAndSetImagesInternalAsync(string[] keys, CancellationToken token)
         {
-            ReleaseLoadedImages();
+            if (_loadedImageHandles == null)
+            {
+                _loadedImageHandles = new List<AsyncOperationHandle<Sprite>>();
+            }
 
+            ReleaseLoadedImages();
             UniTask<Sprite>[] loadTasks = new UniTask<Sprite>[5];
 
             for (int i = 0; i < 5; i++)
@@ -351,7 +502,6 @@ namespace My.Scripts.Core.Pages
         /// </summary>
         private IEnumerator InactivityMonitorRoutine()
         {
-            // # TODO: 하드코딩된 대기 시간(20s, 10s)을 설정 파일에서 주입받도록 개선할 것.
             yield return CoroutineData.GetWaitForSeconds(20.0f);
             if (_currentPhase == Phase.Completed || _isAnimating || _selectedIndex != -1) yield break;
 

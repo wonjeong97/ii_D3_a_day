@@ -216,7 +216,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &153250317
 RectTransform:
   m_ObjectHideFlags: 0
@@ -305,12 +305,15 @@ MonoBehaviour:
   cartACanvas: {fileID: 416181726}
   cartATransform: {fileID: 416181725}
   cartAText: {fileID: 1861296811}
+  cartAImage: {fileID: 416181727}
   cartBCanvas: {fileID: 1436612742}
   cartBTransform: {fileID: 1436612741}
   cartBText: {fileID: 1515474306}
+  cartBImage: {fileID: 1436612743}
   cartCCanvas: {fileID: 528519889}
   cartCTransform: {fileID: 528519888}
   cartCText: {fileID: 1643436475}
+  cartCImage: {fileID: 528519890}
   autoSelectDelay: 1.5
   fadeDuration: 0.5
   finalHoldTime: 3
@@ -685,7 +688,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 7da2c5809d26df642be24d9fb9fc800e, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 22b709ad158333742b0d85d3eecaffc7, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -970,7 +973,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: dcc4e3bb0b3cdb24fbcf215291011e15, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 2a68e93dc70d2db4ea6695a964a7d1ee, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -1821,7 +1824,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 6c24d79814ad630418ec341effac4ae1, type: 3}
+  m_Sprite: {fileID: 21300000, guid: c73a0f5d590140b4c81f925074e78418, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -1908,7 +1911,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1513940950
 RectTransform:
   m_ObjectHideFlags: 0
@@ -2256,7 +2259,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1614754861
 RectTransform:
   m_ObjectHideFlags: 0
@@ -2712,7 +2715,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1840940164
 RectTransform:
   m_ObjectHideFlags: 0
@@ -3163,6 +3166,8 @@ MonoBehaviour:
   descriptionText: {fileID: 1530975597}
   fadeDuration: 0.5
   _clientFetchTimeout: 15
+  pollingInterval: 3
+  apiTimeout: 10
 --- !u!1 &2089370622
 GameObject:
   m_ObjectHideFlags: 0

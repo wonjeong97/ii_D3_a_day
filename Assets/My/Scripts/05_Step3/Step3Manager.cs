@@ -132,6 +132,10 @@ namespace My.Scripts._05_Step3
                         if (rPage)
                         {
                             rPage.SetSyncCommand($"STEP3_R_{i}_COMPLETE");
+                            
+                            // 각 카메라 페이지에 본인의 문항 번호를 주입하여 마지막 문항(D3) 여부를 판단하게 함.
+                            string qId = (i == totalQuestions - 1) ? "D3" : $"Q{i + 1}";
+                            rPage.SetQuestionId(qId);
                         }
                         pages[pageIndex].SetupData(rData);
                     }
@@ -144,7 +148,6 @@ namespace My.Scripts._05_Step3
                 Page_Loading loading = pages[pageIndex] as Page_Loading;
                 if (loading)
                 {
-                    // 로딩 페이지에서 양쪽 PC가 모인 뒤 지정된 시간 경과 후 다음 페이지로 넘어가도록 동기화 설정함.
                     loading.SetSyncCommands("STEP3_LOADING_READY", "STEP3_LOADING_COMPLETE");
                 }
                 pages[pageIndex].SetupData(setting.loadingPage);
@@ -164,6 +167,7 @@ namespace My.Scripts._05_Step3
 
         /// <summary>
         /// 지정된 인덱스의 페이지로 전환함.
+        /// 전환 직전 이전 질문의 응답 데이터를 합성에 활용할 수 있도록 동기화함.
         /// </summary>
         /// <param name="index">전환할 페이지의 인덱스 번호.</param>
         public override void TransitionToPage(int index)
@@ -172,6 +176,15 @@ namespace My.Scripts._05_Step3
             
             if (currentPageIndex >= 0 && currentPageIndex < pages.Count && index >= 0 && index < pages.Count)
             {
+                Page_Question prevQ = pages[currentPageIndex] as Page_Question;
+                Page_Camera nextR = pages[index] as Page_Camera;
+                
+                // 질문(Page_Question)에서 카메라/합성(Page_Camera)으로 넘어갈 때 유저가 고른 답변 번호를 전달함.
+                if (prevQ && nextR)
+                {
+                    nextR.SetAnswerIndex(prevQ.SelectedIndex);
+                }
+
                 GamePage prevPage = pages[currentPageIndex];
                 GamePage nextPage = pages[index];
 
@@ -234,7 +247,7 @@ namespace My.Scripts._05_Step3
         /// </summary>
         protected override void OnAllFinished()
         {
-            UnityEngine.Debug.Log("[Step3Manager] 내 PC Step3 완료. Video 씬으로 즉시 이동합니다.");
+            Debug.Log("[Step3Manager] 내 PC Step3 완료. Video 씬으로 즉시 이동합니다.");
 
             if (GameManager.Instance)
             {

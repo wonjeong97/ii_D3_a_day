@@ -22,6 +22,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 00d001d21300a3b4c8d6d25e84e2c288
+    m_Address: Lego_Face_Client_1
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 0256f7dbaf681c94db861985124d9dc9
     m_Address: BG_Step2_Mt_2_4
     m_ReadOnly: 0
@@ -42,8 +47,23 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 035a4000dc58ed64d96cd49c184d42ac
+    m_Address: Lego_B_Client_4
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 039bb482fea634a4889f574783b94390
     m_Address: BG_Step2_Forest_4_14
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0448ef59d24c23e4f8d7fefaa572d0a1
+    m_Address: Lego_A_Server_5
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 045367222ea23dc45b098b27085cb9d1
+    m_Address: Lego_C_Client_1
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -117,6 +137,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0afc89666251eed41a7b48641a2f738e
+    m_Address: Lego_Result_Client_4
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 0d343e191f53a4a49a139c81c355c4b5
     m_Address: BG_Step2_Mt_1_13
     m_ReadOnly: 0
@@ -134,6 +159,11 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 0de466354f3c9b249b5e5ef51c76f820
     m_Address: BG_Step2_Mt_2_10
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0e8ad029f2f80d14ea9ebeacb2bb1949
+    m_Address: Lego_A_Client_1
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -184,6 +214,11 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 137d8d0951174e24183158c811ccd6c4
     m_Address: BG_Step2_Sky_5_15
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1392f318ecd9cef429c265de7370a05a
+    m_Address: Lego_B_Client_0
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -267,6 +302,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1f87bc28bc02d0b4b8b2d1aa7e85804c
+    m_Address: Lego_A_Client_2
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 2031488a0a2176947b8c6cbac3dfd030
     m_Address: BG_Step2_Sky_2_8
     m_ReadOnly: 0
@@ -274,6 +314,11 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 21f40ad874fefc2449972747238078ad
     m_Address: BG_Step2_Forest_5_14
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 22b709ad158333742b0d85d3eecaffc7
+    m_Address: Lego_A_Server_0
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -299,6 +344,21 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 24c32fb3e82b9a845b2d861faf60288b
     m_Address: BG_Step2_Mt_1_15
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 2517e80b19f4c0b42a5bca635f5b2b55
+    m_Address: Lego_Face_Server_1
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 25b4c199d0b0e074e83fff7742c26620
+    m_Address: Lego_C_Client_3
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 26813e67ed684fc43b19bb408a6d559b
+    m_Address: Lego_B_Server_5
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -347,6 +407,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 2a68e93dc70d2db4ea6695a964a7d1ee
+    m_Address: Lego_C_Server_0
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 2bd8bd661f86f0e4fbe99b95683c1c8b
     m_Address: BG_Step2_Sky_4_1
     m_ReadOnly: 0
@@ -369,6 +434,11 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 2f447824933c8754b9204f8e47520857
     m_Address: BG_Step2_River_4_2
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 2f7747d66fa14c442bc0ac842aa2014b
+    m_Address: Lego_B_Client_2
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -442,6 +512,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3969cd65c4a6bdd4fb5c26a5133438cc
+    m_Address: Lego_C_Client_5
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 3a1bd7cccf6282142b3e6c64d06b7107
     m_Address: BG_Step2_River_4_3
     m_ReadOnly: 0
@@ -479,6 +554,11 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 3eab1fef308cbf2419c8acad6a372918
     m_Address: BG_Step2_Forest_2_12
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3efe1ceaec707204cbc15ea4064be255
+    m_Address: Lego_Result_Server_3
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -627,6 +707,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 530ab4ff7d43fff448f89e8726facc81
+    m_Address: Lego_Face_Client_5
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 53cbd98bab324c24abdfb895fdd022d0
     m_Address: BG_Step2_Forest_1_13
     m_ReadOnly: 0
@@ -639,6 +724,11 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 56eef3c267c19ba4285ae8be12a9ce2c
     m_Address: BG_Step2_Mt_2_11
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 570d968d971afc942a62662d79f62302
+    m_Address: Lego_C_Client_4
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -662,6 +752,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 59279587064c05b4cb37014946f749ce
+    m_Address: Lego_Result_Client_1
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 5950f861e7ff4544f8c2c898838293d4
     m_Address: BG_Step2_Sea_3_12
     m_ReadOnly: 0
@@ -674,6 +769,11 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 599f7f41fb2d4e04b9b205f707397209
     m_Address: BG_Step2_Mt_4_8
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 59d2a23957545ed4cbc4cc878c39ec1e
+    m_Address: Lego_A_Server_2
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -704,6 +804,11 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 5cdbd09abde455040b12bf549a3049fa
     m_Address: BG_Step2_River_2_6
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5dc985691fbc3dd49a7bc83f079f2495
+    m_Address: Lego_Result_Server_5
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -747,6 +852,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 61bdfadfeb446434d911b06750ac9534
+    m_Address: Lego_C_Server_5
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 623b3b070cfc2bb4dabef01de1b4cf32
     m_Address: BG_Step2_Sea_1_12
     m_ReadOnly: 0
@@ -759,6 +869,21 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 6350380206b7bf745b3c05c70b47343a
     m_Address: BG_Step2_Sky_3_7
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 63cb9807d1b6ffc44a67cc12a922f82f
+    m_Address: Lego_Face_Server_5
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 64050c90e2202584cb895378c40b10be
+    m_Address: Lego_A_Server_3
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 646004162f3c4a342a4bc201140891c9
+    m_Address: Lego_Face_Client_4
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -802,18 +927,23 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 69264e369aefea5408369659967e374e
+    m_Address: Lego_Result_Client_3
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 6a36cd0a404e5684a9df28ad8889e3a9
     m_Address: BG_Step2_Sea_1_1
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 6b88f9c9ddb91cc4c840559121ca22a9
-    m_Address: BG_Step2_Forest_1_9
+  - m_GUID: 6a6024809da850f449a4f5e99951a75a
+    m_Address: Lego_B_Client_1
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 6c24d79814ad630418ec341effac4ae1
-    m_Address: Lego_cart_b
+  - m_GUID: 6b88f9c9ddb91cc4c840559121ca22a9
+    m_Address: BG_Step2_Forest_1_9
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -824,6 +954,11 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 6d386d581d299004c9f75f5fa4c5805a
     m_Address: BG_Step2_Mt_1_14
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6d62a8ba727bd3b4e999f6ec252b5e79
+    m_Address: Lego_Result_Server_2
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -897,6 +1032,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 7445b3199fc728a48917f1cdfd348439
+    m_Address: Lego_A_Server_4
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 74c578a0ae3cbd04c845d546e6555c35
     m_Address: BG_Step2_River_1_13
     m_ReadOnly: 0
@@ -904,6 +1044,11 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 751292b0836bd714c96dcdd033321f45
     m_Address: BG_Step2_Forest_4_1
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 751ec93da8d1f1f4eb432d9ac508ff95
+    m_Address: Lego_B_Server_4
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -967,13 +1112,18 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 7c495e72a63f84b4893a2b1208696d61
+    m_Address: Lego_B_Server_2
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 7c8838daa52933540bc13374e6eb5730
     m_Address: BG_Step2_Sea_1_8
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 7da2c5809d26df642be24d9fb9fc800e
-    m_Address: Lego_cart_a
+  - m_GUID: 7d25cd303c210b34ea1f0488a1941c77
+    m_Address: Lego_Result_Server_4
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -982,8 +1132,18 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 7e970547126b7dd4a8708e3cd832e045
+    m_Address: Lego_C_Client_0
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 7ea176ada15b1164f88f09b9015789f2
     m_Address: BG_Step2_River_5_3
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 7fc8140af0bcced4f80b5a81d43c47fe
+    m_Address: Lego_C_Server_4
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -999,6 +1159,11 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 8208ad879bed77b4799fbe4d298ba1d3
     m_Address: BG_Step2_Mt_3_5
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 822af70b71aaacf4b85daf4d8ef2b9c2
+    m_Address: Lego_B_Client_5
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -1029,6 +1194,11 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 8680e85ed28215840a44d4d85a3109c1
     m_Address: BG_Step2_River_1_4
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 882df471294619a448c7e0965b37a16b
+    m_Address: Lego_Face_Server_4
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -1064,6 +1234,11 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 8ce8b133b5d942a4f898910235b21b0e
     m_Address: BG_Step2_River_3_8
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 907aa1fa76ff8f4449bdada4f28742b8
+    m_Address: Lego_Face_Client_2
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -1109,6 +1284,11 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 93641fdb532a9d44e831c737aee93d28
     m_Address: BG_Step2_Sea_3_5
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 94350b547a8830c40bc80faf2cbd74e5
+    m_Address: Lego_A_Client_0
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -1172,6 +1352,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9cb6d3f3d8104c04b8045635d7d8d2ff
+    m_Address: Lego_A_Client_3
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 9cfc6907e994613469dc796cc8dd877c
     m_Address: BG_Step2_River_1_10
     m_ReadOnly: 0
@@ -1192,6 +1377,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a01285d13c092744eb9fa8cf35f78927
+    m_Address: Lego_Face_Server_3
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: a02e8df3811dbd44e9da8d5b6fbf28a5
     m_Address: BG_Step2_Sky_1_15
     m_ReadOnly: 0
@@ -1202,8 +1392,28 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a0ef3a6ee0f183d44a11493e7f924b4a
+    m_Address: Lego_Face_Server_2
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a14439d4547e3f84aa5f73f58b03782a
+    m_Address: Lego_B_Server_3
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: a1bcca20a4f74364684f1dffc099b8cd
     m_Address: BG_Step2_River_2_9
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a3cff206d1c349a4a8d24a626269c543
+    m_Address: Lego_C_Client_2
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a435dcc0ca7f5e34792b4032287e7965
+    m_Address: Lego_C_Server_2
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -1239,6 +1449,11 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: a60bcf7ea85fec9448bb44ca5d3575f7
     m_Address: BG_Step2_Mt_5_11
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a732bf33cbed0fb4eae81ba86310b6ea
+    m_Address: Lego_Result_Client_5
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -1307,6 +1522,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b008aadbef8cdb643a2c2ae085990e86
+    m_Address: Lego_Face_Client_3
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: b0307be6182abf84da8251a35a43e99d
     m_Address: BG_Step2_River_2_8
     m_ReadOnly: 0
@@ -1352,6 +1572,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b58e7f9085cfda6468a315fd83feb0f9
+    m_Address: Lego_A_Server_1
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: b64429659a06a484cb86cc17ef52bafc
     m_Address: BG_Step2_Sea_1_13
     m_ReadOnly: 0
@@ -1387,6 +1612,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b91bcc9fe7738e940bda2ddc01eaa44e
+    m_Address: Lego_B_Server_1
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: b954ff87b605786439521d95046fa970
     m_Address: BG_Step2_Mt_1_8
     m_ReadOnly: 0
@@ -1394,6 +1624,11 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: b988002aa55a2f54db7c36b0b2264a01
     m_Address: BG_Step2_Forest_2_1
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: baef548415f443e40b506aeec3f50591
+    m_Address: Lego_A_Client_4
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -1437,6 +1672,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c27fbf10d5af2534c96c3682e7ba1ebd
+    m_Address: Lego_B_Client_3
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: c33763fd007344a43a79e1f893e6700f
     m_Address: BG_Step2_Mt_2_12
     m_ReadOnly: 0
@@ -1477,6 +1717,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c67194bc5e9376541b9b0186df18fa79
+    m_Address: Lego_Result_Server_1
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: c6d4c2c157fa31d4786a988c5fb85b18
     m_Address: BG_Step2_Sea_5_6
     m_ReadOnly: 0
@@ -1484,6 +1729,16 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: c7063abd735250a4ea82d079e8cf49b7
     m_Address: BG_Step2_River_2_11
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c73a0bca567424f4cbf9f6b3790dd497
+    m_Address: Lego_C_Server_1
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c73a0f5d590140b4c81f925074e78418
+    m_Address: Lego_B_Server_0
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -1499,6 +1754,11 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: c86c6aac1737e154d90ea84dd0354f17
     m_Address: BG_Step2_Sky_5_9
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c94c5439327ea614d8e7b79fcf84fe53
+    m_Address: Lego_A_Client_5
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -1534,6 +1794,11 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: ce747b4783feb4f4c8f3fa63786cc396
     m_Address: BG_Step2_Sky_2_4
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d0b365d8d45c3664ba9874d011921542
+    m_Address: Lego_Result_Client_2
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -1632,11 +1897,6 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: dcc4e3bb0b3cdb24fbcf215291011e15
-    m_Address: Lego_cart_c
-    m_ReadOnly: 0
-    m_SerializedLabels: []
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: dd74b4a98f19da845b164597cd6a3146
     m_Address: BG_Step2_River_3_7
     m_ReadOnly: 0
@@ -1689,6 +1949,11 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: e862f65ded22cdc47874157e0ab990f9
     m_Address: BG_Step2_Sea_4_9
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e98ab83d5928d534ca5a9d768c917e99
+    m_Address: Lego_C_Server_3
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0

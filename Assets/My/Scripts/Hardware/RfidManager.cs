@@ -33,8 +33,8 @@ namespace My.Scripts.Hardware
         private Process _bridgeProcess;
         private NamedPipeClientStream _pipeClient;
         
-        private bool _isInitializing = false;
-        private bool _isProcessingCommand = false;
+        private bool _isInitializing;
+        private bool _isProcessingCommand;
         
         private CancellationTokenSource _pollingCts;
         private readonly byte[] _readBuffer = new byte[256];

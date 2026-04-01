@@ -78,7 +78,9 @@ namespace My.Scripts.Global
         private void Start()
         {
             Cursor.visible = false;
+            Cursor.lockState = CursorLockMode.Locked;
             Application.runInBackground = true;
+            Screen.fullScreenMode = FullScreenMode.ExclusiveFullScreen;
             
             LoadSettings();
             
@@ -147,6 +149,7 @@ namespace My.Scripts.Global
             else if (Input.GetKeyDown(KeyCode.M)) 
             {
                 Cursor.visible = !Cursor.visible;
+                Cursor.lockState = Cursor.visible ? CursorLockMode.None : CursorLockMode.Locked;
             }
         }
 
