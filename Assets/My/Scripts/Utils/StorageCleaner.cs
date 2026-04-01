@@ -39,8 +39,13 @@ namespace My.Scripts.Utils
                         rootPath = loadedSetting.localSaveRoot;
                     }
 
-                    DateTime thresholdDate = DateTime.Now.AddDays(-MaxKeepDays);
-
+                    // 오늘 포함 MaxKeepDays일 유지
+                    DateTime thresholdDate = DateTime.Today.AddDays(-(MaxKeepDays - 1));
+                    if (!IsSafeCleanupRoot(rootPath))
+                    {
+                        Debug.LogError($"[StorageCleaner] 정리 대상 경로가 안전하지 않아 중단: {rootPath}");
+                        return;
+                    }
                     CleanOldFolders(rootPath, thresholdDate);
                 }
                 catch (Exception e)
@@ -48,6 +53,22 @@ namespace My.Scripts.Utils
                     Debug.LogError($"[StorageCleaner] 정리 작업 중 예외 발생: {e.Message}");
                 }
             }).Forget();
+        }
+
+        private static bool IsSafeCleanupRoot(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path)) return false;
+            
+            string fullPath = Path.GetFullPath(path);
+            string root = Path.GetPathRoot(fullPath);
+            
+            // 드라이브 루트/시스템 루트 직접 삭제 방지
+            if (string.Equals(fullPath.TrimEnd(Path.DirectorySeparatorChar), root?.TrimEnd(Path.DirectorySeparatorChar),
+                    StringComparison.OrdinalIgnoreCase))
+                return false;
+            
+            // 필요 시 프로젝트 정책에 맞는 allowlist prefix 검증 추가
+            return true;
         }
 
         /// <summary> 

@@ -68,7 +68,7 @@ namespace My.Scripts.Core.Pages
         /// <param name="id">문항 식별자 문자열.</param>
         public void SetQuestionId(string id)
         {
-            questionId = id;
+            questionId = id?.Trim();
         }
 
         /// <summary>
@@ -166,7 +166,15 @@ namespace My.Scripts.Core.Pages
                 {
                     isSuccess = false;
                     yield return UniTask.ToCoroutine(async () => {
-                        isSuccess = await compositor.ProcessAndSave(_selectedAnswerIndex, false);
+                        try
+                        {
+                            isSuccess = await compositor.ProcessAndSave(_selectedAnswerIndex, false);
+                        }
+                        catch (Exception e)
+                        {
+                            Debug.LogException(e);
+                            isSuccess = false;
+                        }
                     });
                 }
                 else
@@ -266,6 +274,12 @@ namespace My.Scripts.Core.Pages
             string roleString = isServer ? "Left" : "Right";
             int userIdx = SessionManager.Instance ? SessionManager.Instance.CurrentUserIdx : 0;
             string dateStr = DateTime.Now.ToString("yyyy-MM-dd");
+
+            if (string.IsNullOrWhiteSpace(questionId))
+            {
+                Debug.LogError($"{nameof(Page_Camera)}: questionId is not set.");
+                return false;
+            }
             string relativePath = $"{dateStr}/{userIdx}/{roleString}/{userIdx}_{roleString}_{questionId}.png";
 
             try

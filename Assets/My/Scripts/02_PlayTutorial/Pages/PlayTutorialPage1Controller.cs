@@ -105,8 +105,17 @@ namespace My.Scripts._02_PlayTutorial.Pages
         public override void SetupData(object data)
         {
             PlayTutorialPage1Data pageData = data as PlayTutorialPage1Data;
-            if (pageData != null) _cachedData = pageData;
+            if (pageData != null)
+            {
+                _cachedData = pageData;
+            }
+            else
+            {
+                _cachedData = null;
+                Debug.LogWarning("[PlayTutorialPage1] SetupData 타입 불일치 또는 null 입력");
+            }
 
+            _preloadedSprites = null;
             _isPreloadFinished = false;
 
             if (_cts != null) 
@@ -171,6 +180,7 @@ namespace My.Scripts._02_PlayTutorial.Pages
                 if (!token.IsCancellationRequested)
                 {
                     Debug.LogError($"[PlayTutorialPage1] 프리로드 실패: {e.Message}");
+                    _preloadedSprites = null;
                     _isPreloadFinished = true;
                 }
             }
