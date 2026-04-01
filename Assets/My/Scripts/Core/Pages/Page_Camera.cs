@@ -290,12 +290,13 @@ namespace My.Scripts.Core.Pages
             int userIdx = SessionManager.Instance ? SessionManager.Instance.CurrentUserIdx : 0;
             string dateStr = DateTime.Now.ToString("yyyy-MM-dd");
 
-            if (string.IsNullOrWhiteSpace(questionId))
+            string safeQuestionId = NormalizeQuestionId(questionId);
+            if (string.IsNullOrWhiteSpace(safeQuestionId))
             {
-                Debug.LogError($"{nameof(Page_Camera)}: questionId is not set.");
+                Debug.LogError($"{nameof(Page_Camera)}: questionId is not set or invalid.");
                 return false;
             }
-            string relativePath = $"{dateStr}/{userIdx}/{roleString}/{userIdx}_{roleString}_{questionId}.png";
+            string relativePath = $"{dateStr}/{userIdx}/{roleString}/{userIdx}_{roleString}_{safeQuestionId}.png";
 
             try
             {
