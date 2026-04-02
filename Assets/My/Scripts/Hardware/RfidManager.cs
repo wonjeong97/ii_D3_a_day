@@ -215,7 +215,7 @@ namespace My.Scripts.Hardware
         /// </summary>
         private void Update()
         {
-            if (Input.GetKeyDown(KeyCode.Space)) TryReadCard().Forget();
+            if (Input.GetKeyDown(KeyCode.LeftShift)) TryReadCard().Forget();
         }
 
         /// <summary>
@@ -289,14 +289,18 @@ namespace My.Scripts.Hardware
                 
                 if (msg != null)
                 {
+                    string payload = msg.payload != null ? msg.payload.Trim() : string.Empty;
+                    
                     if (msg.command == "RFID_READ")
                     {
-                        string uid = msg.payload.Trim();
-                        ProcessMatchedUid(uid);
+                        if (!string.IsNullOrEmpty(payload))
+                        {
+                            ProcessMatchedUid(payload);
+                        }
                         return;
                     }
                     // 브릿지에서 장치 열기 실패를 보고한 경우
-                    else if (msg.command == "RFID_ERROR" && msg.payload == "DeviceNotOpened")
+                    else if (msg.command == "RFID_ERROR" && string.Equals(payload, "DeviceNotOpened", StringComparison.OrdinalIgnoreCase))
                     {
                         ShowDeviceError();
                         return;
