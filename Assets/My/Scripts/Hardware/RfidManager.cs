@@ -28,6 +28,9 @@ namespace My.Scripts.Hardware
         // UID가 정상적으로 매핑되었을 때 발생할 이벤트 (1~5번)
         public Action<int> onAnswerReceived;
 
+        // RFID 기기 미연결 에러 발생 시 UI 팝업 등을 띄우기 위한 이벤트
+        public Action<string> onRfidError;
+
         private RfidSetting _rfidSetting;
         private string _bridgeExePath;
         private Process _bridgeProcess;
@@ -38,6 +41,7 @@ namespace My.Scripts.Hardware
         
         private CancellationTokenSource _pollingCts;
         private readonly byte[] _readBuffer = new byte[256];
+        private float _lastErrorTime = -10f; // 에러 메시지 중복 방지용 타이머
 
         /// <summary>
         /// 브릿지 프로그램으로부터 수신되는 JSON 응답을 역직렬화하기 위한 내부 클래스.
@@ -207,11 +211,11 @@ namespace My.Scripts.Hardware
         }
 
         /// <summary>
-        /// 디버그용 수동 키보드 입력.
+        /// 디버그용 수동 키보드 입력
         /// </summary>
         private void Update()
         {
-            if (Input.GetKeyDown(KeyCode.Space)) TryReadCard().Forget();
+            if (Input.GetKeyDown(KeyCode.LeftShift)) TryReadCard().Forget();
         }
 
         /// <summary>
@@ -243,7 +247,6 @@ namespace My.Scripts.Hardware
                 byte[] commandBytes = Encoding.UTF8.GetBytes(command);
                 await _pipeClient.WriteAsync(commandBytes, 0, commandBytes.Length).AsUniTask();
 
-                // 기존의 잦은 할당을 피하고 캐싱된 배열(_readBuffer)을 재사용하여 GC 스파이크를 최적화함.
                 int bytesRead = await _pipeClient.ReadAsync(_readBuffer, 0, _readBuffer.Length)
                     .AsUniTask()
                     .Timeout(TimeSpan.FromSeconds(1.0f));
@@ -274,8 +277,7 @@ namespace My.Scripts.Hardware
         }
 
         /// <summary>
-        /// 수신된 문자열을 파싱하고 매핑 이벤트를 발생시킴.
-        /// 브릿지가 보내는 JSON 응답을 역직렬화하여 정확한 UID(payload)만 추출하기 위함.
+        /// 수신된 문자열을 파싱하고 매핑 이벤트를 발생시키거나 에러를 처리함.
         /// </summary>
         private void ProcessResponse(string response)
         {
@@ -285,11 +287,24 @@ namespace My.Scripts.Hardware
             {
                 BridgeMessage msg = JsonUtility.FromJson<BridgeMessage>(response);
                 
-                if (msg != null && msg.command == "RFID_READ")
+                if (msg != null)
                 {
-                    string uid = msg.payload.Trim();
-                    ProcessMatchedUid(uid);
-                    return;
+                    string payload = msg.payload != null ? msg.payload.Trim() : string.Empty;
+                    
+                    if (msg.command == "RFID_READ")
+                    {
+                        if (!string.IsNullOrEmpty(payload))
+                        {
+                            ProcessMatchedUid(payload);
+                        }
+                        return;
+                    }
+                    // 브릿지에서 장치 열기 실패를 보고한 경우
+                    else if (msg.command == "RFID_ERROR" && string.Equals(payload, "DeviceNotOpened", StringComparison.OrdinalIgnoreCase))
+                    {
+                        ShowDeviceError();
+                        return;
+                    }
                 }
             }
             catch
@@ -307,11 +322,36 @@ namespace My.Scripts.Hardware
                     ProcessMatchedUid(uid);
                 }
             }
+            else if (response.Contains("DeviceNotOpened"))
+            {
+                ShowDeviceError();
+            }
+        }
+
+        /// <summary>
+        /// RFID 기기가 인식되지 않을 때 에러 로그를 남기고 이벤트를 발생시킴.
+        /// 폴링 중 지속적인 에러 스팸을 막기 위해 5초의 쿨타임을 적용함.
+        /// </summary>
+        private void ShowDeviceError()
+        {
+            if (Time.time - _lastErrorTime > 5.0f)
+            {
+                _lastErrorTime = Time.time;
+                string errorMsg = "RFID 기기가 연결되어 있지 않습니다. USB 연결을 확인해주세요.";
+                
+                // 콘솔에 빨간색으로 강력하게 에러 출력
+                UnityEngine.Debug.LogError($"<color=red>[RFIDManager] {errorMsg}</color>");
+                
+                // 필요한 경우 팝업 UI를 띄울 수 있도록 외부(예: GameManager, Page 컨트롤러 등)에 알림
+                if (onRfidError != null)
+                {
+                    onRfidError.Invoke(errorMsg);
+                }
+            }
         }
 
         /// <summary>
         /// 추출된 UID를 검증하고 이벤트를 발생시킴.
-        /// 중복 코드를 방지하고 공통된 처리 및 로그 출력을 수행하기 위함.
         /// </summary>
         private void ProcessMatchedUid(string uid)
         {
@@ -333,7 +373,6 @@ namespace My.Scripts.Hardware
 
         /// <summary>
         /// 설정된 JSON 배열을 순회하여 UID에 해당하는 답변 인덱스를 찾음.
-        /// 읽어들인 태그가 1~5번 중 어느 답변에 해당하는지 식별하기 위함.
         /// </summary>
         private int GetAnswerIndexFromUid(string uid)
         {
@@ -350,7 +389,6 @@ namespace My.Scripts.Hardware
 
         /// <summary>
         /// 앱 종료 또는 씬 해제 시 정리 작업 수행.
-        /// 백그라운드 프로세스가 좀비 상태로 남는 것을 방지함.
         /// </summary>
         private void OnDestroy()
         {

@@ -39,6 +39,8 @@ namespace My.Scripts.Global
         [SerializeField] private int maxRetries;
         [SerializeField] private float retryDelay;
 
+        private string _previousSceneName;
+        
         /// <summary>
         /// 싱글톤 인스턴스를 초기화하고 타임스탬프 로그 핸들러를 등록함.
         /// 세션 매니저가 없을 경우 동적으로 생성하여 데이터 연속성을 보장함.
@@ -150,6 +152,45 @@ namespace My.Scripts.Global
             {
                 Cursor.visible = !Cursor.visible;
                 Cursor.lockState = Cursor.visible ? CursorLockMode.None : CursorLockMode.Locked;
+            }
+            
+            if ((Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && Input.GetKeyDown(KeyCode.Space))
+            {
+                ToggleTestScene();
+            }
+        }
+        
+        /// <summary>
+        /// 현재 씬과 테스트 씬 간의 전환을 수행함.
+        /// 개발 중 어떤 구간에서든 즉시 테스트 환경으로 진입하고 다시 원래 흐름으로 복귀하기 위함.
+        /// </summary>
+        private void ToggleTestScene()
+        {
+            if (_isTransitioning) return;
+
+            string currentScene = SceneManager.GetActiveScene().name;
+
+            if (currentScene == GameConstants.Scene.Test)
+            {
+                // 테스트 씬에서 이전 씬으로 복귀
+                if (!string.IsNullOrEmpty(_previousSceneName))
+                {
+                    Debug.Log($"[GameManager] 테스트 씬 종료. 이전 씬({_previousSceneName})으로 복귀합니다.");
+                    ChangeScene(_previousSceneName, true);
+                    _previousSceneName = string.Empty; 
+                }
+                else
+                {
+                    // 이전 씬 정보가 없을 경우 안전하게 타이틀로 이동
+                    ChangeScene(GameConstants.Scene.Title, true);
+                }
+            }
+            else
+            {
+                // 현재 씬을 저장하고 테스트 씬으로 이동
+                _previousSceneName = currentScene;
+                Debug.Log($"[GameManager] 테스트 씬({GameConstants.Scene.Test})으로 이동합니다. (이전 씬: {_previousSceneName})");
+                ChangeScene(GameConstants.Scene.Test, true);
             }
         }
 
