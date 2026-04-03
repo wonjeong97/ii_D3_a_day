@@ -31,6 +31,9 @@ namespace My.Scripts.Hardware
         // RFID 기기 미연결 에러 발생 시 UI 팝업 등을 띄우기 위한 이벤트
         public Action<string> onRfidError;
 
+        // 디버그용: UID와 매핑된 인덱스(미등록 시 -1)를 모두 전달하는 이벤트
+        public Action<string, int> onRfidReadResult;
+
         private RfidSetting _rfidSetting;
         private string _bridgeExePath;
         private Process _bridgeProcess;
@@ -357,6 +360,11 @@ namespace My.Scripts.Hardware
         {
             int answerIndex = GetAnswerIndexFromUid(uid);
             
+            if (onRfidReadResult != null)
+            {
+                onRfidReadResult.Invoke(uid, answerIndex);
+            }
+
             if (answerIndex > 0)
             {
                 UnityEngine.Debug.Log($"<color=green>[RFID] 인식 완료: UID({uid}) -> Answer_{answerIndex}</color>");

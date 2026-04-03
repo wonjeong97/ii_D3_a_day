@@ -39,6 +39,7 @@ namespace My.Scripts.Global
             public const string Step3 = "JSON/Step3";
             public const string Ending = "JSON/Ending";
             public const string ApiSetting = "JSON/API";
+            public const string CameraSetting = "JSON/CameraSetting";
         }
     }
 }

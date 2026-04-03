@@ -3,6 +3,7 @@ using System.Collections;
 using Cysharp.Threading.Tasks;
 using My.Scripts.Core.Data;
 using My.Scripts.Global;
+using My.Scripts.Hardware;
 using My.Scripts.Network;
 using My.Scripts.Utils;
 using UnityEngine;
@@ -39,11 +40,6 @@ namespace My.Scripts.Core.Pages
         private bool _isCompleted;
         private Coroutine _sequenceCoroutine;
         private int _selectedAnswerIndex;
-
-        private const int CamWidth = 1920;
-        private const int CamHeight = 1080;
-        private const int SaveWidth = 960;
-        private const int SaveHeight = 1080;
         
         /// <summary>
         /// 동기화 명령어 설정.
@@ -124,6 +120,11 @@ namespace My.Scripts.Core.Pages
             {
                 CameraManager.Instance.StartCamera();
             }
+            
+            if (ArduinoManager.Instance)
+            {
+                ArduinoManager.Instance.SendCommandToLight("LEDOn");
+            }
 
             if (_sequenceCoroutine != null) StopCoroutine(_sequenceCoroutine);
             _sequenceCoroutine = StartCoroutine(SequenceRoutine());
@@ -142,6 +143,11 @@ namespace My.Scripts.Core.Pages
             }
             
             if (CameraManager.Instance) CameraManager.Instance.StopCamera();
+
+            if (ArduinoManager.Instance)
+            {
+                ArduinoManager.Instance.SendCommandToLight("LEDOff");
+            }
         }
         
         /// <summary>
@@ -154,9 +160,9 @@ namespace My.Scripts.Core.Pages
             SetUIText(textMySceneUI, _cachedData.textMyScene);
         }
 
-        /// <summary>
+       /// <summary>
         /// 답변 완료 안내, 촬영/합성 대기, 저장 연출을 순차적으로 수행함.
-        /// 씬 이름(Step2, Step3)을 기준으로 캡처와 합성 로직을 명확하게 분기 처리하기 위함.
+        /// 씬 이름(Step2, Step3)을 기준으로 캡처와 합성 로직을 명확하게 분기 처리하고, 어떠한 예외 상황이나 촬영 외의 스텝에서도 조명을 확실히 소등하기 위함.
         /// </summary>
         private IEnumerator SequenceRoutine()
         {
@@ -190,11 +196,22 @@ namespace My.Scripts.Core.Pages
                             Debug.LogException(e);
                             isSuccess = false;
                         }
+                        finally
+                        {
+                            if (ArduinoManager.Instance)
+                            {
+                                ArduinoManager.Instance.SendCommandToLight("LEDOff");
+                            }
+                        }
                     });
                 }
                 else
                 {
                     isSuccess = false;
+                    if (ArduinoManager.Instance)
+                    {
+                        ArduinoManager.Instance.SendCommandToLight("LEDOff");
+                    }
                 }
             }
             else if (isStep2)
@@ -204,9 +221,20 @@ namespace My.Scripts.Core.Pages
                     isSuccess = await CapturePhotoAsync();
                 });
             }
+            else
+            {
+                if (ArduinoManager.Instance)
+                {
+                    ArduinoManager.Instance.SendCommandToLight("LEDOff");
+                }
+            }
 
             if (!isSuccess)
             {
+                if (ArduinoManager.Instance)
+                {
+                    ArduinoManager.Instance.SendCommandToLight("LEDOff");
+                }
                 if (errorCg) yield return StartCoroutine(FadeCanvasGroupRoutine(errorCg, 0f, 1f, fadeDuration));
                 yield break;
             }
@@ -238,40 +266,65 @@ namespace My.Scripts.Core.Pages
 
         /// <summary>
         /// 공유 웹캠 텍스처를 이용하여 실제 사진을 캡처하고 저장을 요청함.
+        /// 예외 발생이나 조기 반환 시에도 켜져 있는 조명을 반드시 끄도록 보장하기 위함.
         /// </summary>
         private async UniTask<bool> CapturePhotoAsync()
         {
-            if (!CameraManager.Instance) return false;
-            
-            WebCamTexture cam = CameraManager.Instance.GetWebCamTexture();
-            if (!cam || !cam.isPlaying) return false;
-
-            RenderTexture rt = null;
-            RenderTexture prev = RenderTexture.active;
+            bool isLedTurnedOff = false;
             try
             {
-                rt = RenderTexture.GetTemporary(CamWidth, CamHeight, 0, RenderTextureFormat.ARGB32);
-                Graphics.Blit(cam, rt);
+                if (!CameraManager.Instance) return false;
                 
-                Texture2D photo = CameraManager.Instance.GetSharedCapturedPhoto();
-                RenderTexture.active = rt;
+                WebCamTexture cam = CameraManager.Instance.GetWebCamTexture();
+                if (!cam || !cam.isPlaying) return false;
+
+                CameraSetting camSet = CameraManager.Instance.setting;
+                if (camSet == null) return false;
                 
-                int startX = (CamWidth - SaveWidth) / 2;
-                int startY = (CamHeight - SaveHeight) / 2;
-                
-                photo.ReadPixels(new Rect(startX, startY, SaveWidth, SaveHeight), 0, 0);
-                photo.Apply();
-                
-                return await SavePhotoAsync(photo);
+                camSet.ValidateOrFix();
+                RenderTexture rt = null;
+                RenderTexture prev = RenderTexture.active;
+                try
+                {
+                    rt = RenderTexture.GetTemporary(camSet.camWidth, camSet.camHeight, 0, RenderTextureFormat.ARGB32);
+                    Graphics.Blit(cam, rt);
+                    
+                    Texture2D photo = CameraManager.Instance.GetSharedCapturedPhoto();
+                    RenderTexture.active = rt;
+                    
+                    int centerX = camSet.camWidth / 2;
+                    int centerY = camSet.camHeight / 2;
+                    
+                    int startX = centerX - camSet.cropLeft; 
+                    int startY = centerY - camSet.cropBottom; 
+                    
+                    photo.ReadPixels(new Rect(startX, startY, camSet.SaveWidth, camSet.SaveHeight), 0, 0);
+                    photo.Apply();
+
+                    if (ArduinoManager.Instance)
+                    {
+                        ArduinoManager.Instance.SendCommandToLight("LEDOff");
+                        isLedTurnedOff = true;
+                    }
+                    
+                    return await SavePhotoAsync(photo);
+                }
+                finally 
+                { 
+                    RenderTexture.active = prev;
+                    if (rt) RenderTexture.ReleaseTemporary(rt); 
+                }
             }
             catch 
             { 
                 return false; 
             }
-            finally 
-            { 
-                RenderTexture.active = prev;
-                if (rt) RenderTexture.ReleaseTemporary(rt); 
+            finally
+            {
+                if (!isLedTurnedOff && ArduinoManager.Instance)
+                {
+                    ArduinoManager.Instance.SendCommandToLight("LEDOff");
+                }
             }
         }
 
