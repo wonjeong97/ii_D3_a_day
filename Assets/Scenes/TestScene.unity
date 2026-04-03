@@ -1546,7 +1546,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 1
     m_VerticalOverflow: 1
     m_LineSpacing: 1
-  m_Text: LightOff
+  m_Text: LEDOff
 --- !u!222 &857241000
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -1784,7 +1784,7 @@ GameObject:
   - component: {fileID: 1073268153}
   - component: {fileID: 1073268152}
   m_Layer: 5
-  m_Name: Button_LightOff
+  m_Name: Button_LEDOff
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2010,8 +2010,8 @@ MonoBehaviour:
   rawImagePreview: {fileID: 1364305096}
   imgRandomBg: {fileID: 1519520359}
   btnRandomBg: {fileID: 1932685546}
-  btnLightOn: {fileID: 1268143171}
-  btnLightOff: {fileID: 1073268152}
+  btnLEDOn: {fileID: 1268143171}
+  btnLEDOff: {fileID: 1073268152}
 --- !u!4 &1181060194
 Transform:
   m_ObjectHideFlags: 0
@@ -2097,7 +2097,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 1
     m_VerticalOverflow: 1
     m_LineSpacing: 1
-  m_Text: LightOn
+  m_Text: LEDOn
 --- !u!222 &1207653203
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -2326,7 +2326,7 @@ GameObject:
   - component: {fileID: 1268143172}
   - component: {fileID: 1268143171}
   m_Layer: 5
-  m_Name: Button_LightOn
+  m_Name: Button_LEDOn
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

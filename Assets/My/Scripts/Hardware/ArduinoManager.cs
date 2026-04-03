@@ -139,6 +139,9 @@ namespace My.Scripts.Hardware
                     tempPort.ReadTimeout = 10;
                     _arduinoPort = tempPort;
                     Debug.Log($"<color=green>[ArduinoManager] 조명 아두이노 연결 완료: {portName}</color>");
+                    
+                    // 연결 성공 직후 조명 초기 상태를 강제 보장하기 위함.
+                    SendCommandToLight("LEDOff");
                 }
                 else
                 {
@@ -197,6 +200,12 @@ namespace My.Scripts.Hardware
             }
 
             await AutoConnectAsync();
+            
+            // 재연결 프로세스가 끝난 후 다시 한번 상태를 보장함.
+            if (IsConnected)
+            {
+                SendCommandToLight("LEDOff");
+            }
         }
 
         /// <summary>

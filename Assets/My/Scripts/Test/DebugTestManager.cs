@@ -6,6 +6,7 @@ using My.Scripts.Hardware;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 namespace My.Scripts.Test
@@ -37,8 +38,8 @@ namespace My.Scripts.Test
         [SerializeField] private Button btnRandomBg;
         
         [Header("Arduino UI")]
-        [SerializeField] private Button btnLightOn;
-        [SerializeField] private Button btnLightOff;
+        [SerializeField] private Button btnLEDOn;
+        [SerializeField] private Button btnLEDOff;
 
         private AsyncOperationHandle<Sprite> _bgHandle;
         private readonly string[] _bgThemes = new string[] { "Sea", "Mt", "River", "Sky", "Forest" };
@@ -76,11 +77,11 @@ namespace My.Scripts.Test
             if (btnCapture) btnCapture.onClick.AddListener(() => CaptureDebugPhotoAsync().Forget());
             if (btnRandomBg) btnRandomBg.onClick.AddListener(() => LoadRandomBackgroundAsync().Forget());
             
-            if (btnLightOn) btnLightOn.onClick.AddListener(() => 
+            if (btnLEDOn) btnLEDOn.onClick.AddListener(() => 
             {
                 if (ArduinoManager.Instance)
                 {
-                    ArduinoManager.Instance.SendCommandToLight("LightOn");
+                    ArduinoManager.Instance.SendCommandToLight("LEDOn");
                 }
                 else
                 {
@@ -88,11 +89,11 @@ namespace My.Scripts.Test
                 }
  
             });
-            if (btnLightOff) btnLightOff.onClick.AddListener(() => 
+            if (btnLEDOff) btnLEDOff.onClick.AddListener(() => 
             {
                 if (ArduinoManager.Instance)
                 {
-                    ArduinoManager.Instance.SendCommandToLight("LightOff");
+                    ArduinoManager.Instance.SendCommandToLight("LEDOff");
                 }
                 else
                 {
@@ -122,8 +123,8 @@ namespace My.Scripts.Test
             if (btnCapture) btnCapture.onClick.RemoveAllListeners();
             if (btnRandomBg) btnRandomBg.onClick.RemoveAllListeners();
             
-            if (btnLightOn) btnLightOn.onClick.RemoveAllListeners();
-            if (btnLightOff) btnLightOff.onClick.RemoveAllListeners();
+            if (btnLEDOn) btnLEDOn.onClick.RemoveAllListeners();
+            if (btnLEDOff) btnLEDOff.onClick.RemoveAllListeners();
 
             if (_bgHandle.IsValid()) Addressables.Release(_bgHandle);
         }
@@ -180,6 +181,8 @@ namespace My.Scripts.Test
             if (inputCropLeft && int.TryParse(inputCropLeft.text, out int left)) setting.cropLeft = left;
             if (inputCropRight && int.TryParse(inputCropRight.text, out int right)) setting.cropRight = right;
 
+            setting.ValidateOrFix();
+
             string jsonContent = JsonUtility.ToJson(setting, true);
             string jsonFilePath = Path.Combine(Application.streamingAssetsPath, GameConstants.Path.CameraSetting + ".json");
 
@@ -211,7 +214,11 @@ namespace My.Scripts.Test
             if (!rawImagePreview || !CameraManager.Instance) return;
 
             CameraSetting camSet = CameraManager.Instance.setting;
-            if (camSet == null || camSet.camWidth <= 0 || camSet.camHeight <= 0) return;
+            if (camSet == null) return;
+            
+            camSet.ValidateOrFix();
+            
+            if (camSet.camWidth <= 0 || camSet.camHeight <= 0) return;
 
             float fCamWidth = camSet.camWidth;
             float fCamHeight = camSet.camHeight;
@@ -254,6 +261,8 @@ namespace My.Scripts.Test
 
             CameraSetting camSet = CameraManager.Instance.setting;
             if (camSet == null) return;
+            
+            camSet.ValidateOrFix();
 
             RenderTexture rt = null;
             RenderTexture prev = RenderTexture.active;

@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace My.Scripts.Global
 {   
-    [Serializable]
+   [Serializable]
     public class CameraSetting
     {
         [Header("WebCam Resolution")]
@@ -18,6 +18,54 @@ namespace My.Scripts.Global
 
         public int SaveWidth => cropLeft + cropRight;
         public int SaveHeight => cropTop + cropBottom;
+
+        /// <summary>
+        /// 설정된 해상도 및 크롭 영역의 유효성을 검사하고 잘못된 값을 교정함.
+        /// Out of bounds 에러에 의한 캡처 실패를 방지하기 위함.
+        /// 입력 예: (camWidth: 1920, cropLeft: 2000) -> 결과 cropLeft = 960
+        /// </summary>
+        public void ValidateOrFix()
+        {
+            if (camWidth <= 0)
+            {
+                camWidth = 1920;
+                Debug.LogWarning("[CameraSetting] camWidth 제한 교정");
+            }
+            if (camHeight <= 0)
+            {
+                camHeight = 1080;
+                Debug.LogWarning("[CameraSetting] camHeight 제한 교정");
+            }
+
+            if (cropLeft < 0) cropLeft = 0;
+            if (cropRight < 0) cropRight = 0;
+            if (cropTop < 0) cropTop = 0;
+            if (cropBottom < 0) cropBottom = 0;
+
+            int halfWidth = camWidth / 2;
+            int halfHeight = camHeight / 2;
+
+            if (cropLeft > halfWidth)
+            {
+                cropLeft = halfWidth;
+                Debug.LogWarning("[CameraSetting] cropLeft 제한 교정");
+            }
+            if (cropRight > halfWidth)
+            {
+                cropRight = halfWidth;
+                Debug.LogWarning("[CameraSetting] cropRight 제한 교정");
+            }
+            if (cropTop > halfHeight)
+            {
+                cropTop = halfHeight;
+                Debug.LogWarning("[CameraSetting] cropTop 제한 교정");
+            }
+            if (cropBottom > halfHeight)
+            {
+                cropBottom = halfHeight;
+                Debug.LogWarning("[CameraSetting] cropBottom 제한 교정");
+            }
+        }
     }
     
     /// <summary>
@@ -68,6 +116,8 @@ namespace My.Scripts.Global
                 setting = new CameraSetting();
                 Debug.LogWarning("[CameraManager] CameraSetting.json 로드 실패. 기본값을 사용합니다.");
             }
+            
+            setting.ValidateOrFix();
         }
 
         /// <summary>
