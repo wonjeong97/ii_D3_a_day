@@ -3,6 +3,7 @@ using System.Collections;
 using Cysharp.Threading.Tasks;
 using My.Scripts.Core.Data;
 using My.Scripts.Global;
+using My.Scripts.Hardware;
 using My.Scripts.Network;
 using My.Scripts.Utils;
 using UnityEngine;
@@ -39,11 +40,6 @@ namespace My.Scripts.Core.Pages
         private bool _isCompleted;
         private Coroutine _sequenceCoroutine;
         private int _selectedAnswerIndex;
-
-        private const int CamWidth = 1920;
-        private const int CamHeight = 1080;
-        private const int SaveWidth = 960;
-        private const int SaveHeight = 1080;
         
         /// <summary>
         /// 동기화 명령어 설정.
@@ -124,6 +120,11 @@ namespace My.Scripts.Core.Pages
             {
                 CameraManager.Instance.StartCamera();
             }
+            
+            if (ArduinoManager.Instance)
+            {
+                ArduinoManager.Instance.SendCommandToLight("LEDOn");
+            }
 
             if (_sequenceCoroutine != null) StopCoroutine(_sequenceCoroutine);
             _sequenceCoroutine = StartCoroutine(SequenceRoutine());
@@ -142,6 +143,11 @@ namespace My.Scripts.Core.Pages
             }
             
             if (CameraManager.Instance) CameraManager.Instance.StopCamera();
+
+            if (ArduinoManager.Instance)
+            {
+                ArduinoManager.Instance.SendCommandToLight("LEDOff");
+            }
         }
         
         /// <summary>
@@ -246,21 +252,32 @@ namespace My.Scripts.Core.Pages
             WebCamTexture cam = CameraManager.Instance.GetWebCamTexture();
             if (!cam || !cam.isPlaying) return false;
 
+            CameraSetting camSet = CameraManager.Instance.setting;
+            if (camSet == null) return false;
+
             RenderTexture rt = null;
             RenderTexture prev = RenderTexture.active;
             try
             {
-                rt = RenderTexture.GetTemporary(CamWidth, CamHeight, 0, RenderTextureFormat.ARGB32);
+                rt = RenderTexture.GetTemporary(camSet.camWidth, camSet.camHeight, 0, RenderTextureFormat.ARGB32);
                 Graphics.Blit(cam, rt);
                 
                 Texture2D photo = CameraManager.Instance.GetSharedCapturedPhoto();
                 RenderTexture.active = rt;
                 
-                int startX = (CamWidth - SaveWidth) / 2;
-                int startY = (CamHeight - SaveHeight) / 2;
+                int centerX = camSet.camWidth / 2;
+                int centerY = camSet.camHeight / 2;
                 
-                photo.ReadPixels(new Rect(startX, startY, SaveWidth, SaveHeight), 0, 0);
+                int startX = centerX - camSet.cropLeft; 
+                int startY = centerY - camSet.cropBottom; 
+                
+                photo.ReadPixels(new Rect(startX, startY, camSet.SaveWidth, camSet.SaveHeight), 0, 0);
                 photo.Apply();
+
+                if (ArduinoManager.Instance)
+                {
+                    ArduinoManager.Instance.SendCommandToLight("LEDOff");
+                }
                 
                 return await SavePhotoAsync(photo);
             }

@@ -1,6 +1,8 @@
 using System.Collections;
+using Cysharp.Threading.Tasks;
 using My.Scripts.Global;
-using My.Scripts.Network; 
+using My.Scripts.Hardware;
+using My.Scripts.Network;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
@@ -16,15 +18,16 @@ namespace My.Scripts._00_Title
     /// </summary>
     public class TitleManager : MonoBehaviour
     {
-        private bool _isTransitioning; 
-        private float _fadeTime = 1.0f; 
+        private bool _isTransitioning;
+        private float _fadeTime = 1.0f;
 
         private bool _isWaitingForClient;
         private Coroutine _requestCoroutine;
         private Coroutine _pollCoroutine;
-        
+
         [Header("API Polling Settings")]
         [SerializeField] private float pollingInterval = 3.0f;
+
         [SerializeField] private int apiTimeout = 10;
 
         /// <summary>
@@ -34,11 +37,15 @@ namespace My.Scripts._00_Title
         {
             LoadSettings();
 
+            if (ArduinoManager.Instance)
+            {
+                ArduinoManager.Instance.ReconnectAsync().Forget();
+            }
+
             if (TcpManager.Instance)
             {
                 TcpManager.Instance.onMessageReceived += OnNetworkMessageReceived;
                 
-                // 외부 API 통신 부하는 서버 권한을 가진 PC에서만 전담하도록 제한함.
                 if (TcpManager.Instance.IsServer)
                 {
                     _pollCoroutine = StartCoroutine(PollRoomStateRoutine());
@@ -68,8 +75,8 @@ namespace My.Scripts._00_Title
                 {
                     Debug.LogWarning("[TitleManager] SoundManager 인스턴스가 존재하지 않습니다.");
                 }
-                
-                _fadeTime = settings.fadeTime; 
+
+                _fadeTime = settings.fadeTime;
             }
             else
             {
@@ -103,7 +110,7 @@ namespace My.Scripts._00_Title
                     if (request.result == UnityWebRequest.Result.Success)
                     {
                         string responseText = request.downloadHandler.text.Trim().ToUpper();
-                        
+
                         // 외부 시스템의 시작 명령을 감지하여 씬 전환을 트리거함.
                         if (responseText.Contains("USING"))
                         {
@@ -126,7 +133,7 @@ namespace My.Scripts._00_Title
         /// </summary>
         private void Update()
         {
-            if (_isTransitioning) return; 
+            if (_isTransitioning) return;
 
             //  Update 내부이므로 파괴된 유니티 객체를 안전하게 걸러내는 암시적 불리언 변환 사용.
             if (TcpManager.Instance)
@@ -140,7 +147,7 @@ namespace My.Scripts._00_Title
                         {
                             _isWaitingForClient = true;
                             Debug.Log("[TitleManager] 수동 엔터 입력. 클라이언트 진입 대기를 시작합니다...");
-                            
+
                             if (_pollCoroutine != null) StopCoroutine(_pollCoroutine);
                             _requestCoroutine = StartCoroutine(RequestStartRoutine());
                         }
@@ -161,6 +168,7 @@ namespace My.Scripts._00_Title
                 {
                     TcpManager.Instance.SendMessageToTarget("REQUEST_START", "");
                 }
+
                 yield return CoroutineData.GetWaitForSeconds(1.0f);
             }
         }
@@ -173,7 +181,8 @@ namespace My.Scripts._00_Title
         private void ProcessTag(int playerID)
         {
             if (_isTransitioning) return;
-            _isTransitioning = true; 
+
+            _isTransitioning = true;
 
             if (TcpManager.Instance && TcpManager.Instance.IsServer)
             {
@@ -216,9 +225,9 @@ namespace My.Scripts._00_Title
                     {
                         _isWaitingForClient = false;
                         if (_requestCoroutine != null) StopCoroutine(_requestCoroutine);
-                        
+
                         Debug.Log("[TitleManager] 클라이언트 준비 완료. Tutorial 씬으로 동시 이동합니다.");
-                        ProcessTag(1); 
+                        ProcessTag(1);
                     }
                 }
             }
@@ -228,7 +237,7 @@ namespace My.Scripts._00_Title
                 if (!_isTransitioning)
                 {
                     _isTransitioning = true;
-                    
+
                     if (GameManager.Instance)
                     {
                         GameManager.Instance.ChangeScene(msg.payload, true);
@@ -247,9 +256,9 @@ namespace My.Scripts._00_Title
         /// Why: 메모리 누수 및 비정상적인 네트워크 콜백 실행을 방지하기 위함.
         /// </summary>
         private void OnDestroy()
-        {   
+        {
             StopAllCoroutines();
-            
+
             if (TcpManager.Instance)
             {
                 TcpManager.Instance.onMessageReceived -= OnNetworkMessageReceived;

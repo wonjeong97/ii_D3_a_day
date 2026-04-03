@@ -133,7 +133,7 @@ namespace My.Scripts.Network
 
         /// <summary>
         /// 네트워크 연결 임계치 도달 시 타이틀 씬으로 강제 이동함.
-        /// Update 내부 성능 최적화를 위해 Unity Object 비교 시 ReferenceEquals를 활용함.
+        /// 단, 디버그 테스트 씬(TestScene)에서는 강제 복귀를 차단하여 원활한 테스트 환경을 보장함.
         /// </summary>
         private void HandleSceneTransitionRequest()
         {
@@ -142,7 +142,7 @@ namespace My.Scripts.Network
                 _needsToReturnToTitle = false;
                 
                 string currentSceneName = SceneManager.GetActiveScene().name;
-                if (currentSceneName != GameConstants.Scene.Title)
+                if (currentSceneName != GameConstants.Scene.Title && currentSceneName != GameConstants.Scene.Test)
                 {
                     Debug.LogError("[TcpManager] 연결 유실 임계치 도달로 인한 타이틀 이동");
                     

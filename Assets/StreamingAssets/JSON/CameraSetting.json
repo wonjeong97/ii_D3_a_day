@@ -1,0 +1,8 @@
+{
+    "camWidth": 1920,
+    "camHeight": 1080,
+    "cropLeft": 460,
+    "cropRight": 460,
+    "cropTop": 540,
+    "cropBottom": 380
+}
