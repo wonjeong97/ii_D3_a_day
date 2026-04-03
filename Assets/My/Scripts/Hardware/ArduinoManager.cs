@@ -191,32 +191,38 @@ namespace My.Scripts.Hardware
         /// </summary>
         public async UniTask ReconnectAsync()
         {
-            if (IsConnected)
+            lock (_connectionLock)
             {
-                SendCommandToLight("LEDOff");
-                return;
-            }
+                if (IsConnected)
+                {
+                    SendCommandToLight("LEDOff");
+                    return;
+                }
 
-            Debug.Log("<color=blue>[ArduinoManager] 조명 아두이노 재연결 시도...</color>");
-            
-            if (_arduinoPort != null)
-            {
-                try 
-                { 
-                    _arduinoPort.Close(); 
-                    _arduinoPort.Dispose(); 
-                } 
-                catch { }
+                Debug.Log("<color=blue>[ArduinoManager] 조명 아두이노 재연결 시도...</color>");
                 
-                _arduinoPort = null;
+                if (_arduinoPort != null)
+                {
+                    try 
+                    { 
+                        _arduinoPort.Close(); 
+                        _arduinoPort.Dispose(); 
+                    } 
+                    catch { }
+                    
+                    _arduinoPort = null;
+                }
             }
 
             await AutoConnectAsync();
             
             // 재연결 프로세스가 끝난 후 다시 한번 상태를 보장함.
-            if (IsConnected)
+            lock (_connectionLock)
             {
-                SendCommandToLight("LEDOff");
+                if (IsConnected)
+                {
+                    SendCommandToLight("LEDOff");
+                }
             }
         }
 
