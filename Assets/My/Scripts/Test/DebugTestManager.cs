@@ -3,11 +3,12 @@ using System.IO;
 using Cysharp.Threading.Tasks;
 using My.Scripts.Global;
 using My.Scripts.Hardware;
+using My.Scripts.Network;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
-using UnityEngine.Serialization;
 using UnityEngine.UI;
+using Wonjeong.Utils;
 
 namespace My.Scripts.Test
 {
@@ -244,7 +245,7 @@ namespace My.Scripts.Test
             fitter.aspectRatio = (float)camSet.SaveWidth / (float)camSet.SaveHeight;
         }
 
-        /// <summary>
+       /// <summary>
         /// 현재 CameraSetting의 크롭 오프셋을 기반으로 웹캠 화면을 잘라내어 로컬 폴더에 디버그용으로 저장함.
         /// 사용자가 설정한 상하좌우 여백이 의도대로 동작하는지 확인하기 위함.
         /// </summary>
@@ -294,7 +295,14 @@ namespace My.Scripts.Test
                 string dateStr = DateTime.Now.ToString("yyyy-MM-dd");
                 string timeStr = DateTime.Now.ToString("HHmmss");
                 
-                string saveDirectory = Path.Combine(@"C:\UnitySharedPicture", dateStr, "debug");
+                string rootPath = @"C:\UnitySharedPicture";
+                TcpSetting loadedSetting = JsonLoader.Load<TcpSetting>(GameConstants.Path.TcpSetting);
+                if (loadedSetting != null && !string.IsNullOrWhiteSpace(loadedSetting.localSaveRoot))
+                {
+                    rootPath = loadedSetting.localSaveRoot;
+                }
+                
+                string saveDirectory = Path.Combine(rootPath, dateStr, "debug");
 
                 if (!Directory.Exists(saveDirectory))
                 {

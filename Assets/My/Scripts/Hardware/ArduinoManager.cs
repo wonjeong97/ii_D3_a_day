@@ -16,6 +16,7 @@ namespace My.Scripts.Hardware
 
         private SerialPort _arduinoPort;
         private volatile bool _isRunning;
+        private readonly object _connectionLock = new object();
 
         /// <summary>
         /// 시리얼 포트 객체가 존재하고 현재 개방된 상태인지 확인.
@@ -134,19 +135,30 @@ namespace My.Scripts.Hardware
                 // 메인 스레드로 돌아와서 연결 정보를 갱신함
                 await UniTask.SwitchToMainThread();
 
-                if (response.Contains("Arduino") && !IsConnected)
+                // 경쟁 상태(Race Condition)를 방지하여 단일 태스크만 포트를 할당받도록 보장함.
+                lock (_connectionLock)
                 {
-                    tempPort.ReadTimeout = 10;
-                    _arduinoPort = tempPort;
-                    Debug.Log($"<color=green>[ArduinoManager] 조명 아두이노 연결 완료: {portName}</color>");
-                    
-                    // 연결 성공 직후 조명 초기 상태를 강제 보장하기 위함.
-                    SendCommandToLight("LEDOff");
-                }
-                else
-                {
-                    tempPort.Close();
-                    tempPort.Dispose();
+                    if (response.Contains("Arduino") && !IsConnected)
+                    {
+                        // 예기치 않은 좀비 핸들 방지를 위해 덮어쓰기 전 기존 포트가 있다면 명시적 닫기 수행
+                        if (_arduinoPort != null)
+                        {
+                            try { _arduinoPort.Close(); _arduinoPort.Dispose(); } catch { }
+                        }
+
+                        tempPort.ReadTimeout = 10;
+                        _arduinoPort = tempPort;
+                        Debug.Log($"<color=green>[ArduinoManager] 조명 아두이노 연결 완료: {portName}</color>");
+                        
+                        // 연결 성공 직후 조명 초기 상태를 강제 보장하기 위함.
+                        SendCommandToLight("LEDOff");
+                    }
+                    else
+                    {
+                        // 이미 다른 스레드에서 연결을 선점했거나 실패한 경우 자원을 안전하게 해제함
+                        try { tempPort.Close(); } catch { }
+                        tempPort.Dispose();
+                    }
                 }
             });
         }
