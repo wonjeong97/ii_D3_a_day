@@ -37,6 +37,7 @@ namespace My.Scripts.Global
             public const string Step1 = "JSON/Step1";
             public const string Step2 = "JSON/Step2";
             public const string Step3 = "JSON/Step3";
+            public const string PlayVideo = "JSON/PlayVideo";
             public const string Ending = "JSON/Ending";
             public const string ApiSetting = "JSON/API";
             public const string CameraSetting = "JSON/CameraSetting";
