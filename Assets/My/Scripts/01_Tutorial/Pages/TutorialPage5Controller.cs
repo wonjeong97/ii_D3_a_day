@@ -42,6 +42,11 @@ namespace My.Scripts._01_Tutorial.Pages
         [SerializeField] private float moveDuration = 1.0f;
         [SerializeField] private float waitBetweenSteps = 1.0f;
         [SerializeField] private float finalHoldTime = 3.0f;
+        
+        [Header("Line Images")]
+        [SerializeField] private CanvasGroup cgLine1;
+        [SerializeField] private CanvasGroup cgLine2;
+        [SerializeField] private CanvasGroup cgLine3;
 
         private Vector2 _legoStartPos;
         private Vector2 _legoEndPos;
@@ -79,6 +84,10 @@ namespace My.Scripts._01_Tutorial.Pages
             if (lego1ImageCanvas) lego1ImageCanvas.alpha = 0f;
             if (lego2ImageCanvas) lego2ImageCanvas.alpha = 0f;
             if (lego3ImageCanvas) lego3ImageCanvas.alpha = 0f;
+            
+            if (cgLine1) cgLine1.alpha = 0f;
+            if (cgLine2) cgLine2.alpha = 0f;
+            if (cgLine3) cgLine3.alpha = 0f;
 
             if (legoTransform)
             {
@@ -143,10 +152,38 @@ namespace My.Scripts._01_Tutorial.Pages
             if (mainGroupCanvas) yield return StartCoroutine(FadeCanvasGroupRoutine(mainGroupCanvas, 0f, 1f, fadeDuration));
             yield return CoroutineData.GetWaitForSeconds(waitBetweenSteps);
 
+            // 1단계 레고 등장
             if (lego1ImageCanvas) yield return StartCoroutine(FadeCanvasGroupRoutine(lego1ImageCanvas, 0f, 1f, fadeDuration));
+            
+            // 1. 1단계 레고 이동 완료 후 2초 대기
             if (legoTransform) yield return StartCoroutine(LegoMoveRoutine());
-            yield return CoroutineData.GetWaitForSeconds(5.0f); 
+            yield return CoroutineData.GetWaitForSeconds(2.0f);
+            
+            // 2. CgLine1 연출 (0.5초 페이드인 > 1초 대기 > 0.5초 페이드아웃 > 1초 대기)
+            if (cgLine1) yield return StartCoroutine(FadeCanvasGroupRoutine(cgLine1, 0f, 1f, 0.5f));
+            yield return CoroutineData.GetWaitForSeconds(1.0f);
+            if (cgLine1) yield return StartCoroutine(FadeCanvasGroupRoutine(cgLine1, 1f, 0f, 0.5f));
+            yield return CoroutineData.GetWaitForSeconds(1.0f);
 
+            // 3. 2단계 레고 노출 및 CgLine2 연출
+            StartCoroutine(CrossFadeRoutine(lego1ImageCanvas, lego2ImageCanvas, 0.5f));
+            
+            if (cgLine2) yield return StartCoroutine(FadeCanvasGroupRoutine(cgLine2, 0f, 1f, 0.5f));
+            yield return CoroutineData.GetWaitForSeconds(1.0f);
+            if (cgLine2) yield return StartCoroutine(FadeCanvasGroupRoutine(cgLine2, 1f, 0f, 0.5f));
+
+            // 4. 3단계 레고 노출 + 효과음 및 CgLine3 연출
+            StartCoroutine(CrossFadeRoutine(lego2ImageCanvas, lego3ImageCanvas, 0.5f));
+            if (SoundManager.Instance) SoundManager.Instance.PlaySFX("레고_1");
+            
+            if (cgLine3) yield return StartCoroutine(FadeCanvasGroupRoutine(cgLine3, 0f, 1f, 0.5f));
+            yield return CoroutineData.GetWaitForSeconds(1.0f);
+            if (cgLine3) yield return StartCoroutine(FadeCanvasGroupRoutine(cgLine3, 1f, 0f, 0.5f));
+
+            // 5. 2초 대기
+            yield return CoroutineData.GetWaitForSeconds(2.0f);
+
+            // 6. 설명 텍스트 교체 및 카메라 UI 페이드인
             if (descriptionCanvasGroup) yield return StartCoroutine(FadeCanvasGroupRoutine(descriptionCanvasGroup, 1f, 0f, 0.5f));
 
             if (_cachedData != null && _cachedData.descriptionText2 != null && descriptionUI)
@@ -154,19 +191,11 @@ namespace My.Scripts._01_Tutorial.Pages
                 descriptionUI.text = _cachedData.descriptionText2.text;
             }
 
-            if (descriptionCanvasGroup) yield return StartCoroutine(FadeCanvasGroupRoutine(descriptionCanvasGroup, 0f, 1f, 0.5f));
-            yield return CoroutineData.GetWaitForSeconds(1.0f);
-
-            if (cameraImageCanvas) yield return StartCoroutine(FadeCanvasGroupRoutine(cameraImageCanvas, 0f, 1f, 0.5f));
+            if (descriptionCanvasGroup) StartCoroutine(FadeCanvasGroupRoutine(descriptionCanvasGroup, 0f, 1f, 0.5f));
+            if (cameraImageCanvas) StartCoroutine(FadeCanvasGroupRoutine(cameraImageCanvas, 0f, 1f, 0.5f));
             if (SoundManager.Instance) SoundManager.Instance.PlaySFX("공통_11");
-            yield return CoroutineData.GetWaitForSeconds(1.0f);
-
-            yield return StartCoroutine(CrossFadeRoutine(lego1ImageCanvas, lego2ImageCanvas, 0.3f));
-
+            
             yield return CoroutineData.GetWaitForSeconds(0.5f);
-
-            yield return StartCoroutine(CrossFadeRoutine(lego2ImageCanvas, lego3ImageCanvas, 0.3f));
-            if (SoundManager.Instance) SoundManager.Instance.PlaySFX("레고_1");
 
             yield return CoroutineData.GetWaitForSeconds(finalHoldTime);
 

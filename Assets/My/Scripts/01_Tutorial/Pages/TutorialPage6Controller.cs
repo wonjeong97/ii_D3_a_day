@@ -328,11 +328,11 @@ namespace My.Scripts._01_Tutorial.Pages
                 float scaleX = rt.rect.width / 1920f;
                 float scaleY = rt.rect.height / 1080f;
 
-                _selectedTargetPos = new Vector2(900f * scaleX, -500f * scaleY);
+                _selectedTargetPos = new Vector2(900f * scaleX, -590f * scaleY);
             }
             else
             {
-                _selectedTargetPos = new Vector2(900f, -500f);
+                _selectedTargetPos = new Vector2(900f, -590f);
             }
         }
 
