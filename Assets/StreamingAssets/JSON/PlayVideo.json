@@ -1,0 +1,11 @@
+{
+  "mainText":  {
+    "name": "Text_End",
+    "position": {"x": 0, "y": 0},
+    "scale": {"x": 1, "y": 1, "z": 1},
+    "text": "“우리가 함께 한다면, 하루하루 여행 같을거야.”",
+    "fontName": "font6",
+    "fontSize": 55,
+    "fontColor": {"r": 1, "g": 1, "b": 1, "a": 1}
+  }
+}

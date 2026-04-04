@@ -5,10 +5,22 @@ using My.Scripts.Network;
 using My.Scripts.Global;
 using UnityEngine;
 using UnityEngine.UI;
-using Cysharp.Threading.Tasks; 
+using Cysharp.Threading.Tasks;
+using Wonjeong.Data;
+using Wonjeong.UI;
+using Wonjeong.Utils;
 
 namespace My.Scripts._06_PlayVideo
-{
+{   
+    /// <summary>
+    /// JSON에서 로드되는 PlayVideo 씬의 텍스트 데이터 구조체.
+    /// </summary>
+    [Serializable]
+    public class PlayVideoSetting
+    {
+        public TextSetting mainText;
+    }
+    
     /// <summary>
     /// 양쪽 PC에서 촬영된 사진들을 불러와 메인 화면 및 모자이크 연출을 수행하는 매니저.
     /// 애니메이션과 연동되어 사진을 주기적으로 교체하며 연출 종료 시 동기화 후 엔딩 씬으로 전환함.
@@ -16,6 +28,9 @@ namespace My.Scripts._06_PlayVideo
     public class PlayVideoManager : MonoBehaviour
     {   
         public static PlayVideoManager Instance;
+        
+        [Header("UI Text Components")]
+        [SerializeField] private Text mainTextUI;
         
         [Header("Main View Components")]
         [SerializeField] private Image leftMainImage;
@@ -63,8 +78,40 @@ namespace My.Scripts._06_PlayVideo
                 TcpManager.Instance.onMessageReceived += OnNetworkMessageReceived;
             }
 
+            LoadSettings();
             SetupImagesUI();
             LoadAndPrepareAsync().Forget();
+        }
+        
+        /// <summary>
+        /// 외부 JSON 파일에서 설정 데이터를 로드하여 UI 텍스트 등에 할당함.
+        /// </summary>
+        private void LoadSettings()
+        {
+            PlayVideoSetting setting = JsonLoader.Load<PlayVideoSetting>(GameConstants.Path.PlayVideo);
+
+            if (setting != null)
+            {
+                if (setting.mainText != null)
+                {
+                    if (mainTextUI)
+                    {
+                        if (UIManager.Instance)
+                        {
+                            UIManager.Instance.SetText(mainTextUI.gameObject, setting.mainText);
+                        }
+                        mainTextUI.text = setting.mainText.text;
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning("[PlayVideoManager] JSON 설정 내 mainText 데이터가 없습니다.");
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[PlayVideoManager] JSON/PlayVideo 로드 실패. 설정값을 찾을 수 없습니다.");
+            }
         }
 
         /// <summary>
