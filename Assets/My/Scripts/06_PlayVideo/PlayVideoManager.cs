@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using My.Scripts.Network;
@@ -19,6 +20,8 @@ namespace My.Scripts._06_PlayVideo
     public class PlayVideoSetting
     {
         public TextSetting mainText;
+        public TextSetting leftText;
+        public TextSetting rightText;
     }
     
     /// <summary>
@@ -31,6 +34,8 @@ namespace My.Scripts._06_PlayVideo
         
         [Header("UI Text Components")]
         [SerializeField] private Text mainTextUI;
+        [SerializeField] private Text leftTextUI;
+        [SerializeField] private Text rightTextUI;
         
         [Header("Main View Components")]
         [SerializeField] private Image leftMainImage;
@@ -47,14 +52,19 @@ namespace My.Scripts._06_PlayVideo
 
         [Header("UI Animator")]
         [SerializeField] private Animator uiAnimator;
+        
+        [Header("Film Animation UI")]
+        [SerializeField] private CanvasGroup filmCanvasGroup;
 
         private readonly List<Sprite> _myLoadedSprites = new List<Sprite>();
         private readonly List<Sprite> _otherLoadedSprites = new List<Sprite>();
         private readonly static int FilmTrigger = Animator.StringToHash("Film");
-        private bool _isAnimationStarted;
         
+        private bool _isAnimationStarted;
         private bool _isLocalVideoFinished;
         private bool _isRemoteVideoFinished;
+        
+        private Coroutine _filmFadeCoroutine;
 
         /// <summary>
         /// 싱글톤 패턴 초기화 및 기존 인스턴스 파괴.
@@ -70,7 +80,8 @@ namespace My.Scripts._06_PlayVideo
         /// 로딩 완료 전 애니메이션이 재생되는 것을 막기 위해 애니메이터를 일시 정지함.
         /// </summary>
         private void Start()
-        {
+        {   
+            if (filmCanvasGroup) filmCanvasGroup.alpha = 0f;
             if (uiAnimator) uiAnimator.enabled = false;
 
             if (TcpManager.Instance)
@@ -92,26 +103,66 @@ namespace My.Scripts._06_PlayVideo
 
             if (setting != null)
             {
-                if (setting.mainText != null)
+                if (setting.mainText != null && mainTextUI)
                 {
-                    if (mainTextUI)
-                    {
-                        if (UIManager.Instance)
-                        {
-                            UIManager.Instance.SetText(mainTextUI.gameObject, setting.mainText);
-                        }
-                        mainTextUI.text = setting.mainText.text;
-                    }
+                    if (UIManager.Instance) UIManager.Instance.SetText(mainTextUI.gameObject, setting.mainText);
+                    mainTextUI.text = setting.mainText.text;
                 }
-                else
+
+                if (setting.leftText != null && leftTextUI)
                 {
-                    Debug.LogWarning("[PlayVideoManager] JSON 설정 내 mainText 데이터가 없습니다.");
+                    if (UIManager.Instance) UIManager.Instance.SetText(leftTextUI.gameObject, setting.leftText);
+                    leftTextUI.text = ProcessPlayerName(setting.leftText.text, true);
+                }
+
+                if (setting.rightText != null && rightTextUI)
+                {
+                    if (UIManager.Instance) UIManager.Instance.SetText(rightTextUI.gameObject, setting.rightText);
+                    rightTextUI.text = ProcessPlayerName(setting.rightText.text, false);
                 }
             }
             else
             {
                 Debug.LogWarning("[PlayVideoManager] JSON/PlayVideo 로드 실패. 설정값을 찾을 수 없습니다.");
             }
+        }
+        
+        /// <summary>
+        /// 서버/클라이언트 역할에 따라 좌우 UI의 텍스트 플레이스홀더를 실제 이름으로 치환함.
+        /// </summary>
+        private string ProcessPlayerName(string rawText, bool isLeftUI)
+        {
+            if (string.IsNullOrEmpty(rawText)) return rawText;
+
+            bool isServer = false;
+            if (TcpManager.Instance) isServer = TcpManager.Instance.IsServer;
+
+            string lastNameA = SessionManager.Instance ? SessionManager.Instance.PlayerALastName : "";
+            string firstNameA = SessionManager.Instance ? SessionManager.Instance.PlayerAFirstName : "";
+            string lastNameB = SessionManager.Instance ? SessionManager.Instance.PlayerBLastName : "";
+            string firstNameB = SessionManager.Instance ? SessionManager.Instance.PlayerBFirstName : "";
+
+            // 위치에 따라 본인과 상대방의 이름을 유동적으로 결정함
+            string targetLastName = "";
+            string targetFirstName = "";
+
+            if (isServer)
+            {
+                targetLastName = isLeftUI ? lastNameA : lastNameB;
+                targetFirstName = isLeftUI ? firstNameA : firstNameB;
+            }
+            else
+            {
+                targetLastName = isLeftUI ? lastNameB : lastNameA;
+                targetFirstName = isLeftUI ? firstNameB : firstNameA;
+            }
+
+            // JSON에서 LEFT/RIGHT 중 어느 태그를 썼더라도 해당 UI 방향에 맞는 유저 데이터로 강제 덮어씌워 보장함
+            return rawText
+                .Replace("{RESERVATION_LAST_NAME_LEFT}", targetLastName)
+                .Replace("{RESERVATION_FIRST_NAME_LEFT}", targetFirstName)
+                .Replace("{RESERVATION_LAST_NAME_RIGHT}", targetLastName)
+                .Replace("{RESERVATION_FIRST_NAME_RIGHT}", targetFirstName);
         }
 
         /// <summary>
@@ -447,6 +498,12 @@ namespace My.Scripts._06_PlayVideo
         {
             if (TcpManager.Instance) TcpManager.Instance.onMessageReceived -= OnNetworkMessageReceived;
 
+            if (_filmFadeCoroutine != null)
+            {
+                StopCoroutine(_filmFadeCoroutine);
+                _filmFadeCoroutine = null;
+            }
+            
             ClearSprites(_myLoadedSprites);
             ClearSprites(_otherLoadedSprites);
         }
@@ -466,6 +523,38 @@ namespace My.Scripts._06_PlayVideo
                 }
             }
             sprites.Clear();
+        }
+        
+        /// <summary>
+        /// 애니메이션 타임라인 이벤트에서 호출되어 캔버스 그룹을 페이드 인 시킴.
+        /// 외부 타임라인의 흐름에 맞춰 시각적 요소를 부드럽게 노출하기 위함.
+        /// </summary>
+        /// <param name="duration">페이드 인에 소요되는 시간.</param>
+        public void FadeInFilmTextCanvas(float duration)
+        {
+            if (!filmCanvasGroup) return;
+            
+            if (_filmFadeCoroutine != null) StopCoroutine(_filmFadeCoroutine);
+            _filmFadeCoroutine = StartCoroutine(FadeCanvasGroupRoutine(filmCanvasGroup, 0f, 1f, duration));
+        }
+
+        /// <summary>
+        /// 지정된 시간 동안 캔버스 그룹의 알파값을 선형 보간함.
+        /// </summary>
+        /// <param name="target">대상 캔버스 그룹.</param>
+        /// <param name="start">시작 알파값.</param>
+        /// <param name="end">목표 알파값.</param>
+        /// <param name="duration">진행 시간.</param>
+        private IEnumerator FadeCanvasGroupRoutine(CanvasGroup target, float start, float end, float duration)
+        {
+            float elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                if (target) target.alpha = Mathf.Lerp(start, end, elapsed / duration);
+                yield return null;
+            }
+            if (target) target.alpha = end;
         }
     }
 }

@@ -97,7 +97,7 @@
       "name": "Text_AnswerComplete",
       "position": {"x": 0, "y": 212},
       "scale": {"x": 1, "y": 1, "z": 1},
-      "text": "답변을 완료하셨습니다.",
+      "text": "촬영을 시작합니다. 진행되는 동안 손을 넣지 말아 주세요.",
       "fontName": "font4",
       "fontSize": 55,
       "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1}
@@ -106,7 +106,7 @@
       "name": "Text_Saved",
       "position": {"x": 0, "y": 212},
       "scale": {"x": 1, "y": 1, "z": 1},
-      "text": "사진이 기록되었습니다.",
+      "text": "사진이 기록되었습니다.\n답변에 사용한 레고는 원래 자리에 내려놓아 주세요.",
       "fontName": "font4",
       "fontSize": 55,
       "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1}

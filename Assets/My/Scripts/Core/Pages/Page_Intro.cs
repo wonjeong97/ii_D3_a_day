@@ -5,6 +5,7 @@ using My.Scripts.Network;
 using My.Scripts.UI;
 using UnityEngine;
 using UnityEngine.UI;
+using Wonjeong.Data;
 using Wonjeong.UI;
 using Wonjeong.Utils;
 
@@ -16,9 +17,14 @@ namespace My.Scripts.Core.Pages
     /// </summary>
     public class Page_Intro : GamePage
     {
-        [Header("Dynamic UI Components")]
+        [Header("Dynamic UI Components (Main)")]
         [SerializeField] private Text textName;
         [SerializeField] private Text textDate;
+
+        [Header("Dynamic UI Components (Sub Canvas)")]
+        [SerializeField] private CanvasGroup subCanvasGroup;
+        [SerializeField] private Text subTextName;
+        [SerializeField] private Text subTextDate;
 
         [Header("Settings")]
         [SerializeField] private float autoTransitionDelay = 3.0f;
@@ -43,6 +49,18 @@ namespace My.Scripts.Core.Pages
             CommonIntroData pageData = data as CommonIntroData;
             if (pageData != null) _cachedData = pageData;
         }
+        
+        /// <summary>
+        /// 메인 캔버스의 투명도(페이드 연출)를 서브 캔버스에도 동일하게 동기화함.
+        /// BaseFlowManager가 메인 CanvasGroup의 알파만 조절하더라도 같이 페이드 아웃 되도록 하기 위함.
+        /// </summary>
+        private void Update()
+        {
+            if (subCanvasGroup && canvasGroup)
+            {
+                subCanvasGroup.alpha = canvasGroup.alpha;
+            }
+        }
 
         /// <summary>
         /// 페이지 활성화 시 초기화 및 전환 타이머 시작.
@@ -51,6 +69,12 @@ namespace My.Scripts.Core.Pages
         {
             base.OnEnter();
             _isCompleted = false;
+
+            if (subCanvasGroup)
+            {
+                subCanvasGroup.gameObject.SetActive(true);
+                subCanvasGroup.alpha = 1f;
+            }
 
             ApplyDataToUI();
             ApplyCurrentDate();
@@ -68,6 +92,12 @@ namespace My.Scripts.Core.Pages
         {
             base.OnExit();
 
+            if (subCanvasGroup)
+            {
+                subCanvasGroup.alpha = 0f;
+                subCanvasGroup.gameObject.SetActive(false);
+            }
+
             if (_autoTransitionCoroutine != null)
             {
                 StopCoroutine(_autoTransitionCoroutine);
@@ -76,34 +106,44 @@ namespace My.Scripts.Core.Pages
         }
 
         /// <summary>
-        /// 이름 등 플레이어 데이터를 UI에 적용.
+        /// 이름 등 플레이어 데이터를 양쪽 UI에 모두 적용.
         /// </summary>
         private void ApplyDataToUI()
         {
             if (_cachedData == null) return;
 
+            bool isServer = false;
+            if (TcpManager.Instance) isServer = TcpManager.Instance.IsServer;
+
+            TextSetting targetSetting = isServer ? _cachedData.nameA : _cachedData.nameB;
+
             if (textName)
             {
-                bool isServer = false;
-                if (TcpManager.Instance) isServer = TcpManager.Instance.IsServer;
-
-                SetUIText(textName, isServer ? _cachedData.nameA : _cachedData.nameB);
-
-                // JSON 파일 내부에 {nameA}, {nameB} 태그가 잘못 복사된 경우를 대비한 강제 보정
+                SetUIText(textName, targetSetting);
                 string rawText = textName.text;
                 if (isServer && rawText.Contains("{nameB}")) rawText = rawText.Replace("{nameB}", "{nameA}");
                 if (!isServer && rawText.Contains("{nameA}")) rawText = rawText.Replace("{nameA}", "{nameB}");
-
                 textName.text = UIUtils.ReplacePlayerNamePlaceholders(rawText);
+            }
+
+            if (subTextName)
+            {
+                SetUIText(subTextName, targetSetting);
+                string rawText = subTextName.text;
+                if (isServer && rawText.Contains("{nameB}")) rawText = rawText.Replace("{nameB}", "{nameA}");
+                if (!isServer && rawText.Contains("{nameA}")) rawText = rawText.Replace("{nameA}", "{nameB}");
+                subTextName.text = UIUtils.ReplacePlayerNamePlaceholders(rawText);
             }
         }
 
         /// <summary>
-        /// 현재 시스템 날짜를 포맷팅하여 UI에 적용.
+        /// 현재 시스템 날짜를 양쪽 UI에 적용.
         /// </summary>
         private void ApplyCurrentDate()
         {
-            if (textDate) textDate.text = DateTime.Now.ToString("yyyy.MM.dd");
+            string dateStr = DateTime.Now.ToString("yyyy.MM.dd");
+            if (textDate) textDate.text = dateStr;
+            if (subTextDate) subTextDate.text = dateStr;
         }
 
         /// <summary>

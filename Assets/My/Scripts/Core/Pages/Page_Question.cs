@@ -67,6 +67,7 @@ namespace My.Scripts.Core.Pages
         [SerializeField] private Font countdownFont;
         
         private CommonQuestionPageData _cachedData; 
+        private string _processedDescription;
         private Phase _currentPhase;
         private int _selectedIndex;
         private bool _isFirstSelectionDone;
@@ -93,10 +94,21 @@ namespace My.Scripts.Core.Pages
                 
         private Sprite[] _preloadedSprites;
         private bool _isDynamicImageMode;
+        
+        private int _arrowNum = 2;
 
         public int SelectedIndex 
         { 
             get { return _selectedIndex; } 
+        }
+        
+        /// <summary>
+        /// 외부 매니저에서 결정한 화살표 번호를 주입함. 
+        /// 텍스트 치환을 위해 반드시 SetupData 이전에 호출되어야 함.
+        /// </summary>
+        public void SetArrowNumber(int num)
+        {
+            _arrowNum = num;
         }
 
         /// <summary>
@@ -128,7 +140,19 @@ namespace My.Scripts.Core.Pages
         public override void SetupData(object data)
         {
             CommonQuestionPageData pageData = data as CommonQuestionPageData;
-            if (pageData != null) _cachedData = pageData;
+            if (pageData != null) 
+            {
+                _cachedData = pageData;
+                
+                if (_cachedData.textDescription != null && !string.IsNullOrEmpty(_cachedData.textDescription.text))
+                {
+                    _processedDescription = _cachedData.textDescription.text;
+                    if (_processedDescription.Contains("{ArrowNum}"))
+                    {
+                        _processedDescription = _processedDescription.Replace("{ArrowNum}", _arrowNum.ToString());
+                    }
+                }
+            }
 
             _isPreloadFinished = false;
 
@@ -448,7 +472,12 @@ namespace My.Scripts.Core.Pages
                 SetUIText(textAnswer4, qSetting.textAnswer4);
                 SetUIText(textAnswer5, qSetting.textAnswer5);
             }
-            SetUIText(textDescription, _cachedData.textDescription);
+            
+            if (textDescription && _cachedData.textDescription != null)
+            {
+                SetUIText(textDescription, _cachedData.textDescription);
+                textDescription.text = !string.IsNullOrEmpty(_processedDescription) ? _processedDescription : _cachedData.textDescription.text;
+            }
         }
 
         /// <summary>

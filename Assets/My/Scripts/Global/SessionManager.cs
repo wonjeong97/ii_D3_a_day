@@ -48,6 +48,8 @@ namespace My.Scripts.Global
         
         public string PlayerAFirstName { get; set; }
         public string PlayerBFirstName { get; set; }
+        public string PlayerALastName { get; set; }
+        public string PlayerBLastName { get; set; }
         
         public ColorData PlayerAColor { get; set; }
         public ColorData PlayerBColor { get; set; }
@@ -176,6 +178,8 @@ namespace My.Scripts.Global
             
             PlayerAFirstName = "NoNameA";
             PlayerBFirstName = "NoNameB";
+            PlayerALastName = string.Empty;
+            PlayerBLastName = string.Empty;
             
             PlayerAColor = ColorData.NotSet;
             PlayerBColor = ColorData.NotSet;
