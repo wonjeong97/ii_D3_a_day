@@ -37,6 +37,10 @@ namespace My.Scripts._05_Step3
     {
         [Header("Background Setup")]
         [SerializeField] private Page_Background backgroundPage;
+        
+        [Header("Sub Canvas UI")]
+        [Tooltip("모니터 2(서브 캔버스)를 페이드 아웃 시킬 검은색 패널의 CanvasGroup")]
+        [SerializeField] private CanvasGroup subCanvasFadeCg;
 
         /// <summary>
         /// 씬 진입 시 배경 비디오 인코딩을 백그라운드에서 시작함.
@@ -244,15 +248,40 @@ namespace My.Scripts._05_Step3
 
         /// <summary>
         /// 모든 시퀀스가 종료되면 PlayVideo 씬으로 전환함.
+        /// 메인 디스플레이가 페이드 아웃될 때 서브 캔버스도 동시에 페이드 아웃되도록 처리함.
         /// </summary>
         protected override void OnAllFinished()
         {
             Debug.Log("[Step3Manager] 내 PC Step3 완료. Video 씬으로 즉시 이동합니다.");
 
+            if (subCanvasFadeCg)
+            {
+                StartCoroutine(SubCanvasFadeOutRoutine());
+            }
+
             if (GameManager.Instance)
             {
                 GameManager.Instance.ChangeScene(GameConstants.Scene.PlayVideo, true);
             }
+        }
+
+        /// <summary>
+        /// 서브 캔버스의 검은색 패널 알파값을 올려 메인 카메라 페이드아웃과 타이밍을 맞춤.
+        /// GameManager의 기본 페이드아웃 시간(약 1초)과 동기화됨.
+        /// </summary>
+        private IEnumerator SubCanvasFadeOutRoutine()
+        {
+            float elapsed = 0f;
+            float duration = 1.0f; 
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                if (subCanvasFadeCg) subCanvasFadeCg.alpha = Mathf.Lerp(0f, 1f, elapsed / duration);
+                yield return null;
+            }
+            
+            if (subCanvasFadeCg) subCanvasFadeCg.alpha = 1f;
         }
     }
 }

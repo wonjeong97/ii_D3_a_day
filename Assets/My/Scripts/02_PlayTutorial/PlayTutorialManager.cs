@@ -28,6 +28,10 @@ namespace My.Scripts._02_PlayTutorial
     {
         private bool _isLocalFinished;
         private bool _isRemoteFinished;
+        
+        [Header("Sub Canvas UI")]
+        [Tooltip("모니터 2(서브 캔버스)를 페이드 아웃 시킬 검은색 패널의 CanvasGroup")]
+        [SerializeField] private CanvasGroup subCanvasFadeCg;
 
         /// <summary>
         /// 매니저 초기화 및 네트워크 메시지 수신 이벤트를 구독함.
@@ -133,7 +137,7 @@ namespace My.Scripts._02_PlayTutorial
 
         /// <summary>
         /// 양쪽 PC 모두 튜토리얼을 완료했는지 확인하고 다음 씬으로 전환함.
-        /// 화면이 검게 꺼지지 않고 자연스럽게 넘어가도록 전역 페이드 아웃을 비활성화함.
+        /// 메인 디스플레이가 페이드 아웃될 때 서브 캔버스도 동시에 페이드 아웃되도록 처리함.
         /// </summary>
         private void CheckSyncAndChangeScene()
         {
@@ -146,11 +150,35 @@ namespace My.Scripts._02_PlayTutorial
 
                 Debug.Log("[PlayTutorialManager] 양방향 동기화 완료. 즉시 Step1 씬으로 이동합니다.");
                 
+                if (subCanvasFadeCg)
+                {
+                    StartCoroutine(SubCanvasFadeOutRoutine());
+                }
+
                 if (GameManager.Instance)
                 {
                     GameManager.Instance.ChangeScene(GameConstants.Scene.Step1, true); 
                 }
             }
+        }
+
+        /// <summary>
+        /// 서브 캔버스의 검은색 패널 알파값을 올려 메인 카메라 페이드아웃과 타이밍을 맞춤.
+        /// GameManager의 기본 페이드아웃 시간(약 1초)과 동기화됨.
+        /// </summary>
+        private IEnumerator SubCanvasFadeOutRoutine()
+        {
+            float elapsed = 0f;
+            float duration = 1.0f;
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                if (subCanvasFadeCg) subCanvasFadeCg.alpha = Mathf.Lerp(0f, 1f, elapsed / duration);
+                yield return null;
+            }
+            
+            if (subCanvasFadeCg) subCanvasFadeCg.alpha = 1f;
         }
 
         /// <summary>

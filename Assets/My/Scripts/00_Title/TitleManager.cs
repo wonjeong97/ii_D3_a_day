@@ -37,6 +37,12 @@ namespace My.Scripts._00_Title
         {
             LoadSettings();
 
+            // 타이틀 씬 진입 시 이전 씬에서 강제로 넘어와 켜져 있을 수 있는 RFID 폴링을 확실하게 중단함.
+            if (RfidManager.Instance)
+            {
+                RfidManager.Instance.StopPolling();
+            }
+
             if (ArduinoManager.Instance)
             {
                 ArduinoManager.Instance.ReconnectAsync().Forget();

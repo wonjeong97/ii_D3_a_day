@@ -29,7 +29,7 @@ namespace My.Scripts.Core.Pages
         [Header("Dynamic UI Components")]
         [SerializeField] private Text textAnswerCompleteUI;
         [SerializeField] private Text textMySceneUI;
-
+        
         [Header("Save Settings")]
         [SerializeField] private string questionId;
 
@@ -141,13 +141,8 @@ namespace My.Scripts.Core.Pages
                 StopCoroutine(_sequenceCoroutine);
                 _sequenceCoroutine = null;
             }
-            
-            if (CameraManager.Instance) CameraManager.Instance.StopCamera();
 
-            if (ArduinoManager.Instance)
-            {
-                ArduinoManager.Instance.SendCommandToLight("LEDOff");
-            }
+            if (CameraManager.Instance) CameraManager.Instance.StopCamera();
         }
         
         /// <summary>
@@ -241,6 +236,12 @@ namespace My.Scripts.Core.Pages
             
             yield return CoroutineData.GetWaitForSeconds(0.5f);
 
+            // Step2일 경우, 캡처가 완료된 이 시점에 서브 캔버스 배경을 미리 페이드 아웃 시킴
+            if (isStep2 && _04_Step2.Step2Manager.Instance)
+            {
+                _04_Step2.Step2Manager.Instance.FadeOutBackground();
+            }
+
             float elapsed = 0f;
             while (elapsed < fadeDuration)
             {
@@ -252,14 +253,13 @@ namespace My.Scripts.Core.Pages
                 yield return null;
             }
 
-            // Step2(촬영)와 Step3(합성)에서 실제 저장 로직을 거쳤을 때만 안내 텍스트를 노출함.
-            if (isStep2 || isStep3)
-            {
-                SetUIText(textAnswerCompleteUI, _cachedData.textPhotoSaved);
-                if (textAnswerCompleteCg) yield return StartCoroutine(FadeCanvasGroupRoutine(textAnswerCompleteCg, 0f, 1f, fadeDuration));
-                if (SoundManager.Instance) SoundManager.Instance.PlaySFX("공통_12");
-                yield return CoroutineData.GetWaitForSeconds(1.5f);
-            }
+            SetUIText(textAnswerCompleteUI, _cachedData.textPhotoSaved);
+            
+            if (textAnswerCompleteCg) yield return StartCoroutine(FadeCanvasGroupRoutine(textAnswerCompleteCg, 0f, 1f, fadeDuration));
+            else yield return CoroutineData.GetWaitForSeconds(fadeDuration);
+
+            if (SoundManager.Instance) SoundManager.Instance.PlaySFX("공통_12");
+            yield return CoroutineData.GetWaitForSeconds(1.5f);
 
             if (!_isCompleted) CompletePage();
         }

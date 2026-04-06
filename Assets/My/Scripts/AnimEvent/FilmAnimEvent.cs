@@ -37,6 +37,19 @@ public class FilmAnimEvent : MonoBehaviour
             PlayVideoManager.Instance.StartVideoAnimation();
         }
     }
+    
+    /// <summary>
+    /// 애니메이션 타임라인 이벤트에서 호출되어 PlayVideoManager의 텍스트 캔버스 페이드 인 기능을 실행함.
+    /// 애니메이터와 UI 연출 로직의 결합도를 낮추고 매니저를 통해 중앙 제어하기 위함.
+    /// </summary>
+    /// <param name="duration">페이드 인에 소요되는 시간.</param>
+    public void FadeInFilmTextCanvas(float duration)
+    {
+        if (PlayVideoManager.Instance)
+        {
+            PlayVideoManager.Instance.FadeInFilmTextCanvas(duration);
+        }
+    }
 
     /// <summary>
     /// 애니메이션 타임라인 종료 시점에 호출되어 엔딩 씬 전환 프로세스를 시작함.

@@ -38,6 +38,8 @@ namespace My.Scripts._04_Step2
     /// </summary>
     public class Step2Manager : BaseFlowManager
     {
+        public static Step2Manager Instance { get; private set; }
+        
         [Header("Background Setup")]
         [SerializeField] private Page_Background backgroundPage;
 
@@ -50,6 +52,12 @@ namespace My.Scripts._04_Step2
         private CancellationTokenSource _fadeCts;
         
         private int _currentBgQuestionNum = -1; 
+        
+        protected override void Awake()
+        {
+            base.Awake();
+            Instance = this;
+        }
 
         /// <summary>
         /// 씬 진입 시 배경 캔버스를 투명하게 초기화하고 첫 페이지 페이드 인 연출을 생략함.
@@ -106,9 +114,14 @@ namespace My.Scripts._04_Step2
         }
 
         /// <summary>
-        /// 대상 페이지 유형에 맞춰 배경 이미지 갱신과 페이드 연출 순서를 다르게 적용함.
-        /// 카메라 촬영 화면에서는 촬영 대상 확보를 위해 이미지를 먼저 교체함.
+        /// 카메라 촬영 완료 시 외부에서 호출되어 배경을 즉시 페이드 아웃 시킴.
+        /// 질문 페이지 진입 시점이 아닌 캡처 완료 시점으로 페이드 아웃 타이밍을 앞당기기 위함.
         /// </summary>
+        public void FadeOutBackground()
+        {
+            FadeSubCanvasBackgroundAsync(false).Forget();
+        }
+
         private async UniTaskVoid ProcessBackgroundSequenceAsync(int questionNum, bool isCameraPage)
         {
             if (isCameraPage)
@@ -118,7 +131,7 @@ namespace My.Scripts._04_Step2
             }
             else
             {
-                await FadeSubCanvasBackgroundAsync(false);
+                // 페이드 아웃 타이밍이 사진 캡처 완료 시점(Page_Camera)으로 앞당겨졌으므로 여기서는 생략함.
                 await UpdateSubCanvasBackgroundAsync(questionNum);
             }
         }
@@ -313,6 +326,27 @@ namespace My.Scripts._04_Step2
                         {
                             qPage.SetSyncCommand($"STEP2_Q_{i}_COMPLETE");
                             qPage.SetProgressInfo(backgroundPage, progressString);
+
+                            // 문항 인덱스(0~14)에 따른 화살표 자리 번호 동적 할당
+                            int arrowNum = 2;
+                            if (i < 12) // Q1 ~ Q12
+                            {
+                                arrowNum = UnityEngine.Random.Range(2, 4); // 2 또는 3 랜덤
+                            }
+                            else if (i == 12) // Q13
+                            {
+                                arrowNum = 3;
+                            }
+                            else if (i == 13) // Q14
+                            {
+                                arrowNum = 2;
+                            }
+                            else if (i == 14) // Q15
+                            {
+                                arrowNum = 1;
+                            }
+                            
+                            qPage.SetArrowNumber(arrowNum);
                         }
                         pages[pageIndex].SetupData(qData);
                     }
@@ -362,7 +396,8 @@ namespace My.Scripts._04_Step2
         /// 씬 전환 시 메모리 누수를 방어하기 위함.
         /// </summary>
         private void OnDestroy()
-        {
+        {   
+            if (Instance == this) Instance = null;
             if (_bgHandle.IsValid()) Addressables.Release(_bgHandle);
             
             if (_fadeCts != null)

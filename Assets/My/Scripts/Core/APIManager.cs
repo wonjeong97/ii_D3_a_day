@@ -221,7 +221,9 @@ namespace My.Scripts.Core
                     userData.LANG = ParseStringSafe(colMap, firstRow, "LANG");
                     userData.RELATION = ParseIntSafe(colMap, firstRow, "RELATION");
                     userData.RESERVATION_FIRST_NAME_LEFT = ParseStringSafe(colMap, firstRow, "RESERVATION_FIRST_NAME_LEFT");
+                    userData.RESERVATION_LAST_NAME_LEFT = ParseStringSafe(colMap, firstRow, "RESERVATION_LAST_NAME_LEFT");
                     userData.RESERVATION_FIRST_NAME_RIGHT = ParseStringSafe(colMap, firstRow, "RESERVATION_FIRST_NAME_RIGHT");
+                    userData.RESERVATION_LAST_NAME_RIGHT = ParseStringSafe(colMap, firstRow, "RESERVATION_LAST_NAME_RIGHT");
                     userData.COLOR_LEFT = ParseColorSafe(colMap, firstRow, "COLOR_LEFT");
                     userData.COLOR_RIGHT = ParseColorSafe(colMap, firstRow, "COLOR_RIGHT");
                     userData.BLOCK_CODE = ParseStringSafe(colMap, firstRow, "BLOCK_CODE");
@@ -247,6 +249,24 @@ namespace My.Scripts.Core
                         if (!string.IsNullOrEmpty(userData.RESERVATION_FIRST_NAME_RIGHT))
                         {
                             SessionManager.Instance.PlayerBFirstName = userData.RESERVATION_FIRST_NAME_RIGHT;
+                        }
+                        
+                        if (!string.IsNullOrEmpty(userData.RESERVATION_LAST_NAME_LEFT))
+                        {
+                            SessionManager.Instance.PlayerALastName = userData.RESERVATION_LAST_NAME_LEFT;
+                        }
+                        else
+                        {
+                            SessionManager.Instance.PlayerALastName = string.Empty;
+                        }
+                        
+                        if (!string.IsNullOrEmpty(userData.RESERVATION_LAST_NAME_RIGHT))
+                        {
+                            SessionManager.Instance.PlayerBLastName = userData.RESERVATION_LAST_NAME_RIGHT;
+                        }
+                        else
+                        {
+                            SessionManager.Instance.PlayerBLastName = string.Empty;
                         }
                         
                         SessionManager.Instance.PlayerAColor = userData.COLOR_LEFT;
