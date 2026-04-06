@@ -255,10 +255,18 @@ namespace My.Scripts.Core
                         {
                             SessionManager.Instance.PlayerALastName = userData.RESERVATION_LAST_NAME_LEFT;
                         }
+                        else
+                        {
+                            SessionManager.Instance.PlayerALastName = string.Empty;
+                        }
                         
                         if (!string.IsNullOrEmpty(userData.RESERVATION_LAST_NAME_RIGHT))
                         {
                             SessionManager.Instance.PlayerBLastName = userData.RESERVATION_LAST_NAME_RIGHT;
+                        }
+                        else
+                        {
+                            SessionManager.Instance.PlayerBLastName = string.Empty;
                         }
                         
                         SessionManager.Instance.PlayerAColor = userData.COLOR_LEFT;

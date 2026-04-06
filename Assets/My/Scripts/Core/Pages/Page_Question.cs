@@ -140,6 +140,8 @@ namespace My.Scripts.Core.Pages
         public override void SetupData(object data)
         {
             CommonQuestionPageData pageData = data as CommonQuestionPageData;
+            _processedDescription = null;
+            
             if (pageData != null) 
             {
                 _cachedData = pageData;

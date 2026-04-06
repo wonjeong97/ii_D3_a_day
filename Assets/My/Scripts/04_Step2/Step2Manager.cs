@@ -396,7 +396,8 @@ namespace My.Scripts._04_Step2
         /// 씬 전환 시 메모리 누수를 방어하기 위함.
         /// </summary>
         private void OnDestroy()
-        {
+        {   
+            if (Instance == this) Instance = null;
             if (_bgHandle.IsValid()) Addressables.Release(_bgHandle);
             
             if (_fadeCts != null)

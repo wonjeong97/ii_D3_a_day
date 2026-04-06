@@ -7,6 +7,7 @@ using My.Scripts.Global;
 using UnityEngine;
 using UnityEngine.UI;
 using Cysharp.Threading.Tasks;
+using My.Scripts.UI;
 using Wonjeong.Data;
 using Wonjeong.UI;
 using Wonjeong.Utils;
@@ -106,7 +107,7 @@ namespace My.Scripts._06_PlayVideo
                 if (setting.mainText != null && mainTextUI)
                 {
                     if (UIManager.Instance) UIManager.Instance.SetText(mainTextUI.gameObject, setting.mainText);
-                    mainTextUI.text = setting.mainText.text;
+                    mainTextUI.text = ProcessMainTextPlayerName(setting.mainText.text);
                 }
 
                 if (setting.leftText != null && leftTextUI)
@@ -127,6 +128,35 @@ namespace My.Scripts._06_PlayVideo
             }
         }
         
+        /// <summary>
+        /// 메인 텍스트 내의 플레이스홀더를 좌우 역할에 맞게 각각 실제 이름으로 치환함.
+        /// </summary>
+        private string ProcessMainTextPlayerName(string rawText)
+        {
+            if (string.IsNullOrEmpty(rawText)) return rawText;
+
+            bool isServer = false;
+            if (TcpManager.Instance) isServer = TcpManager.Instance.IsServer;
+
+            string lastNameA = SessionManager.Instance ? SessionManager.Instance.PlayerALastName : "";
+            string firstNameA = SessionManager.Instance ? SessionManager.Instance.PlayerAFirstName : "";
+            string lastNameB = SessionManager.Instance ? SessionManager.Instance.PlayerBLastName : "";
+            string firstNameB = SessionManager.Instance ? SessionManager.Instance.PlayerBFirstName : "";
+
+            string leftLastName = isServer ? lastNameA : lastNameB;
+            string leftFirstName = isServer ? firstNameA : firstNameB;
+            string rightLastName = isServer ? lastNameB : lastNameA;
+            string rightFirstName = isServer ? firstNameB : firstNameA;
+
+            string processed = rawText
+                .Replace("{RESERVATION_LAST_NAME_LEFT}", leftLastName)
+                .Replace("{RESERVATION_FIRST_NAME_LEFT}", leftFirstName)
+                .Replace("{RESERVATION_LAST_NAME_RIGHT}", rightLastName)
+                .Replace("{RESERVATION_FIRST_NAME_RIGHT}", rightFirstName);
+
+            return UIUtils.ReplacePlayerNamePlaceholders(processed);
+        }
+
         /// <summary>
         /// 서버/클라이언트 역할에 따라 좌우 UI의 텍스트 플레이스홀더를 실제 이름으로 치환함.
         /// </summary>
