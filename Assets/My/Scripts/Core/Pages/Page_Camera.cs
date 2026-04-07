@@ -259,7 +259,7 @@ namespace My.Scripts.Core.Pages
             else yield return CoroutineData.GetWaitForSeconds(fadeDuration);
 
             if (SoundManager.Instance) SoundManager.Instance.PlaySFX("공통_12");
-            yield return CoroutineData.GetWaitForSeconds(1.5f);
+            yield return CoroutineData.GetWaitForSeconds(2.5f);
 
             if (!_isCompleted) CompletePage();
         }
