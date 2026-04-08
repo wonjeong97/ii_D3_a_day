@@ -188,7 +188,7 @@
         "name": "Text_Take",
         "position": {"x": 0, "y": 140},
         "scale": {"x": 1, "y": 1, "z": 1},
-        "text": "나의 장면 take1",
+        "text": "",
         "fontName": "font4",
         "fontSize": 38,
         "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 1}
@@ -269,7 +269,7 @@
         "name": "Text_Take",
         "position": {"x": 0, "y": 140},
         "scale": {"x": 1, "y": 1, "z": 1},
-        "text": "나의 장면 take2",
+        "text": "",
         "fontName": "font4",
         "fontSize": 38,
         "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 1}
