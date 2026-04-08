@@ -1,6 +1,7 @@
 using My.Scripts._06_PlayVideo;
 using UnityEngine;
 using UnityEngine.UI;
+using Wonjeong.UI;
 
 /// <summary>
 /// 애니메이션 타임라인의 이벤트를 수신하여 영상 재생 상태를 제어하는 브릿지 컴포넌트.
@@ -9,6 +10,14 @@ using UnityEngine.UI;
 public class FilmAnimEvent : MonoBehaviour
 {   
     [SerializeField] private Text filmText;
+    
+    [Header("Film Audio Settings")]
+    [Tooltip("레고_7 효과음을 재생할 전용 AudioSource")]
+    [SerializeField] private AudioSource filmAudioSource;
+    [Tooltip("페이드아웃에 걸리는 시간")]
+    [SerializeField] private float fadeOutDuration = 1.0f;
+    
+    private Coroutine _fadeCoroutine;
 
     /// <summary>
     /// 애니메이션 특정 시점에 화면에 표시될 텍스트 내용을 변경함.
@@ -60,6 +69,88 @@ public class FilmAnimEvent : MonoBehaviour
         if (PlayVideoManager.Instance)
         {
             PlayVideoManager.Instance.MoveToEndingScene();
+        }
+    }
+    
+    /// <summary>
+    /// 카운트다운 효과음을 재생함.
+    /// </summary>
+    public void PlayCountSfx()
+    {
+        if (SoundManager.Instance)
+        {
+            SoundManager.Instance.PlaySFX("공통_10_3초");
+        }
+    }
+
+    /// <summary>
+    /// 필름 롤링 효과음을 루프 모드로 재생함.
+    /// </summary>
+    public void PlayFilmSfx()
+    {
+        if (filmAudioSource)
+        {
+            if (_fadeCoroutine != null)
+            {
+                StopCoroutine(_fadeCoroutine);
+                _fadeCoroutine = null;
+            }
+            
+            filmAudioSource.loop = true;
+            filmAudioSource.volume = 0.5f;
+            
+            if (!filmAudioSource.isPlaying)
+            {
+                filmAudioSource.Play();
+            }
+        }
+    }
+
+    /// <summary>
+    /// 재생 중인 필름 효과음을 설정된 시간에 걸쳐 자연스럽게 페이드아웃하고 정지함.
+    /// </summary>
+    public void FadeOutFilmSfx()
+    {
+        if (filmAudioSource && filmAudioSource.isPlaying)
+        {
+            if (_fadeCoroutine != null)
+            {
+                StopCoroutine(_fadeCoroutine);
+            }
+            _fadeCoroutine = StartCoroutine(FadeOutRoutine());
+        }
+    }
+
+    private System.Collections.IEnumerator FadeOutRoutine()
+    {
+        float startVolume = filmAudioSource.volume;
+        float elapsed = 0f;
+
+        while (elapsed < fadeOutDuration)
+        {
+            elapsed += Time.deltaTime;
+            filmAudioSource.volume = Mathf.Lerp(startVolume, 0f, elapsed / fadeOutDuration);
+            yield return null;
+        }
+
+        filmAudioSource.volume = 0f;
+        filmAudioSource.Stop();
+    }
+
+    /// <summary>
+    /// 객체 파괴 시 실행 중인 코루틴과 오디오를 안전하게 정지하여 에러 및 메모리 누수를 방지함.
+    /// </summary>
+    private void OnDestroy()
+    {
+        if (_fadeCoroutine != null)
+        {
+            StopCoroutine(_fadeCoroutine);
+            _fadeCoroutine = null;
+        }
+
+        if (filmAudioSource && filmAudioSource.isPlaying)
+        {
+            filmAudioSource.Stop();
         }
     }
 }

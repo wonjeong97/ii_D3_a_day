@@ -100,6 +100,15 @@
       "fontSize": 55,
       "fontColor": {"r": 0.2588235, "g": 0.2588235, "b": 0.2588235, "a": 1}
     },
+    "descriptionText2": {
+      "name": "Text_Description2",
+      "position": {"x": 960, "y": -900},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "해당하는 컬러의 피규어로만 답변해 주세요.",
+      "fontName": "font4",
+      "fontSize": 38,
+      "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 1}
+    },
     "cartNameA": {
       "name": "Text_A",
       "position": {"x": 20, "y": 170},

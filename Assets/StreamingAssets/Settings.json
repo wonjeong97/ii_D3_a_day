@@ -27,6 +27,7 @@
     {"key": "레고_3", "clipPath": "Sound/Anous_Sound_레고 장면 만들기_3.mp3", "volume": 0.5},
     {"key": "레고_4", "clipPath": "Sound/Anous_Sound_레고 장면 만들기_4.mp3", "volume": 1.0},
     {"key": "레고_5", "clipPath": "Sound/Anous_Sound_레고 장면 만들기_5.mp3", "volume": 0.5},
+    {"key": "레고_7", "clipPath": "Sound/Anous_Sound_레고 장면 만들기_7.mp3", "volume": 0.25},
     {"key": "공통_6", "clipPath": "Sound/Anous_Sound_공통_6.mp3", "volume": 0.5},
     {"key": "공통_10_3초", "clipPath": "Sound/Anous_Sound_공통_10_3초.mp3", "volume": 0.5},
     {"key": "공통_10_5초", "clipPath": "Sound/Anous_Sound_공통_10_5초.mp3", "volume": 0.5},
