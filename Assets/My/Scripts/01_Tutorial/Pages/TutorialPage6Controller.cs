@@ -25,6 +25,7 @@ namespace My.Scripts._01_Tutorial.Pages
     {
         public TextSetting descriptionTextA;
         public TextSetting descriptionTextB;
+        public TextSetting descriptionText2;
         public TextSetting cartNameA;
         public TextSetting cartNameB;
         public TextSetting cartNameC;
@@ -40,6 +41,7 @@ namespace My.Scripts._01_Tutorial.Pages
         [SerializeField] private CanvasGroup pageCanvasGroup;
         [SerializeField] private CanvasGroup cg1CanvasGroup;
         [SerializeField] private Text descriptionUI;
+        [SerializeField] private Text description2UI;
 
         [Header("Cart A")]
         [SerializeField] private CanvasGroup cartACanvas;
@@ -225,6 +227,12 @@ namespace My.Scripts._01_Tutorial.Pages
                 {
                     SetUIText(cartCText, _cachedData.cartNameC);
                     cartCText.text = _cachedData.cartNameC.text;
+                }
+                
+                if (description2UI && _cachedData.descriptionText2 != null)
+                {
+                    SetUIText(description2UI, _cachedData.descriptionText2);
+                    description2UI.text = _cachedData.descriptionText2.text;
                 }
             }
         }
