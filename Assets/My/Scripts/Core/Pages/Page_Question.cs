@@ -722,12 +722,11 @@ namespace My.Scripts.Core.Pages
             {
                 RfidManager.Instance.onAnswerReceived -= OnRfidAnswerReceived;
             }
-
             if (TcpManager.Instance)
             {
                 TcpManager.Instance.onMessageReceived -= OnNetworkMessageReceived;
             }
-
+            ReleaseLoadedImages();
             if (_cts != null)
             {
                 _cts.Cancel();

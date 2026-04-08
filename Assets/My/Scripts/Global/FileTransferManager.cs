@@ -192,6 +192,7 @@ namespace My.Scripts.Global
 
         /// <summary>
         /// 촬영된 사진을 로컬에 저장하고 역할에 따라 서버로 전송함.
+        /// 통신 실패 시 최대 10회까지 재시도함.
         /// </summary>
         /// <param name="imageBytes">이미지 바이트 데이터.</param>
         /// <param name="relativePath">저장될 상대 경로.</param>
@@ -228,24 +229,45 @@ namespace My.Scripts.Global
             else
             {
                 string url = $"http://{serverIp}:{port}/{relativePath}";
-                using (UnityWebRequest www = new UnityWebRequest(url, "POST"))
-                {
-                    www.uploadHandler = new UploadHandlerRaw(imageBytes);
-                    www.downloadHandler = new DownloadHandlerBuffer();
-                    www.SetRequestHeader("Content-Type", "image/png");
-                    www.timeout = 10;
+                int maxRetries = 10;
+                float retryDelay = 1.0f;
 
-                    try
+                for (int attempt = 0; attempt < maxRetries; attempt++)
+                {
+                    using (UnityWebRequest www = new UnityWebRequest(url, "POST"))
                     {
-                        await www.SendWebRequest();
-                        return www.result == UnityWebRequest.Result.Success;
+                        www.uploadHandler = new UploadHandlerRaw(imageBytes);
+                        www.downloadHandler = new DownloadHandlerBuffer();
+                        www.SetRequestHeader("Content-Type", "image/png");
+                        www.timeout = 10;
+
+                        try
+                        {
+                            await www.SendWebRequest();
+                            if (www.result == UnityWebRequest.Result.Success)
+                            {
+                                return true;
+                            }
+                            else
+                            {
+                                Debug.LogWarning($"[FileTransferManager] 업로드 실패 ({attempt + 1}/{maxRetries}): {www.error}");
+                            }
+                        }
+                        catch (Exception e)
+                        { 
+                            Debug.LogWarning($"[FileTransferManager] 업로드 요청 예외 발생 ({attempt + 1}/{maxRetries}): {e.Message}");
+                        }
                     }
-                    catch (Exception e)
-                    { 
-                        Debug.LogError($"[FileTransferManager] 업로드 요청 실패: {e.Message}");
-                        return false; 
+
+                    // 실패 시 대기 후 재시도
+                    if (attempt < maxRetries - 1)
+                    {
+                        await UniTask.Delay(TimeSpan.FromSeconds(retryDelay));
                     }
                 }
+                
+                Debug.LogError("[FileTransferManager] 업로드 최종 요청 실패");
+                return false;
             }
         }
 

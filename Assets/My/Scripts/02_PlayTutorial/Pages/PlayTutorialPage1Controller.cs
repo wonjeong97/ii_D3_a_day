@@ -488,7 +488,7 @@ namespace My.Scripts._02_PlayTutorial.Pages
         /// </summary>
         private void OnDestroy()
         {
-            if (RfidManager.Instance) 
+            if (RfidManager.Instance)
             {
                 RfidManager.Instance.onAnswerReceived -= OnRfidAnswerReceived;
             }
