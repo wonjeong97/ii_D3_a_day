@@ -171,6 +171,10 @@ namespace My.Scripts._06_PlayVideo
             string otherInputPath = Path.Combine(userFolder, otherRole, $"{userIdx}_{otherRole}_Q%d.png");
             string outputVideoPath = Path.Combine(userFolder, $"{userIdx}_{myRole}_D3.mp4");
     
+            // FFmpeg가 누락된 시퀀스 번호에서 멈추는 것을 방지하기 위해 빈자리를 복사본으로 채움
+            EnsureSequentialImages(Path.Combine(userFolder, myRole), $"{userIdx}_{myRole}", 15);
+            EnsureSequentialImages(Path.Combine(userFolder, otherRole), $"{userIdx}_{otherRole}", 15);
+
             string ffmpegPath = Path.Combine(Application.streamingAssetsPath, "ffmpeg.exe");
             string countdownPath = Path.Combine(Application.streamingAssetsPath, "countdown.mp4"); 
 
@@ -206,6 +210,50 @@ namespace My.Scripts._06_PlayVideo
 #else
             UnityEngine.Debug.LogWarning("[StillcutManager] Windows 환경 전용 함수입니다.");
 #endif
+        }
+
+        /// <summary>
+        /// FFmpeg의 %d 시퀀스 읽기가 중간에 파일 누락으로 인해 중단되는 것을 방지함.
+        /// 빈자리가 있다면 사용 가능한 이전(또는 다음) 사진을 복사하여 15장의 구성을 강제함.
+        /// </summary>
+        private static void EnsureSequentialImages(string folderPath, string prefix, int totalFrames)
+        {
+            if (!Directory.Exists(folderPath)) return;
+            
+            string fallbackPath = null;
+            for (int i = 1; i <= totalFrames; i++)
+            {
+                string path = Path.Combine(folderPath, $"{prefix}_Q{i}.png");
+                if (File.Exists(path))
+                {
+                    fallbackPath = path;
+                    break;
+                }
+            }
+
+            // 쓸 수 있는 이미지가 아예 없다면 무시 (FFmpeg가 실패하겠지만 진행에는 문제 없음)
+            if (fallbackPath == null) return;
+
+            string lastValid = fallbackPath;
+            for (int i = 1; i <= totalFrames; i++)
+            {
+                string path = Path.Combine(folderPath, $"{prefix}_Q{i}.png");
+                if (File.Exists(path))
+                {
+                    lastValid = path;
+                }
+                else
+                {
+                    try
+                    {
+                        File.Copy(lastValid, path);
+                    }
+                    catch (Exception e)
+                    {
+                        UnityEngine.Debug.LogWarning($"[StillcutManager] 임시 이미지 복사 실패: {e.Message}");
+                    }
+                }
+            }
         }
 
         /// <summary>

@@ -23,7 +23,6 @@ namespace My.Scripts.Core.Pages
         [Header("Canvas Groups")]
         [Tooltip("안내 텍스트, 씬 텍스트, RawImage 프리뷰를 모두 포함하는 통합 CanvasGroup")]
         [SerializeField] private CanvasGroup mainContentCg;
-        [SerializeField] private CanvasGroup errorCg;
 
         [Header("Dynamic UI Components")]
         [SerializeField] private Text textAnswerCompleteUI;
@@ -105,7 +104,6 @@ namespace My.Scripts.Core.Pages
             _isCompleted = false;
 
             if (mainContentCg) mainContentCg.alpha = 0f;
-            if (errorCg) errorCg.alpha = 0f;
 
             // 재진입 시 꺼져있던 씬 텍스트와 프리뷰 이미지를 다시 켜줌
             if (textMySceneUI) textMySceneUI.gameObject.SetActive(true);
@@ -113,7 +111,6 @@ namespace My.Scripts.Core.Pages
 
             if (_cachedData == null)
             {
-                if (errorCg) errorCg.alpha = 1f;
                 return;
             }
 
@@ -246,20 +243,23 @@ namespace My.Scripts.Core.Pages
             if (countdownTextUI)
             {   
                 countdownTextUI.gameObject.SetActive(true);
-                if (SoundManager.Instance) SoundManager.Instance.PlaySFX("공통_10_3초");
                 for (int i = 3; i >= 1; i--)
                 {
                     countdownTextUI.text = i.ToString();
+                    
+                    // 카운트가 2초 남았을 때 캡처 효과음 재생
+                    if (i == 2 && SoundManager.Instance) 
+                    {
+                        SoundManager.Instance.PlaySFX("레고_4");
+                    }
+                    
                     yield return CoroutineData.GetWaitForSeconds(1.0f);
                 }
                 countdownTextUI.gameObject.SetActive(false);
             }
 
-            // 카운트다운 완료 후 효과음 재생
-            if (SoundManager.Instance) SoundManager.Instance.PlaySFX("레고_4");
-            
-            // 효과음 재생 후 2.7초 대기 후 캡처
-            yield return CoroutineData.GetWaitForSeconds(2.7f);
+            // 카운트다운 완료 후 0.7초 대기 후 캡처
+            yield return CoroutineData.GetWaitForSeconds(0.7f);
 
             bool isSuccess = true;
             string currentScene = SceneManager.GetActiveScene().name;
@@ -323,12 +323,11 @@ namespace My.Scripts.Core.Pages
 
             if (!isSuccess)
             {
+                Debug.LogWarning("[Page_Camera] 캡처 또는 업로드에 실패했으나, 진행을 위해 무시합니다.");
                 if (ArduinoManager.Instance)
                 {
                     ArduinoManager.Instance.SendCommandToLight("LEDOff");
                 }
-                if (errorCg) yield return StartCoroutine(FadeCanvasGroupRoutine(errorCg, 0f, 1f, fadeDuration));
-                yield break;
             }
             
             yield return CoroutineData.GetWaitForSeconds(0.5f);
