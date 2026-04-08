@@ -220,6 +220,11 @@ namespace My.Scripts.Test
             camSet.ValidateOrFix();
             
             if (camSet.camWidth <= 0 || camSet.camHeight <= 0) return;
+            if (camSet.SaveWidth <= 0 || camSet.SaveHeight <= 0)
+            {
+                Debug.LogWarning($"[DebugTestManager] 크롭 영역의 Width 또는 Height가 0 이하입니다. (SaveWidth: {camSet.SaveWidth}, SaveHeight: {camSet.SaveHeight})");
+                return;
+            }
 
             float fCamWidth = camSet.camWidth;
             float fCamHeight = camSet.camHeight;

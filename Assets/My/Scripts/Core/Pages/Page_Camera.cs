@@ -21,14 +21,17 @@ namespace My.Scripts.Core.Pages
     public class Page_Camera : GamePage
     {
         [Header("Canvas Groups")]
-        [SerializeField] private CanvasGroup textAnswerCompleteCg;
-        [SerializeField] private CanvasGroup textMySceneCg;
-        [SerializeField] private CanvasGroup imageCg;
+        [Tooltip("안내 텍스트, 씬 텍스트, RawImage 프리뷰를 모두 포함하는 통합 CanvasGroup")]
+        [SerializeField] private CanvasGroup mainContentCg;
         [SerializeField] private CanvasGroup errorCg;
 
         [Header("Dynamic UI Components")]
         [SerializeField] private Text textAnswerCompleteUI;
         [SerializeField] private Text textMySceneUI;
+        [Tooltip("카메라 화면을 실시간으로 렌더링할 RawImage 컴포넌트")]
+        [SerializeField] private RawImage previewRawImage;
+        [Tooltip("3초 카운트다운을 표시할 텍스트 컴포넌트")]
+        [SerializeField] private Text countdownTextUI;
         
         [Header("Save Settings")]
         [SerializeField] private string questionId;
@@ -101,10 +104,12 @@ namespace My.Scripts.Core.Pages
             base.OnEnter();
             _isCompleted = false;
 
-            if (textAnswerCompleteCg) textAnswerCompleteCg.alpha = 0f;
-            if (textMySceneCg) textMySceneCg.alpha = 0f;
-            if (imageCg) imageCg.alpha = 0f;
+            if (mainContentCg) mainContentCg.alpha = 0f;
             if (errorCg) errorCg.alpha = 0f;
+
+            // 재진입 시 꺼져있던 씬 텍스트와 프리뷰 이미지를 다시 켜줌
+            if (textMySceneUI) textMySceneUI.gameObject.SetActive(true);
+            if (previewRawImage) previewRawImage.gameObject.SetActive(true);
 
             if (_cachedData == null)
             {
@@ -114,11 +119,11 @@ namespace My.Scripts.Core.Pages
 
             ApplyDataToUI();
 
-            bool isStep2 = SceneManager.GetActiveScene().name == GameConstants.Scene.Step2;
-
-            if (isStep2 && CameraManager.Instance)
+            // Step1, 2, 3 모든 구간에서 카메라를 가동함
+            if (CameraManager.Instance)
             {
                 CameraManager.Instance.StartCamera();
+                SetupCameraPreview();
             }
             
             if (ArduinoManager.Instance)
@@ -155,20 +160,106 @@ namespace My.Scripts.Core.Pages
             SetUIText(textMySceneUI, _cachedData.textMyScene);
         }
 
-       /// <summary>
+        /// <summary>
+        /// CameraSetting에 저장된 크롭 영역 오프셋을 기반으로 RawImage의 uvRect를 설정하여 
+        /// 화면에 실제 저장될 영역과 동일한 화면을 렌더링함.
+        /// </summary>
+        private void SetupCameraPreview()
+        {
+            if (!previewRawImage || !CameraManager.Instance) return;
+
+            WebCamTexture camTex = CameraManager.Instance.GetWebCamTexture();
+            if (camTex) previewRawImage.texture = camTex;
+
+            CameraSetting camSet = CameraManager.Instance.setting;
+            if (camSet == null) return;
+            
+            camSet.ValidateOrFix();
+            if (camSet.camWidth <= 0 || camSet.camHeight <= 0) return;
+            if (camSet.SaveWidth <= 0 || camSet.SaveHeight <= 0)
+            {
+                Debug.LogWarning($"[Page_Camera] 크롭 영역의 Width 또는 Height가 0 이하입니다. (SaveWidth: {camSet.SaveWidth}, SaveHeight: {camSet.SaveHeight})");
+                return;
+            }
+
+            float fCamWidth = camSet.camWidth;
+            float fCamHeight = camSet.camHeight;
+
+            float startX = (fCamWidth / 2f) - camSet.cropLeft;
+            float startY = (fCamHeight / 2f) - camSet.cropBottom;
+
+            float uvX = startX / fCamWidth;
+            float uvY = startY / fCamHeight;
+            float uvW = camSet.SaveWidth / fCamWidth;
+            float uvH = camSet.SaveHeight / fCamHeight;
+
+            previewRawImage.uvRect = new Rect(uvX, uvY, uvW, uvH);
+
+            // AspectRatioFitter가 남아있다면 제거하여 충돌을 방지함
+            AspectRatioFitter fitter = previewRawImage.GetComponent<AspectRatioFitter>();
+            if (fitter)
+            {
+                Destroy(fitter);
+            }
+
+            // Height를 580에 고정하고 설정된 크롭 비율에 맞춰 Width를 동적으로 설정함
+            RectTransform rt = previewRawImage.rectTransform;
+            float targetHeight = 580f;
+            float targetWidth = targetHeight * ((float)camSet.SaveWidth / camSet.SaveHeight);
+            
+            rt.sizeDelta = new Vector2(targetWidth, targetHeight);
+        }
+
+        /// <summary>
         /// 답변 완료 안내, 촬영/합성 대기, 저장 연출을 순차적으로 수행함.
         /// 씬 이름(Step2, Step3)을 기준으로 캡처와 합성 로직을 명확하게 분기 처리하고, 어떠한 예외 상황이나 촬영 외의 스텝에서도 조명을 확실히 소등하기 위함.
         /// </summary>
         private IEnumerator SequenceRoutine()
         {
-            if (textAnswerCompleteCg) yield return StartCoroutine(FadeCanvasGroupRoutine(textAnswerCompleteCg, 0f, 1f, fadeDuration));
-            if (imageCg) yield return StartCoroutine(FadeCanvasGroupRoutine(imageCg, 0f, 1f, fadeDuration));
+            WebCamTexture camTex = null;
+            if (CameraManager.Instance)
+            {
+                camTex = CameraManager.Instance.GetWebCamTexture();
+                if (camTex)
+                {
+                    // 카메라가 켜지고 화면 픽셀이 정상적으로 올라올 때까지 대기하여 페이드 인 시 깜빡임을 방지함
+                    float waitTimeout = 2.0f;
+                    while (camTex.width < 100 && waitTimeout > 0f)
+                    {
+                        waitTimeout -= Time.deltaTime;
+                        yield return null;
+                    }
+                    // 프레임 안정화를 위한 추가 대기
+                    yield return CoroutineData.GetWaitForSeconds(0.2f);
+                }
+            }
+
+            if (countdownTextUI) countdownTextUI.gameObject.SetActive(false);
+
+            // 텍스트와 프리뷰 화면을 한 번에 페이드 인
+            if (mainContentCg) yield return StartCoroutine(FadeCanvasGroupRoutine(mainContentCg, 0f, 1f, fadeDuration));
             
+            // 페이드 인 완료 후 2초 대기
+            yield return CoroutineData.GetWaitForSeconds(2.0f);
+
+            // 3초 카운트다운 연출
+            if (countdownTextUI)
+            {   
+                countdownTextUI.gameObject.SetActive(true);
+                if (SoundManager.Instance) SoundManager.Instance.PlaySFX("공통_10_3초");
+                for (int i = 3; i >= 1; i--)
+                {
+                    countdownTextUI.text = i.ToString();
+                    yield return CoroutineData.GetWaitForSeconds(1.0f);
+                }
+                countdownTextUI.gameObject.SetActive(false);
+            }
+
+            // 카운트다운 완료 후 효과음 재생
             if (SoundManager.Instance) SoundManager.Instance.PlaySFX("레고_4");
-            yield return CoroutineData.GetWaitForSeconds(2.5f);
             
-            if (textMySceneCg) yield return StartCoroutine(FadeCanvasGroupRoutine(textMySceneCg, 0f, 1f, fadeDuration));
-            yield return CoroutineData.GetWaitForSeconds(1.0f);
+            // 효과음 재생 후 2.7초 대기 후 캡처
+            yield return CoroutineData.GetWaitForSeconds(2.7f);
 
             bool isSuccess = true;
             string currentScene = SceneManager.GetActiveScene().name;
@@ -224,6 +315,12 @@ namespace My.Scripts.Core.Pages
                 }
             }
 
+            // 캡처가 완료된 순간 카메라 화면을 일시정지하여 텍스처를 고정시킴
+            if (camTex && camTex.isPlaying)
+            {
+                camTex.Pause();
+            }
+
             if (!isSuccess)
             {
                 if (ArduinoManager.Instance)
@@ -242,20 +339,16 @@ namespace My.Scripts.Core.Pages
                 _04_Step2.Step2Manager.Instance.FadeOutBackground();
             }
 
-            float elapsed = 0f;
-            while (elapsed < fadeDuration)
-            {
-                elapsed += Time.deltaTime;
-                float t = elapsed / fadeDuration;
-                if (textAnswerCompleteCg) textAnswerCompleteCg.alpha = Mathf.Lerp(1f, 0f, t);
-                if (textMySceneCg) textMySceneCg.alpha = Mathf.Lerp(1f, 0f, t);
-                if (imageCg) imageCg.alpha = Mathf.Lerp(1f, 0f, t);
-                yield return null;
-            }
+            if (mainContentCg) yield return StartCoroutine(FadeCanvasGroupRoutine(mainContentCg, 1f, 0f, fadeDuration));
+            else yield return CoroutineData.GetWaitForSeconds(fadeDuration);
+
+            // 페이드 아웃되어 안 보이는 틈을 타서 불필요해진 오브젝트 비활성화
+            if (textMySceneUI) textMySceneUI.gameObject.SetActive(false);
+            if (previewRawImage) previewRawImage.gameObject.SetActive(false);
 
             SetUIText(textAnswerCompleteUI, _cachedData.textPhotoSaved);
             
-            if (textAnswerCompleteCg) yield return StartCoroutine(FadeCanvasGroupRoutine(textAnswerCompleteCg, 0f, 1f, fadeDuration));
+            if (mainContentCg) yield return StartCoroutine(FadeCanvasGroupRoutine(mainContentCg, 0f, 1f, fadeDuration));
             else yield return CoroutineData.GetWaitForSeconds(fadeDuration);
 
             if (SoundManager.Instance) SoundManager.Instance.PlaySFX("공통_12");

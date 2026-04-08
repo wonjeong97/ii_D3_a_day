@@ -312,10 +312,6 @@ namespace My.Scripts._02_PlayTutorial.Pages
             _loadedImageHandles.Clear();
         }
 
-        /// <summary>
-        /// 매 프레임 키보드 디버그 입력을 검사함.
-        /// 물리 하드웨어 없이 개발 환경에서도 원활한 테스트가 가능하도록 입력을 보조함. 
-        /// </summary>
         private void Update()
         {
             if (_isCompleted || !_canAcceptInput) return;
@@ -330,6 +326,7 @@ namespace My.Scripts._02_PlayTutorial.Pages
 
             if (pressed != KeyCode.None)
             {
+                _canAcceptInput = false;
                 PressedKey = pressed; 
                 
                 if (pressed >= KeyCode.Alpha1 && pressed <= KeyCode.Alpha5) 
@@ -350,13 +347,14 @@ namespace My.Scripts._02_PlayTutorial.Pages
         }
 
         /// <summary>
-        /// 폴링 중 카드가 인식되면 해당 인덱스로 상태를 갱신하고 입력을 확정함.
+        /// 첫 번째 카드가 인식되는 즉시 입력을 차단하고 확정 연출을 시작함.
         /// </summary>
         /// <param name="index">인식된 응답 인덱스 번호 (1~5).</param>
         private void OnRfidAnswerReceived(int index)
         {
             if (_isCompleted || !_canAcceptInput) return;
             
+            _canAcceptInput = false;
             PressedAnswerIndex = index; 
             OnValidInputReceived();
         }

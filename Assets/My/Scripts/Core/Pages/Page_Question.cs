@@ -602,8 +602,8 @@ namespace My.Scripts.Core.Pages
         }
 
         /// <summary>
-        /// 선택된 답변에 따라 애니메이션 시퀀스를 분기 실행함.
-        /// 무응답 감지 코루틴을 중단하고 현재 상태(카운트다운 중인지 여부)에 맞는 연출을 수행함.
+        /// 첫 번째 입력이 감지되면 즉시 추가 입력을 차단하고 선택 연출을 시작함.
+        /// 무응답 감지 코루틴을 중단하고 선택된 답변의 애니메이션을 수행함.
         /// </summary>
         private void SelectAnswer(int index)
         {
@@ -614,6 +614,10 @@ namespace My.Scripts.Core.Pages
             }
             if (_selectedIndex == index) return;
             _selectedIndex = index;
+
+            // 추가 입력을 즉시 차단하여 번복을 방지함
+            _canAcceptInput = false;
+            if (RfidManager.Instance) RfidManager.Instance.StopPolling();
 
             if (_inactivityMonitorCoroutine != null) StopCoroutine(_inactivityMonitorCoroutine);
             if (SoundManager.Instance) SoundManager.Instance.StopSFX();
@@ -626,15 +630,12 @@ namespace My.Scripts.Core.Pages
 
             if (_sequenceCoroutine != null) StopCoroutine(_sequenceCoroutine);
 
-            if (_currentPhase == Phase.CountingDown) 
-                _sequenceCoroutine = StartCoroutine(InterruptedCountdownRoutine(index));
-            else 
-                _sequenceCoroutine = StartCoroutine(SelectionSequenceRoutine(index));
+            _sequenceCoroutine = StartCoroutine(SelectionSequenceRoutine(index));
         }
 
-        /// <summary>
-        /// 응답 선택 시 발생하는 UI 연출 및 5초 카운트다운을 수행함.
-        /// 최초 선택 시에는 질문 텍스트를 "선택되었습니다"로 변경하고 UI 배치를 재조정함.
+       /// <summary>
+        /// 응답 선택 시 중앙으로 객체를 모으는 연출을 수행한 뒤 3초 대기 후 곧바로 카메라 페이지로 전환함.
+        /// (카운트다운 및 선택 번복 불가)
         /// </summary>
         /// <param name="index">선택된 답변의 인덱스 번호 (1~5).</param>
         private IEnumerator SelectionSequenceRoutine(int index)
@@ -645,165 +646,56 @@ namespace My.Scripts.Core.Pages
             CanvasGroup qCg = GetOrAddCanvasGroup(textQuestion);
             CanvasGroup targetCg = _cgsCache[index - 1];
 
-            if (!_isFirstSelectionDone)
+            // 모든 답변 CG 페이드 아웃
+            float elapsed = 0f;
+            float qStart = qCg ? qCg.alpha : 1f;
+            float[] startAlphas = new float[5];
+            for (int i = 0; i < 5; i++) startAlphas[i] = _cgsCache[i] ? _cgsCache[i].alpha : 1f;
+
+            while (elapsed < 0.5f)
             {
-                _isFirstSelectionDone = true;
-                float elapsed = 0f;
-                float qStart = qCg ? qCg.alpha : 1f;
-                float[] startAlphas = new float[5];
-                for (int i = 0; i < 5; i++) startAlphas[i] = _cgsCache[i] ? _cgsCache[i].alpha : 1f;
+                elapsed += Time.deltaTime;
+                float t = elapsed / 0.5f;
 
-                while (elapsed < 0.5f)
-                {
-                    elapsed += Time.deltaTime;
-                    float t = elapsed / 0.5f;
-
-                    if (qCg) qCg.alpha = Mathf.Lerp(qStart, 0f, t);
-                    for (int i = 0; i < 5; i++)
-                        if (_cgsCache[i]) _cgsCache[i].alpha = Mathf.Lerp(startAlphas[i], 0f, t);
-                    
-                    yield return null;
-                }
-
-                SetUIText(textQuestion, _cachedData.textSelected);
+                if (qCg) qCg.alpha = Mathf.Lerp(qStart, 0f, t);
                 for (int i = 0; i < 5; i++)
-                {
-                    if (_cgObjectsCache[i])
-                    {
-                        RectTransform rt = _cgObjectsCache[i].GetComponent<RectTransform>();
-                        if (rt) rt.anchoredPosition = new Vector2(0f, -160f);
-                    }
-                }
-
-                elapsed = 0f;
-                while (elapsed < 0.5f)
-                {
-                    elapsed += Time.deltaTime;
-                    float t = elapsed / 0.5f;
-
-                    if (qCg) qCg.alpha = Mathf.Lerp(0f, 1f, t);
-                    if (targetCg) targetCg.alpha = Mathf.Lerp(0f, 1f, t);
-                    yield return null;
-                }
-
-                if (SoundManager.Instance) SoundManager.Instance.PlaySFX("레고_3");
-            }
-            else
-            {
-                float elapsed = 0f;
-                float[] startAlphas = new float[5];
-                for (int i = 0; i < 5; i++) startAlphas[i] = _cgsCache[i] ? _cgsCache[i].alpha : 0f;
-
-                while (elapsed < 0.5f)
-                {
-                    elapsed += Time.deltaTime;
-                    float t = elapsed / 0.5f;
-
-                    for (int i = 0; i < 5; i++)
-                        if (_cgsCache[i]) _cgsCache[i].alpha = Mathf.Lerp(startAlphas[i], 0f, t);
-                    
-                    yield return null;
-                }
-
-                for (int i = 0; i < 5; i++) if (_cgsCache[i]) _cgsCache[i].alpha = 0f;
-
-                elapsed = 0f;
-                while (elapsed < 0.5f)
-                {
-                    elapsed += Time.deltaTime;
-                    float t = elapsed / 0.5f;
-
-                    if (targetCg) targetCg.alpha = Mathf.Lerp(0f, 1f, t);
-                    yield return null;
-                }
-
-                if (SoundManager.Instance) SoundManager.Instance.PlaySFX("레고_3");
-            }
-
-            _isAnimating = false; 
-            yield return CoroutineData.GetWaitForSeconds(3.0f);
-            _currentPhase = Phase.CountingDown;
-
-            SetUIText(textDescription, _cachedData.textWait);
-
-            if (textQuestion)
-            {
-                if (countdownFont) textQuestion.font = countdownFont;
-                textQuestion.text = "5";
-            }
-
-            if (SoundManager.Instance)
-            {
-                SoundManager.Instance.StopSFX();
-                SoundManager.Instance.PlaySFX("공통_10_5초");
-            }
-
-            _isAnimating = true;
-            float fadeOutElapsed = 0f;
-            float targetFinalStart = targetCg ? targetCg.alpha : 1f;
-
-            while (fadeOutElapsed < 0.5f)
-            {
-                fadeOutElapsed += Time.deltaTime;
-                float t = fadeOutElapsed / 0.5f;
-
-                if (targetCg) targetCg.alpha = Mathf.Lerp(targetFinalStart, 0f, t);
+                    if (_cgsCache[i]) _cgsCache[i].alpha = Mathf.Lerp(startAlphas[i], 0f, t);
+                
                 yield return null;
             }
-            if (targetCg) targetCg.alpha = 0f;
 
-            float fadeInElapsed = 0f;
-            while (fadeInElapsed < 0.5f)
-            {
-                fadeInElapsed += Time.deltaTime;
-                float t = fadeInElapsed / 0.5f;
-
-                if (legoArrowCg) legoArrowCg.alpha = Mathf.Lerp(0f, 1f, t);
-                yield return null;
-            }
-            if (legoArrowCg) legoArrowCg.alpha = 1f;
+            SetUIText(textQuestion, _cachedData.textSelected);
             
-            _isAnimating = false;
-
-            for (int i = 4; i >= 1; i--)
-            {
-                if (textQuestion) textQuestion.text = i.ToString();
-                yield return CoroutineData.GetWaitForSeconds(1.0f);
-            }
-
-            _currentPhase = Phase.Completed;
-            CompleteOnce();
-        }
-
-        /// <summary>
-        /// 진행 중이던 카운트다운을 즉시 중단하고 새로운 선택지에 대한 카운트다운을 처음부터 다시 시작함.
-        /// 유저가 선택을 번복했을 때 응답성을 확보하기 위함.
-        /// </summary>
-        /// <param name="index">새로 선택된 답변의 인덱스 번호.</param>
-        private IEnumerator InterruptedCountdownRoutine(int index)
-        {
-            yield return CoroutineData.GetWaitForSeconds(1.0f);
-
+            // 모든 답변 객체 중앙 이동
             for (int i = 0; i < 5; i++)
             {
-                if (_cgsCache[i]) _cgsCache[i].alpha = 0f;
+                if (_cgObjectsCache[i])
+                {
+                    RectTransform rt = _cgObjectsCache[i].GetComponent<RectTransform>();
+                    if (rt) rt.anchoredPosition = new Vector2(0f, -160f);
+                }
             }
-            if (legoArrowCg) legoArrowCg.alpha = 1f;
 
-            if (textQuestion && countdownFont) textQuestion.font = countdownFont;
-
-            if (SoundManager.Instance)
+            // 질문 텍스트와 선택된 객체만 다시 페이드 인
+            elapsed = 0f;
+            while (elapsed < 0.5f)
             {
-                SoundManager.Instance.StopSFX();
-                SoundManager.Instance.PlaySFX("공통_10_5초");
+                elapsed += Time.deltaTime;
+                float t = elapsed / 0.5f;
+
+                if (qCg) qCg.alpha = Mathf.Lerp(0f, 1f, t);
+                if (targetCg) targetCg.alpha = Mathf.Lerp(0f, 1f, t);
+                yield return null;
             }
 
-            for (int i = 5; i >= 1; i--)
-            {
-                if (textQuestion) textQuestion.text = i.ToString();
-                yield return CoroutineData.GetWaitForSeconds(1.0f);
-            }
+            if (SoundManager.Instance) SoundManager.Instance.PlaySFX("레고_3");
 
+            _isAnimating = false; 
+            
+            // 3초 대기
+            yield return CoroutineData.GetWaitForSeconds(3.0f);
+
+            // 대기 종료 시 곧바로 다음 씬(카메라)으로 넘김
             _currentPhase = Phase.Completed;
             CompleteOnce();
         }
