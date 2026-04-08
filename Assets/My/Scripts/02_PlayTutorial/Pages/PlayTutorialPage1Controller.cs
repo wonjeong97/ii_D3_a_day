@@ -484,6 +484,29 @@ namespace My.Scripts._02_PlayTutorial.Pages
         }
 
         /// <summary>
+        /// 오브젝트 파괴 시 전역 이벤트 구독을 강제 해제함.
+        /// </summary>
+        private void OnDestroy()
+        {
+            if (RfidManager.Instance)
+            {
+                RfidManager.Instance.onAnswerReceived -= OnRfidAnswerReceived;
+            }
+
+            if (TcpManager.Instance)
+            {
+                TcpManager.Instance.onMessageReceived -= OnNetworkMessageReceived;
+            }
+
+            if (_cts != null)
+            {
+                _cts.Cancel();
+                _cts.Dispose();
+                _cts = null;
+            }
+        }
+
+        /// <summary>
         /// 캔버스 그룹의 알파값을 선형 보간하여 페이드 연출을 수행함.
         /// </summary>
         private IEnumerator FadeCanvasGroupRoutine(CanvasGroup target, float start, float end, float duration)
