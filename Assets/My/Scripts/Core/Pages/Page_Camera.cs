@@ -243,20 +243,23 @@ namespace My.Scripts.Core.Pages
             if (countdownTextUI)
             {   
                 countdownTextUI.gameObject.SetActive(true);
-                if (SoundManager.Instance) SoundManager.Instance.PlaySFX("공통_10_3초");
                 for (int i = 3; i >= 1; i--)
                 {
                     countdownTextUI.text = i.ToString();
+                    
+                    // 카운트가 2초 남았을 때 캡처 효과음 재생
+                    if (i == 2 && SoundManager.Instance) 
+                    {
+                        SoundManager.Instance.PlaySFX("레고_4");
+                    }
+                    
                     yield return CoroutineData.GetWaitForSeconds(1.0f);
                 }
                 countdownTextUI.gameObject.SetActive(false);
             }
 
-            // 카운트다운 완료 후 효과음 재생
-            if (SoundManager.Instance) SoundManager.Instance.PlaySFX("레고_4");
-            
-            // 효과음 재생 후 2.7초 대기 후 캡처
-            yield return CoroutineData.GetWaitForSeconds(2.7f);
+            // 카운트다운 완료 후 0.7초 대기 후 캡처
+            yield return CoroutineData.GetWaitForSeconds(0.7f);
 
             bool isSuccess = true;
             string currentScene = SceneManager.GetActiveScene().name;
