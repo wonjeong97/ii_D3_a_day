@@ -42,14 +42,14 @@
       "name": "Text_Description",
       "position": {"x": 960, "y": -250},
       "scale": {"x": 1, "y": 1, "z": 1},
-      "text": "네, 그렇게 답변해 주시면 됩니다.",
+      "text": "네, 그렇게 답변해 주시면 됩니다.\n답변에 사용한 레고는 원래 자리에 내려놓아 주세요.",
       "fontName": "font4",
       "fontSize": 55,
       "fontColor": {"r": 0.2588235, "g": 0.2588235, "b": 0.2588235, "a": 1}
     },
     "waitText": {
       "name": "Text_Wait",
-      "position": {"x": 960, "y": -340},
+      "position": {"x": 960, "y": -370},
       "scale": {"x": 1, "y": 1, "z": 1},
       "text": "이제 질문을 시작하니, 잠시만 기다려 주세요.",
       "fontName": "font4",
