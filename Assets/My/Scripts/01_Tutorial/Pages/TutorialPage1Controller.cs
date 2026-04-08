@@ -525,6 +525,32 @@ namespace My.Scripts._01_Tutorial.Pages
         }
 
         /// <summary>
+        /// 오브젝트 파괴 시 등록된 네트워크 이벤트를 강제 해제함.
+        /// 씬 강제 전환 시 OnExit이 불리지 않아 발생하는 좀비 이벤트 누수를 방지하기 위함.
+        /// </summary>
+        private void OnDestroy()
+        {
+            if (TcpManager.Instance)
+            {
+                TcpManager.Instance.onMessageReceived -= OnNetworkMessageReceived;
+            }
+
+            if (_pageCts != null)
+            {
+                _pageCts.Cancel();
+                _pageCts.Dispose();
+                _pageCts = null;
+            }
+
+            if (_serverFetchCts != null)
+            {
+                _serverFetchCts.Cancel();
+                _serverFetchCts.Dispose();
+                _serverFetchCts = null;
+            }
+        }
+
+        /// <summary>
         /// 텍스트 UI의 알파값을 선형 보간하여 페이드 연출을 수행함.
         /// </summary>
         private IEnumerator FadeTextRoutine(CanvasGroup target, float start, float end, float duration)

@@ -714,6 +714,29 @@ namespace My.Scripts.Core.Pages
         }
 
         /// <summary>
+        /// 오브젝트 파괴 시 전역 이벤트 구독을 강제 해제함.
+        /// </summary>
+        private void OnDestroy()
+        {
+            if (RfidManager.Instance)
+            {
+                RfidManager.Instance.onAnswerReceived -= OnRfidAnswerReceived;
+            }
+
+            if (TcpManager.Instance)
+            {
+                TcpManager.Instance.onMessageReceived -= OnNetworkMessageReceived;
+            }
+
+            if (_cts != null)
+            {
+                _cts.Cancel();
+                _cts.Dispose();
+                _cts = null;
+            }
+        }
+
+        /// <summary>
         /// 컴포넌트에서 CanvasGroup을 찾아 반환하거나 없을 경우 새로 생성하여 반환함.
         /// </summary>
         private CanvasGroup GetOrAddCanvasGroup(Component comp)
