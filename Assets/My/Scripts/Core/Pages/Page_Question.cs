@@ -720,6 +720,7 @@ namespace My.Scripts.Core.Pages
         {
             if (RfidManager.Instance)
             {
+                RfidManager.Instance.StopPolling();
                 RfidManager.Instance.onAnswerReceived -= OnRfidAnswerReceived;
             }
             if (TcpManager.Instance)
@@ -734,7 +735,7 @@ namespace My.Scripts.Core.Pages
                 _cts = null;
             }
         }
-
+        
         /// <summary>
         /// 컴포넌트에서 CanvasGroup을 찾아 반환하거나 없을 경우 새로 생성하여 반환함.
         /// </summary>

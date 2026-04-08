@@ -226,14 +226,22 @@ namespace My.Scripts.Global
                 }
                 return true; 
             }
-            else
+else
             {
                 string url = $"http://{serverIp}:{port}/{relativePath}";
                 int maxRetries = 10;
                 float retryDelay = 1.0f;
+                float totalTimeoutSeconds = 30.0f;
+                float startTime = Time.realtimeSinceStartup;
 
                 for (int attempt = 0; attempt < maxRetries; attempt++)
                 {
+                    if (Time.realtimeSinceStartup - startTime > totalTimeoutSeconds)
+                    {
+                        Debug.LogError($"[FileTransferManager] 업로드 전체 타임아웃 초과 ({totalTimeoutSeconds}초)");
+                        return false;
+                    }
+
                     using (UnityWebRequest www = new UnityWebRequest(url, "POST"))
                     {
                         www.uploadHandler = new UploadHandlerRaw(imageBytes);
@@ -257,6 +265,12 @@ namespace My.Scripts.Global
                         { 
                             Debug.LogWarning($"[FileTransferManager] 업로드 요청 예외 발생 ({attempt + 1}/{maxRetries}): {e.Message}");
                         }
+                    }
+
+                    if (Time.realtimeSinceStartup - startTime > totalTimeoutSeconds)
+                    {
+                        Debug.LogError($"[FileTransferManager] 업로드 전체 타임아웃 초과 ({totalTimeoutSeconds}초)");
+                        return false;
                     }
 
                     // 실패 시 대기 후 재시도
