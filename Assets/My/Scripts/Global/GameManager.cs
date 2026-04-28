@@ -253,6 +253,11 @@ namespace My.Scripts.Global
         private IEnumerator ReturnToTitleRoutine(bool isClear)
         {
             Debug.Log("[GameManager] 타이틀 복귀 시퀀스 시작");
+            
+            if (Network.TcpManager.Instance)
+            {
+                Network.TcpManager.Instance.SendMessageToTarget("FORCE_RETURN_TITLE", "");
+            }
 
             if (SessionManager.Instance && SessionManager.Instance.CurrentUserIdx != 0 && ApiConfig != null)
             {

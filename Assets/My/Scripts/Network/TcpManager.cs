@@ -176,6 +176,14 @@ namespace My.Scripts.Network
                         continue;
                     }
 
+                    // 상대방이 타이틀로 강제 복귀한 경우, 나도 즉시 타이틀로 동반 복귀함
+                    if (message.command == "FORCE_RETURN_TITLE")
+                    {
+                        _needsToReturnToTitle = true;
+                        processedThisFrame++;
+                        continue;
+                    }
+
                     if (onMessageReceived != null) 
                     {
                         onMessageReceived.Invoke(message);
@@ -336,7 +344,8 @@ namespace My.Scripts.Network
         /// </summary>
         private void ReceiveDataRoutine()
         {
-            byte[] buffer = new byte[1024];
+            byte[] buffer = new byte[4096];
+            StringBuilder sb = new StringBuilder();
 
             while (_isRunning && _isConnectionActive && _networkStream != null)
             {
@@ -348,13 +357,36 @@ namespace My.Scripts.Network
                     {
                         _lastMessageReceivedTime = DateTime.UtcNow;
 
-                        string jsonString = Encoding.UTF8.GetString(buffer, 0, bytesRead);
-                        TcpMessage receivedMessage = JsonUtility.FromJson<TcpMessage>(jsonString);
+                        string text = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+                        sb.Append(text);
 
-                        if (receivedMessage != null) 
+                        string content = sb.ToString();
+                        int newlineIndex;
+                        
+                        // 구분자(\n)를 기준으로 메시지를 분리하여 TCP 패킷 뭉침(Fragmentation/Concatenation) 현상을 해결함.
+                        while ((newlineIndex = content.IndexOf('\n')) >= 0)
                         {
-                            _messageQueue.Enqueue(receivedMessage);
+                            string jsonString = content.Substring(0, newlineIndex).Trim();
+                            content = content.Substring(newlineIndex + 1);
+                            
+                            if (!string.IsNullOrEmpty(jsonString))
+                            {
+                                try
+                                {
+                                    TcpMessage receivedMessage = JsonUtility.FromJson<TcpMessage>(jsonString);
+                                    if (receivedMessage != null) 
+                                    {
+                                        _messageQueue.Enqueue(receivedMessage);
+                                    }
+                                }
+                                catch (Exception e)
+                                {
+                                    Debug.LogWarning($"[TcpManager] JSON 파싱 에러: {e.Message} / 원본: {jsonString}");
+                                }
+                            }
                         }
+                        sb.Clear();
+                        sb.Append(content);
                     }
                     else
                     {
@@ -372,6 +404,7 @@ namespace My.Scripts.Network
 
         /// <summary>
         /// 명령어와 데이터를 JSON 문자열로 변환하여 상대방에게 전송함.
+        /// 수신부에서 패킷을 정확히 구분할 수 있도록 끝에 개행 문자(\n)를 반드시 추가함.
         /// </summary>
         /// <param name="command">식별 명령어</param>
         /// <param name="payload">전달할 데이터 내용</param>
@@ -380,7 +413,7 @@ namespace My.Scripts.Network
             if (_isConnectionActive && _networkStream != null)
             {
                 TcpMessage msg = new TcpMessage { command = command, payload = payload };
-                string jsonString = JsonUtility.ToJson(msg);
+                string jsonString = JsonUtility.ToJson(msg) + "\n";
                 byte[] data = Encoding.UTF8.GetBytes(jsonString);
 
                 try
