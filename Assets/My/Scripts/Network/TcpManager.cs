@@ -45,6 +45,8 @@ namespace My.Scripts.Network
         public Action<TcpMessage> onMessageReceived;
 
         private readonly int _maxMessagesPerFrame = 30;
+        private const int MAX_SB_LENGTH = 1024 * 1024; // 1 MB
+        private const float MAX_SB_THRESHOLD = 0.8f;  // 80% 초과 시 잔여 조각 드롭
         
         private TcpSetting _tcpSetting;
         private TcpListener _serverListener;
@@ -362,19 +364,19 @@ namespace My.Scripts.Network
 
                         string content = sb.ToString();
                         int newlineIndex;
-                        
+
                         // 구분자(\n)를 기준으로 메시지를 분리하여 TCP 패킷 뭉침(Fragmentation/Concatenation) 현상을 해결함.
                         while ((newlineIndex = content.IndexOf('\n')) >= 0)
                         {
                             string jsonString = content.Substring(0, newlineIndex).Trim();
                             content = content.Substring(newlineIndex + 1);
-                            
+
                             if (!string.IsNullOrEmpty(jsonString))
                             {
                                 try
                                 {
                                     TcpMessage receivedMessage = JsonUtility.FromJson<TcpMessage>(jsonString);
-                                    if (receivedMessage != null) 
+                                    if (receivedMessage != null)
                                     {
                                         _messageQueue.Enqueue(receivedMessage);
                                     }
@@ -386,7 +388,16 @@ namespace My.Scripts.Network
                             }
                         }
                         sb.Clear();
-                        sb.Append(content);
+
+                        // 완성된 메시지를 모두 처리한 뒤 잔여 조각이 임계치를 초과하면 드롭.
+                        if (content.Length > MAX_SB_LENGTH * MAX_SB_THRESHOLD)
+                        {
+                            Debug.LogWarning($"[TcpManager] 잔여 버퍼 임계치 초과 ({content.Length} bytes). 불완전한 조각을 버립니다.");
+                        }
+                        else
+                        {
+                            sb.Append(content);
+                        }
                     }
                     else
                     {

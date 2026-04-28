@@ -236,6 +236,16 @@ namespace My.Scripts._04_Step2
                 cartridge = "A";
                 Debug.LogWarning("[Step2Manager] Cartridge 정보가 없어 기본값 'A'를 사용합니다.");
             }
+            else
+            {
+                cartridge = cartridge.Trim().ToUpperInvariant();
+                string[] allowedCartridges = { "A", "B", "C", "D" };
+                if (System.Array.IndexOf(allowedCartridges, cartridge) < 0)
+                {
+                    Debug.LogWarning($"[Step2Manager] 유효하지 않은 Cartridge 값 '{cartridge}', 기본값 'A'를 사용합니다.");
+                    cartridge = "A";
+                }
+            }
             
             if (typeStr.Length < 2 || typeStr == "None")
             {
