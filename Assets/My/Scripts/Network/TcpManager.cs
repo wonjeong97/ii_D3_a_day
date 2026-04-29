@@ -397,7 +397,7 @@ namespace My.Scripts.Network
                         // 완성된 메시지를 모두 처리한 뒤 잔여 조각이 임계치를 초과하면 드롭.
                         if (content.Length > MAX_SB_LENGTH * MAX_SB_THRESHOLD)
                         {
-                            Debug.LogWarning($"[TcpManager] 잔여 버퍼 임계치 초과 ({content.Length} bytes). 불완전한 조각을 버립니다.");
+                            Debug.LogWarning($"[TcpManager] 잔여 버퍼 임계치 초과 ({content.Length} chars). 불완전한 조각을 버립니다.");
                         }
                         else
                         {
