@@ -228,6 +228,24 @@ namespace My.Scripts._04_Step2
             }
 
             string typeStr = SessionManager.Instance.CurrentUserType.ToString();
+            string cartridge = SessionManager.Instance.Cartridge;
+
+            // 카트리지 정보가 누락되었을 경우를 대비한 안전장치
+            if (string.IsNullOrEmpty(cartridge))
+            {
+                cartridge = "A";
+                Debug.LogWarning("[Step2Manager] Cartridge 정보가 없어 기본값 'A'를 사용합니다.");
+            }
+            else
+            {
+                cartridge = cartridge.Trim().ToUpperInvariant();
+                string[] allowedCartridges = { "A", "B", "C", "D" };
+                if (System.Array.IndexOf(allowedCartridges, cartridge) < 0)
+                {
+                    Debug.LogWarning($"[Step2Manager] 유효하지 않은 Cartridge 값 '{cartridge}', 기본값 'A'를 사용합니다.");
+                    cartridge = "A";
+                }
+            }
             
             if (typeStr.Length < 2 || typeStr == "None")
             {
@@ -236,7 +254,7 @@ namespace My.Scripts._04_Step2
             }
 
             string commonPath = "JSON/Step2/Common";
-            string dynamicPath = $"JSON/Step2/{typeStr}";
+            string dynamicPath = $"JSON/Step2/Cartridge_{cartridge}/{typeStr}";
             
             Step2Setting commonSetting = JsonLoader.Load<Step2Setting>(commonPath);
             Step2Setting specificSetting = JsonLoader.Load<Step2Setting>(dynamicPath);

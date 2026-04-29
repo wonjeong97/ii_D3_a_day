@@ -45,6 +45,8 @@ namespace My.Scripts.Network
         public Action<TcpMessage> onMessageReceived;
 
         private readonly int _maxMessagesPerFrame = 30;
+        private const int MAX_SB_LENGTH = 1024 * 1024; // 1 MB
+        private const float MAX_SB_THRESHOLD = 0.8f;  // 80% 초과 시 잔여 조각 드롭
         
         private TcpSetting _tcpSetting;
         private TcpListener _serverListener;
@@ -60,6 +62,7 @@ namespace My.Scripts.Network
         private volatile bool _isConnectionActive;
         
         private bool _needsToReturnToTitle;
+        private bool _returnToTitleIsClear;
         private int _failedConnectionCount;
         private Coroutine _heartbeatCoroutine;
 
@@ -144,11 +147,11 @@ namespace My.Scripts.Network
                 string currentSceneName = SceneManager.GetActiveScene().name;
                 if (currentSceneName != GameConstants.Scene.Title && currentSceneName != GameConstants.Scene.Test)
                 {
-                    Debug.LogError("[TcpManager] 연결 유실 임계치 도달로 인한 타이틀 이동");
+                    Debug.LogError($"[TcpManager] 타이틀 강제 이동 (isClear: {_returnToTitleIsClear})");
                     
                     if (GameManager.Instance) 
                     {
-                        GameManager.Instance.ReturnToTitle();
+                        GameManager.Instance.ReturnToTitle(_returnToTitleIsClear);
                     }
                     else 
                     {
@@ -172,6 +175,15 @@ namespace My.Scripts.Network
                 {
                     if (message.command == "HEARTBEAT") 
                     {
+                        processedThisFrame++;
+                        continue;
+                    }
+
+                    // 상대방이 타이틀로 강제 복귀한 경우, 나도 즉시 타이틀로 동반 복귀함
+                    if (message.command == "FORCE_RETURN_TITLE")
+                    {
+                        _needsToReturnToTitle = true;
+                        bool.TryParse(message.payload, out _returnToTitleIsClear);
                         processedThisFrame++;
                         continue;
                     }
@@ -218,6 +230,7 @@ namespace My.Scripts.Network
                         {
                             _failedConnectionCount = 0; 
                             _needsToReturnToTitle = true;
+                            _returnToTitleIsClear = false; // 통신 두절은 비정상 종료로 간주
                         }
                     }
                 }
@@ -336,7 +349,10 @@ namespace My.Scripts.Network
         /// </summary>
         private void ReceiveDataRoutine()
         {
-            byte[] buffer = new byte[1024];
+            byte[] buffer = new byte[4096];
+            char[] charBuffer = new char[Encoding.UTF8.GetMaxCharCount(buffer.Length)];
+            Decoder utf8Decoder = Encoding.UTF8.GetDecoder();
+            StringBuilder sb = new StringBuilder();
 
             while (_isRunning && _isConnectionActive && _networkStream != null)
             {
@@ -348,12 +364,44 @@ namespace My.Scripts.Network
                     {
                         _lastMessageReceivedTime = DateTime.UtcNow;
 
-                        string jsonString = Encoding.UTF8.GetString(buffer, 0, bytesRead);
-                        TcpMessage receivedMessage = JsonUtility.FromJson<TcpMessage>(jsonString);
+                        int charCount = utf8Decoder.GetChars(buffer, 0, bytesRead, charBuffer, 0);
+                        sb.Append(charBuffer, 0, charCount);
 
-                        if (receivedMessage != null) 
+                        string content = sb.ToString();
+                        int newlineIndex;
+
+                        // 구분자(\n)를 기준으로 메시지를 분리하여 TCP 패킷 뭉침(Fragmentation/Concatenation) 현상을 해결함.
+                        while ((newlineIndex = content.IndexOf('\n')) >= 0)
                         {
-                            _messageQueue.Enqueue(receivedMessage);
+                            string jsonString = content.Substring(0, newlineIndex).Trim();
+                            content = content.Substring(newlineIndex + 1);
+
+                            if (!string.IsNullOrEmpty(jsonString))
+                            {
+                                try
+                                {
+                                    TcpMessage receivedMessage = JsonUtility.FromJson<TcpMessage>(jsonString);
+                                    if (receivedMessage != null)
+                                    {
+                                        _messageQueue.Enqueue(receivedMessage);
+                                    }
+                                }
+                                catch (Exception e)
+                                {
+                                    Debug.LogWarning($"[TcpManager] JSON 파싱 에러: {e.Message} / 원본: {jsonString}");
+                                }
+                            }
+                        }
+                        sb.Clear();
+
+                        // 완성된 메시지를 모두 처리한 뒤 잔여 조각이 임계치를 초과하면 드롭.
+                        if (content.Length > MAX_SB_LENGTH * MAX_SB_THRESHOLD)
+                        {
+                            Debug.LogWarning($"[TcpManager] 잔여 버퍼 임계치 초과 ({content.Length} chars). 불완전한 조각을 버립니다.");
+                        }
+                        else
+                        {
+                            sb.Append(content);
                         }
                     }
                     else
@@ -372,6 +420,7 @@ namespace My.Scripts.Network
 
         /// <summary>
         /// 명령어와 데이터를 JSON 문자열로 변환하여 상대방에게 전송함.
+        /// 수신부에서 패킷을 정확히 구분할 수 있도록 끝에 개행 문자(\n)를 반드시 추가함.
         /// </summary>
         /// <param name="command">식별 명령어</param>
         /// <param name="payload">전달할 데이터 내용</param>
@@ -380,7 +429,7 @@ namespace My.Scripts.Network
             if (_isConnectionActive && _networkStream != null)
             {
                 TcpMessage msg = new TcpMessage { command = command, payload = payload };
-                string jsonString = JsonUtility.ToJson(msg);
+                string jsonString = JsonUtility.ToJson(msg) + "\n";
                 byte[] data = Encoding.UTF8.GetBytes(jsonString);
 
                 try
