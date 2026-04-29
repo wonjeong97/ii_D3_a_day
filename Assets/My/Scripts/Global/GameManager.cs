@@ -256,7 +256,7 @@ namespace My.Scripts.Global
             
             if (Network.TcpManager.Instance)
             {
-                Network.TcpManager.Instance.SendMessageToTarget("FORCE_RETURN_TITLE", "");
+                Network.TcpManager.Instance.SendMessageToTarget("FORCE_RETURN_TITLE", isClear.ToString());
             }
 
             if (SessionManager.Instance && SessionManager.Instance.CurrentUserIdx != 0 && ApiConfig != null)

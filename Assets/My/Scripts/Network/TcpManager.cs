@@ -62,6 +62,7 @@ namespace My.Scripts.Network
         private volatile bool _isConnectionActive;
         
         private bool _needsToReturnToTitle;
+        private bool _returnToTitleIsClear;
         private int _failedConnectionCount;
         private Coroutine _heartbeatCoroutine;
 
@@ -146,11 +147,11 @@ namespace My.Scripts.Network
                 string currentSceneName = SceneManager.GetActiveScene().name;
                 if (currentSceneName != GameConstants.Scene.Title && currentSceneName != GameConstants.Scene.Test)
                 {
-                    Debug.LogError("[TcpManager] 연결 유실 임계치 도달로 인한 타이틀 이동");
+                    Debug.LogError($"[TcpManager] 타이틀 강제 이동 (isClear: {_returnToTitleIsClear})");
                     
                     if (GameManager.Instance) 
                     {
-                        GameManager.Instance.ReturnToTitle();
+                        GameManager.Instance.ReturnToTitle(_returnToTitleIsClear);
                     }
                     else 
                     {
@@ -182,6 +183,7 @@ namespace My.Scripts.Network
                     if (message.command == "FORCE_RETURN_TITLE")
                     {
                         _needsToReturnToTitle = true;
+                        bool.TryParse(message.payload, out _returnToTitleIsClear);
                         processedThisFrame++;
                         continue;
                     }
@@ -228,6 +230,7 @@ namespace My.Scripts.Network
                         {
                             _failedConnectionCount = 0; 
                             _needsToReturnToTitle = true;
+                            _returnToTitleIsClear = false; // 통신 두절은 비정상 종료로 간주
                         }
                     }
                 }
@@ -347,6 +350,8 @@ namespace My.Scripts.Network
         private void ReceiveDataRoutine()
         {
             byte[] buffer = new byte[4096];
+            char[] charBuffer = new char[Encoding.UTF8.GetMaxCharCount(buffer.Length)];
+            Decoder utf8Decoder = Encoding.UTF8.GetDecoder();
             StringBuilder sb = new StringBuilder();
 
             while (_isRunning && _isConnectionActive && _networkStream != null)
@@ -359,8 +364,8 @@ namespace My.Scripts.Network
                     {
                         _lastMessageReceivedTime = DateTime.UtcNow;
 
-                        string text = Encoding.UTF8.GetString(buffer, 0, bytesRead);
-                        sb.Append(text);
+                        int charCount = utf8Decoder.GetChars(buffer, 0, bytesRead, charBuffer, 0);
+                        sb.Append(charBuffer, 0, charCount);
 
                         string content = sb.ToString();
                         int newlineIndex;
