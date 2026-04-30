@@ -229,9 +229,9 @@ namespace My.Scripts.Global
 else
             {
                 string url = $"http://{serverIp}:{port}/{relativePath}";
-                int maxRetries = 10;
+                int maxRetries = 5;
                 float retryDelay = 1.0f;
-                float totalTimeoutSeconds = 30.0f;
+                float totalTimeoutSeconds = 55.0f;
                 float startTime = Time.realtimeSinceStartup;
 
                 for (int attempt = 0; attempt < maxRetries; attempt++)
@@ -342,29 +342,57 @@ else
             }
             catch (Exception e) 
             { 
-                Debug.LogWarning($"[FileTransferManager] 로컬 읽기 에러: {e.Message}"); 
+                Debug.LogWarning($"[FileTransferManager] 로컬 파일 확인 중 에러: {e.Message}"); 
             }
 
             bool isServer = false;
             if (TcpManager.Instance) isServer = TcpManager.Instance.IsServer;
 
+            // 서버가 아닌 클라이언트일 때만 실제 다운로드 로직 실행
             if (!isServer)
             {
                 string url = $"http://{serverIp}:{port}/{relativePath}";
-                using (UnityWebRequest www = UnityWebRequest.Get(url))
+                int maxRetries = 5;            // 리트라이 횟수 적용
+                float retryDelay = 1.0f;       // 재시도 간격 적용
+                float totalTimeoutSeconds = 55.0f; // 전체 제한 시간 적용
+                float startTime = Time.realtimeSinceStartup;
+
+                for (int attempt = 0; attempt < maxRetries; attempt++)
                 {
-                    www.timeout = 5; 
-                    try
+                    // 전체 제한 시간(55초)을 초과했는지 먼저 체크
+                    if (Time.realtimeSinceStartup - startTime > totalTimeoutSeconds)
                     {
-                        await www.SendWebRequest();
-                        if (www.result == UnityWebRequest.Result.Success) 
+                        Debug.LogError($"[FileTransferManager] 다운로드 전체 시간 초과 ({totalTimeoutSeconds}초)");
+                        return null;
+                    }
+
+                    using (UnityWebRequest www = UnityWebRequest.Get(url))
+                    {
+                        www.timeout = 10; // 개별 시도 타임아웃 10초 설정
+                        
+                        try
                         {
-                            return www.downloadHandler.data;
+                            await www.SendWebRequest();
+
+                            if (www.result == UnityWebRequest.Result.Success) 
+                            {
+                                return www.downloadHandler.data; // 다운로드 성공 시 데이터 반환
+                            }
+                            else
+                            {
+                                Debug.LogWarning($"[FileTransferManager] 다운로드 시도 실패 ({attempt + 1}/{maxRetries}): {www.error}");
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            Debug.LogWarning($"[FileTransferManager] 다운로드 중 예외 발생 ({attempt + 1}/{maxRetries}): {e.Message}");
                         }
                     }
-                    catch (Exception e)
+
+                    // 마지막 시도가 아니면 지정된 간격(1초)만큼 대기 후 재시도
+                    if (attempt < maxRetries - 1)
                     {
-                        Debug.LogWarning($"[FileTransferManager] 사진 다운로드 실패: {e.Message}");
+                        await UniTask.Delay(TimeSpan.FromSeconds(retryDelay));
                     }
                 }
             }
