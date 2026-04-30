@@ -192,7 +192,7 @@ namespace My.Scripts.Global
 
         /// <summary>
         /// 촬영된 사진을 로컬에 저장하고 역할에 따라 서버로 전송함.
-        /// 통신 실패 시 최대 10회까지 재시도함.
+        /// 통신 실패 시 최대 5회까지 재시도함.
         /// </summary>
         /// <param name="imageBytes">이미지 바이트 데이터.</param>
         /// <param name="relativePath">저장될 상대 경로.</param>
