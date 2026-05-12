@@ -73,16 +73,23 @@ namespace My.Scripts._03_Step1
         /// </summary>
         protected override void LoadSettings()
         {   
-            if (!SessionManager.Instance)
+            string lang = "ko";
+            if (SessionManager.Instance)
             {
-                Debug.LogWarning("[Step1Manager] SessionManager Null.");
-                return;
+                lang = SessionManager.Instance.CurrentLanguage;
+                if (string.IsNullOrWhiteSpace(lang))
+                {
+                    Debug.LogWarning("[Step1Manager] 언어 값이 비어있음. (ko로 폴백)");
+                    lang = "ko";
+                }
+                else
+                {
+                    lang = lang.Trim();
+                }
             }
-            string lang = SessionManager.Instance.CurrentLanguage;
-            if (string.IsNullOrEmpty(lang))
-            {   
-                Debug.LogWarning("[Step1Manager] 언어 값이 비어있음. (ko로 폴백)");
-                lang = "ko";
+            else
+            {
+                Debug.LogWarning("[Step1Manager] SessionManager 부재로 기본 언어(ko) 적용.");
             }
             
             string path = $"{GameConstants.Path.ContentRoot}/{lang}/{GameConstants.Path.Step1}";

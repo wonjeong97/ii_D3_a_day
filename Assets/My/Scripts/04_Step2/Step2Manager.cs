@@ -25,10 +25,10 @@ namespace My.Scripts._04_Step2
         public CommonBackgroundData background;
         public CommonIntroData introPage;
         public CommonOutroData outroPage;
-        
+
         public CommonQuestionUI commonQuestionUI;
         public CommonResultUI commonResultUI;
-        
+
         public List<QuestionSetItem> questionSets;
     }
 
@@ -39,20 +39,21 @@ namespace My.Scripts._04_Step2
     public class Step2Manager : BaseFlowManager
     {
         public static Step2Manager Instance { get; private set; }
-        
+
         [Header("Background Setup")]
         [SerializeField] private Page_Background backgroundPage;
 
         [Header("Dynamic SubCanvas Background")]
-        [SerializeField] private Image subCanvasBgImage; 
+        [SerializeField] private Image subCanvasBgImage;
+
         [SerializeField] private CanvasGroup subCanvasBgCg;
         [SerializeField] private float bgFadeDuration = 0.5f;
 
         private AsyncOperationHandle<Sprite> _bgHandle;
         private CancellationTokenSource _fadeCts;
-        
-        private int _currentBgQuestionNum = -1; 
-        
+
+        private int _currentBgQuestionNum = -1;
+
         protected override void Awake()
         {
             base.Awake();
@@ -65,11 +66,12 @@ namespace My.Scripts._04_Step2
         protected override void Start()
         {
             skipFirstPageFade = true;
-            
+
             if (subCanvasBgCg)
             {
                 subCanvasBgCg.alpha = 0f;
             }
+
             base.Start();
         }
 
@@ -87,12 +89,12 @@ namespace My.Scripts._04_Step2
                 {
                     int qNo = (currentPageIndex - 1) / 2 + 1;
                     int rawSelection = qPage.SelectedIndex;
-                    
+
                     if (rawSelection >= 1 && rawSelection <= 5)
                     {
                         int mappedValue = 6 - rawSelection;
                         string side = (TcpManager.Instance && TcpManager.Instance.IsServer) ? "left" : "right";
-                        
+
                         if (GameManager.Instance)
                         {
                             Debug.Log($"[Step2Manager] API 전송: Q{qNo}, Side: {side}, Value: {mappedValue}");
@@ -106,8 +108,8 @@ namespace My.Scripts._04_Step2
 
             if (index > 0 && index < pages.Count)
             {
-                int questionNum = (index - 1) / 2 + 1; 
-                bool isCameraPage = pages[index] is Page_Camera; 
+                int questionNum = (index - 1) / 2 + 1;
+                bool isCameraPage = pages[index] is Page_Camera;
 
                 ProcessBackgroundSequenceAsync(questionNum, isCameraPage).Forget();
             }
@@ -149,7 +151,7 @@ namespace My.Scripts._04_Step2
                 _fadeCts.Cancel();
                 _fadeCts.Dispose();
             }
-            
+
             _fadeCts = new CancellationTokenSource();
             CancellationToken token = _fadeCts.Token;
 
@@ -165,7 +167,7 @@ namespace My.Scripts._04_Step2
 
                     elapsed += Time.deltaTime;
                     subCanvasBgCg.alpha = Mathf.Lerp(startAlpha, endAlpha, elapsed / bgFadeDuration);
-                    
+
                     await UniTask.Yield(PlayerLoopTiming.Update, token);
                 }
 
@@ -174,7 +176,9 @@ namespace My.Scripts._04_Step2
                     subCanvasBgCg.alpha = endAlpha;
                 }
             }
-            catch (OperationCanceledException) { }
+            catch (OperationCanceledException)
+            {
+            }
         }
 
         /// <summary>
@@ -186,7 +190,7 @@ namespace My.Scripts._04_Step2
             if (!subCanvasBgImage) return;
             if (questionNum > 15) return;
             if (_currentBgQuestionNum == questionNum) return;
-            
+
             _currentBgQuestionNum = questionNum;
 
             string mainTheme = "Sea";
@@ -206,7 +210,7 @@ namespace My.Scripts._04_Step2
             {
                 _bgHandle = Addressables.LoadAssetAsync<Sprite>(bgKey);
                 Sprite nextBg = await _bgHandle;
-                
+
                 if (nextBg) subCanvasBgImage.sprite = nextBg;
             }
             catch (Exception e)
@@ -228,21 +232,22 @@ namespace My.Scripts._04_Step2
             }
 
             string cartridge = SessionManager.Instance.Cartridge;
-            if (string.IsNullOrEmpty(cartridge) || (cartridge != "A" && cartridge != "B" && cartridge != "C" && cartridge != "D"))
-            {   
+            if (string.IsNullOrEmpty(cartridge) ||
+                (cartridge != "A" && cartridge != "B" && cartridge != "C" && cartridge != "D"))
+            {
                 Debug.LogWarning($"[Step2Manager] 카트리지 값이 비어있거나 비정상적인 값({cartridge})이 감지됨. (A로 폴백)");
                 cartridge = "A";
             }
-            
+
             string typeStr = SessionManager.Instance.CurrentUserType.ToString();
             string lang = SessionManager.Instance.CurrentLanguage;
-            
+
             if (string.IsNullOrEmpty(lang))
-            {   
+            {
                 Debug.LogWarning("[Step2Manager] 언어 값이 비어있음. (ko로 폴백)");
                 lang = "ko";
             }
-            
+
             if (typeStr.Length < 2 || typeStr == "None")
             {
                 Debug.LogWarning($"[Step2Manager] 유효하지 않은 UserType입니다: {typeStr} (A1로 폴백)");
@@ -251,9 +256,16 @@ namespace My.Scripts._04_Step2
 
             string commonPath = $"{GameConstants.Path.ContentRoot}/{lang}/Step2/{GameConstants.Path.Common}";
             string dynamicPath = $"{GameConstants.Path.ContentRoot}/{lang}/Step2/Cartridge_{cartridge}/{typeStr}";
-            
+
             Step2Setting commonSetting = JsonLoader.Load<Step2Setting>(commonPath);
             Step2Setting specificSetting = JsonLoader.Load<Step2Setting>(dynamicPath);
+            
+            if (specificSetting == null && typeStr != "A1")
+            {
+                string fallbackDynamicPath = $"{GameConstants.Path.ContentRoot}/{lang}/Step2/Cartridge_{cartridge}/A1";
+                Debug.LogWarning($"[Step2Manager] {dynamicPath} 로드 실패. A1로 재시도합니다: {fallbackDynamicPath}");
+                specificSetting = JsonLoader.Load<Step2Setting>(fallbackDynamicPath);
+            }
 
             if (specificSetting == null)
             {
@@ -266,28 +278,39 @@ namespace My.Scripts._04_Step2
                 if (specificSetting.background == null) specificSetting.background = commonSetting.background;
                 if (specificSetting.introPage == null) specificSetting.introPage = commonSetting.introPage;
                 if (specificSetting.outroPage == null) specificSetting.outroPage = commonSetting.outroPage;
-                
-                if (specificSetting.commonQuestionUI == null) 
+
+                if (specificSetting.commonQuestionUI == null)
                 {
                     specificSetting.commonQuestionUI = commonSetting.commonQuestionUI;
                 }
                 else if (commonSetting.commonQuestionUI != null)
                 {
-                    if (specificSetting.commonQuestionUI.textSelected == null) specificSetting.commonQuestionUI.textSelected = commonSetting.commonQuestionUI.textSelected;
-                    if (specificSetting.commonQuestionUI.textDescription == null) specificSetting.commonQuestionUI.textDescription = commonSetting.commonQuestionUI.textDescription;
-                    if (specificSetting.commonQuestionUI.textWait == null) specificSetting.commonQuestionUI.textWait = commonSetting.commonQuestionUI.textWait;
-                    if (specificSetting.commonQuestionUI.textPopupWarning == null) specificSetting.commonQuestionUI.textPopupWarning = commonSetting.commonQuestionUI.textPopupWarning;
-                    if (specificSetting.commonQuestionUI.textPopupTimeout == null) specificSetting.commonQuestionUI.textPopupTimeout = commonSetting.commonQuestionUI.textPopupTimeout;
+                    if (specificSetting.commonQuestionUI.textSelected == null)
+                        specificSetting.commonQuestionUI.textSelected = commonSetting.commonQuestionUI.textSelected;
+                    if (specificSetting.commonQuestionUI.textDescription == null)
+                        specificSetting.commonQuestionUI.textDescription =
+                            commonSetting.commonQuestionUI.textDescription;
+                    if (specificSetting.commonQuestionUI.textWait == null)
+                        specificSetting.commonQuestionUI.textWait = commonSetting.commonQuestionUI.textWait;
+                    if (specificSetting.commonQuestionUI.textPopupWarning == null)
+                        specificSetting.commonQuestionUI.textPopupWarning =
+                            commonSetting.commonQuestionUI.textPopupWarning;
+                    if (specificSetting.commonQuestionUI.textPopupTimeout == null)
+                        specificSetting.commonQuestionUI.textPopupTimeout =
+                            commonSetting.commonQuestionUI.textPopupTimeout;
                 }
 
-                if (specificSetting.commonResultUI == null) 
+                if (specificSetting.commonResultUI == null)
                 {
                     specificSetting.commonResultUI = commonSetting.commonResultUI;
                 }
                 else if (commonSetting.commonResultUI != null)
                 {
-                    if (specificSetting.commonResultUI.textAnswerComplete == null) specificSetting.commonResultUI.textAnswerComplete = commonSetting.commonResultUI.textAnswerComplete;
-                    if (specificSetting.commonResultUI.textPhotoSaved == null) specificSetting.commonResultUI.textPhotoSaved = commonSetting.commonResultUI.textPhotoSaved;
+                    if (specificSetting.commonResultUI.textAnswerComplete == null)
+                        specificSetting.commonResultUI.textAnswerComplete =
+                            commonSetting.commonResultUI.textAnswerComplete;
+                    if (specificSetting.commonResultUI.textPhotoSaved == null)
+                        specificSetting.commonResultUI.textPhotoSaved = commonSetting.commonResultUI.textPhotoSaved;
                 }
             }
 
@@ -316,14 +339,14 @@ namespace My.Scripts._04_Step2
                 {
                     string progressString = $"{i + 1}/{totalQuestions}";
 
-                    bool hasOverrideDesc = setting.questionSets[i].textDescription != null && 
+                    bool hasOverrideDesc = setting.questionSets[i].textDescription != null &&
                                            !string.IsNullOrEmpty(setting.questionSets[i].textDescription.text);
 
-                   TextSetting targetDescription = hasOverrideDesc 
-                        ? setting.questionSets[i].textDescription 
+                    TextSetting targetDescription = hasOverrideDesc
+                        ? setting.questionSets[i].textDescription
                         : setting.commonQuestionUI.textDescription;
 
-                    CommonQuestionPageData qData = new CommonQuestionPageData 
+                    CommonQuestionPageData qData = new CommonQuestionPageData
                     {
                         questionSetting = setting.questionSets[i].questionSetting,
                         textSelected = setting.commonQuestionUI.textSelected,
@@ -359,14 +382,16 @@ namespace My.Scripts._04_Step2
                             {
                                 arrowNum = 1;
                             }
-                            
+
                             qPage.SetArrowNumber(arrowNum);
                         }
+
                         pages[pageIndex].SetupData(qData);
                     }
+
                     pageIndex++;
 
-                    CommonResultPageData rData = new CommonResultPageData 
+                    CommonResultPageData rData = new CommonResultPageData
                     {
                         textAnswerComplete = setting.commonResultUI.textAnswerComplete,
                         textMyScene = setting.questionSets[i].textMyScene,
@@ -379,6 +404,7 @@ namespace My.Scripts._04_Step2
                         if (rPage) rPage.SetSyncCommand($"STEP2_R_{i}_COMPLETE");
                         pages[pageIndex].SetupData(rData);
                     }
+
                     pageIndex++;
                 }
             }
@@ -410,10 +436,10 @@ namespace My.Scripts._04_Step2
         /// 씬 전환 시 메모리 누수를 방어하기 위함.
         /// </summary>
         private void OnDestroy()
-        {   
+        {
             if (Instance == this) Instance = null;
             if (_bgHandle.IsValid()) Addressables.Release(_bgHandle);
-            
+
             if (_fadeCts != null)
             {
                 _fadeCts.Cancel();
