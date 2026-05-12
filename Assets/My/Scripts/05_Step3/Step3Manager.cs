@@ -60,11 +60,28 @@ namespace My.Scripts._05_Step3
         /// </summary>
         protected override void LoadSettings()
         {
-            Step3Setting setting = JsonLoader.Load<Step3Setting>(GameConstants.Path.Step3);
+            string lang = "ko";
+
+            // 전역 세션에서 언어 정보를 조회하여 다국어 경로를 결정함.
+            if (SessionManager.Instance)
+            {
+                lang = SessionManager.Instance.CurrentLanguage;
+                if (string.IsNullOrEmpty(lang))
+                {
+                    lang = "ko";
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[Step3Manager] SessionManager 부재로 기본 언어(ko) 적용함.");
+            }
+
+            string path = $"{GameConstants.Path.ContentRoot}/{lang}/{GameConstants.Path.Step3}";
+            Step3Setting setting = JsonLoader.Load<Step3Setting>(path);
 
             if (setting == null)
             {
-                Debug.LogWarning("[Step3Manager] JSON/Step3 로드 실패. 데이터를 확인할 수 없습니다.");
+                Debug.LogWarning($"[Step3Manager] {path} 로드 실패. 데이터를 확인할 수 없습니다.");
                 return;
             }
 
@@ -137,7 +154,7 @@ namespace My.Scripts._05_Step3
                         {
                             rPage.SetSyncCommand($"STEP3_R_{i}_COMPLETE");
                             
-                            // 각 카메라 페이지에 본인의 문항 번호를 주입하여 마지막 문항(D3) 여부를 판단하게 함.
+                            // 각 카메라 페이지에 본인의 문항 번호를 주입하여 마지막 문항 여부를 판단하게 함.
                             string qId = (i == totalQuestions - 1) ? "D3" : $"Q{i + 1}";
                             rPage.SetQuestionId(qId);
                         }

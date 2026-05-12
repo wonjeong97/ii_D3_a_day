@@ -51,14 +51,33 @@ namespace My.Scripts._02_PlayTutorial
         /// </summary>
         protected override void LoadSettings()
         {
-            PlayTutorialSetting setting = JsonLoader.Load<PlayTutorialSetting>(GameConstants.Path.PlayTutorial);
+            string lang = "ko";
+
+            // 전역 세션에서 언어 정보를 조회하여 다국어 경로를 결정함
+            if (SessionManager.Instance)
+            {
+                lang = SessionManager.Instance.CurrentLanguage;
+                if (string.IsNullOrEmpty(lang))
+                {
+                    lang = "ko"; // 언어 설정 누락 시 기본값으로 복구함
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[PlayTutorialManager] SessionManager 부재로 기본 언어(ko) 적용함.");
+            }
+
+            // 언어별 폴더 구조(JSON/{lang}/...)에서 데이터를 불러옴
+            string path = $"{GameConstants.Path.ContentRoot}/{lang}/{GameConstants.Path.PlayTutorial}";
+            PlayTutorialSetting setting = JsonLoader.Load<PlayTutorialSetting>(path);
 
             if (setting == null)
             {
-                Debug.LogError("[PlayTutorialManager] JSON/PlayTutorial 로드 실패.");
+                Debug.LogError($"[PlayTutorialManager] {path} 로드 실패. 파일 유무 확인 필요함.");
                 return;
             }
             
+            // 각 페이지 컨트롤러의 유효성을 검사한 뒤 데이터를 주입함
             if (pages.Count > 0 && pages[0]) pages[0].SetupData(setting.page1);
             if (pages.Count > 1 && pages[1]) pages[1].SetupData(setting.page2);
             if (pages.Count > 2 && pages[2]) pages[2].SetupData(setting.page3);

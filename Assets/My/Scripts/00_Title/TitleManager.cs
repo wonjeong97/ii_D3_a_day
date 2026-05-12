@@ -35,9 +35,7 @@ namespace My.Scripts._00_Title
         /// </summary>
         private void Start()
         {
-            LoadSettings();
-
-            // 타이틀 씬 진입 시 이전 씬에서 강제로 넘어와 켜져 있을 수 있는 RFID 폴링을 확실하게 중단함.
+            // 타이틀 씬 진입 시 이전 씬에서 강제로 넘어와 켜져 있을 수 있는 RFID 폴링을 중단함.
             if (RfidManager.Instance)
             {
                 RfidManager.Instance.StopPolling();
@@ -61,35 +59,13 @@ namespace My.Scripts._00_Title
             {
                 Debug.LogWarning("[TitleManager] TcpManager 인스턴스가 존재하지 않습니다.");
             }
-        }
-
-        /// <summary>
-        /// 환경 설정 JSON 데이터를 메모리에 적재함.
-        /// Why: 페이드 시간 및 공통 설정값을 씬 진입 시점에 즉시 적용하기 위함.
-        /// </summary>
-        private void LoadSettings()
-        {
-            Settings settings = JsonLoader.Load<Settings>(GameConstants.Path.JsonSetting);
-
-            if (settings != null)
+            
+            if (SoundManager.Instance)
             {
-                if (SoundManager.Instance)
-                {
-                    SoundManager.Instance.PlayBGM("MainBGM");
-                }
-                else
-                {
-                    Debug.LogWarning("[TitleManager] SoundManager 인스턴스가 존재하지 않습니다.");
-                }
-
-                _fadeTime = settings.fadeTime;
-            }
-            else
-            {
-                Debug.LogWarning("[TitleManager] Settings.json 로드 실패.");
+                SoundManager.Instance.PlayBGM("MainBGM");
             }
         }
-
+        
         /// <summary>
         /// 외부 API를 주기적으로 호출하여 현재 방의 점유 상태를 확인함.
         /// </summary>

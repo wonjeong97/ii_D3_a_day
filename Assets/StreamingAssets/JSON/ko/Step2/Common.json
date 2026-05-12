@@ -1,0 +1,124 @@
+{
+  "background": {
+    "nameA": {
+      "name": "Text_NameA",
+      "position": {"x": 216, "y": -190},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "{nameA}",
+      "fontName": "font6",
+      "fontSize": 24,
+      "fontColor": {"r": 0.627451, "g": 0.627451, "b": 0.627451, "a": 1},
+      "alignment": 3
+    },
+    "nameB": {
+      "name": "Text_NameB",
+      "position": {"x": 216, "y": -190},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "{nameB}",
+      "fontName": "font6",
+      "fontSize": 24,
+      "fontColor": {"r": 0.627451, "g": 0.627451, "b": 0.627451, "a": 1},
+      "alignment": 3
+    }
+  },
+  "introPage": {
+    "nameA": {
+      "name": "Text_NameA",
+      "position": {"x": 216, "y": -190},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "{nameA}",
+      "fontName": "font6",
+      "fontSize": 24,
+      "fontColor": {"r": 1, "g": 1, "b": 1, "a": 1},
+      "alignment": 3
+    },
+    "nameB": {
+      "name": "Text_NameB",
+      "position": {"x": 216, "y": -190},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "{nameB}",
+      "fontName": "font6",
+      "fontSize": 24,
+      "fontColor": {"r": 1, "g": 1, "b": 1, "a": 1},
+      "alignment": 3
+    }
+  },
+  "outroPage": {
+    "textOutro": {
+      "name": "Text_Outro",
+      "position": {"x": 0, "y": 212},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "이번에는 <b>표정 피규어</b>를 사용합니다.\n답변에 맞는 표정 피규어를 올려주세요.",
+      "fontName": "font4",
+      "fontSize": 55,
+      "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1}
+    }
+  },
+  "commonQuestionUI": {
+    "textSelected": {
+      "name": "Text_Selected",
+      "position": {"x": 0, "y": 5},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "답변을 완료하셨습니다.",
+      "fontName": "font4",
+      "fontSize": 55,
+      "fontColor": {"r": 0, "g": 0, "b": 0, "a": 1}
+    },
+    "textDescription": {
+      "name": "Text_Description",
+      "position": {"x": 0, "y": 96},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "<b><size=45>{ArrowNum}번 화살표 자리</size></b>에 맞춰 올려 주세요.",
+      "fontName": "font6",
+      "fontSize": 38,
+      "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 1}
+    },
+    "textWait": {
+      "name": "Text_Wait",
+      "position": {"x": 0, "y": 96},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "확정하시려면, 잠시 기다려주세요.",
+      "fontName": "font6",
+      "fontSize": 38,
+      "fontColor": {"r": 0.5686275, "g": 0.5176471, "b": 0.4823529, "a": 1}
+    },
+    "textPopupWarning": {
+      "name": "Text_Popup1",
+      "position": {"x": 0, "y": 0},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "피규어를 올려 답변을 진행해 주세요!",
+      "fontName": "font4",
+      "fontSize": 55,
+      "fontColor": {"r": 1, "g": 1, "b": 1, "a": 1}
+    },
+    "textPopupTimeout": {
+      "name": "Text_Popup2",
+      "position": {"x": 0, "y": 0},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "동작이 인식되지 않아 초기화됩니다.",
+      "fontName": "font4",
+      "fontSize": 55,
+      "fontColor": {"r": 1, "g": 1, "b": 1, "a": 1}
+    }
+  },
+  "commonResultUI": {
+    "textAnswerComplete": {
+      "name": "Text_AnswerComplete",
+      "position": {"x": 0, "y": 212},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "촬영을 시작합니다. 카메라를 가리지 말아 주세요.",
+      "fontName": "font4",
+      "fontSize": 55,
+      "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1}
+    },
+    "textPhotoSaved": {
+      "name": "Text_Saved",
+      "position": {"x": 0, "y": 212},
+      "scale": {"x": 1, "y": 1, "z": 1},
+      "text": "사진이 기록되었습니다.\n답변에 사용한 레고는 원래 자리에 내려놓아 주세요.",
+      "fontName": "font4",
+      "fontSize": 55,
+      "fontColor": {"r": 0.1960784, "g": 0.1960784, "b": 0.1960784, "a": 1}
+    }
+  }
+}
