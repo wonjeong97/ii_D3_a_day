@@ -72,20 +72,40 @@ namespace My.Scripts._03_Step1
         /// 반복되는 공통 UI 데이터와 개별 페이지 데이터를 결합하여 메모리에 할당함.
         /// </summary>
         protected override void LoadSettings()
-        {
-            Step1Setting settings = JsonLoader.Load<Step1Setting>(GameConstants.Path.Step1);
-
-            if (settings == null)
+        {   
+            string lang = "ko";
+            if (SessionManager.Instance)
             {
-                Debug.LogError("[Step1Manager] JSON 로드 실패.");
+                lang = SessionManager.Instance.CurrentLanguage;
+                if (string.IsNullOrWhiteSpace(lang))
+                {
+                    Debug.LogWarning("[Step1Manager] 언어 값이 비어있음. (ko로 폴백)");
+                    lang = "ko";
+                }
+                else
+                {
+                    lang = lang.Trim();
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[Step1Manager] SessionManager 부재로 기본 언어(ko) 적용.");
+            }
+            
+            string path = $"{GameConstants.Path.ContentRoot}/{lang}/{GameConstants.Path.Step1}";
+            Step1Setting step1Setting = JsonLoader.Load<Step1Setting>(path);
+
+            if (step1Setting is null)
+            {
+                Debug.LogWarning($"[Step1Manager] 로드 실패. Path: {path}");
                 return;
             }
 
-            _q2DynamicAnswers = settings.q2DynamicAnswers;
+            _q2DynamicAnswers = step1Setting.q2DynamicAnswers;
 
             if (backgroundPage)
             {
-                backgroundPage.SetupData(settings.background);
+                backgroundPage.SetupData(step1Setting.background);
                 backgroundPage.OnEnter();
             }
 
@@ -93,34 +113,34 @@ namespace My.Scripts._03_Step1
             {
                 Page_Intro intro = pages[0] as Page_Intro;
                 if (intro) intro.SetSyncCommand("STEP1_INTRO_COMPLETE");
-                pages[0].SetupData(settings.introPage);
+                pages[0].SetupData(step1Setting.introPage);
             }
 
             int pageIndex = 1; 
 
-            if (settings.questionSets != null)
+            if (step1Setting.questionSets != null)
             {
-                int totalQuestions = settings.questionSets.Count;
+                int totalQuestions = step1Setting.questionSets.Count;
 
                 for (int i = 0; i < totalQuestions; i++)
                 {
                     string progressString = $"{i + 1}/{totalQuestions}";
                     
-                    bool hasOverrideDesc = settings.questionSets[i].textDescription != null && 
-                                           !string.IsNullOrEmpty(settings.questionSets[i].textDescription.text);
+                    bool hasOverrideDesc = step1Setting.questionSets[i].textDescription != null && 
+                                           !string.IsNullOrEmpty(step1Setting.questionSets[i].textDescription.text);
 
                     TextSetting targetDescription = hasOverrideDesc 
-                        ? settings.questionSets[i].textDescription 
-                        : settings.commonQuestionUI.textDescription;
+                        ? step1Setting.questionSets[i].textDescription 
+                        : step1Setting.commonQuestionUI.textDescription;
 
                     CommonQuestionPageData qData = new CommonQuestionPageData 
                     {
-                        questionSetting = settings.questionSets[i].questionSetting,
-                        textSelected = settings.commonQuestionUI.textSelected,
+                        questionSetting = step1Setting.questionSets[i].questionSetting,
+                        textSelected = step1Setting.commonQuestionUI.textSelected,
                         textDescription = targetDescription,
-                        textWait = settings.commonQuestionUI.textWait,
-                        textPopupWarning = settings.commonQuestionUI.textPopupWarning,
-                        textPopupTimeout = settings.commonQuestionUI.textPopupTimeout
+                        textWait = step1Setting.commonQuestionUI.textWait,
+                        textPopupWarning = step1Setting.commonQuestionUI.textPopupWarning,
+                        textPopupTimeout = step1Setting.commonQuestionUI.textPopupTimeout
                     };
 
                     if (pageIndex < pages.Count && pages[pageIndex])
@@ -145,9 +165,9 @@ namespace My.Scripts._03_Step1
 
                     CommonResultPageData rData = new CommonResultPageData 
                     {
-                        textAnswerComplete = settings.commonResultUI.textAnswerComplete,
-                        textMyScene = settings.questionSets[i].textMyScene,
-                        textPhotoSaved = settings.commonResultUI.textPhotoSaved
+                        textAnswerComplete = step1Setting.commonResultUI.textAnswerComplete,
+                        textMyScene = step1Setting.questionSets[i].textMyScene,
+                        textPhotoSaved = step1Setting.commonResultUI.textPhotoSaved
                     };
 
                     if (pageIndex < pages.Count && pages[pageIndex])
@@ -166,7 +186,7 @@ namespace My.Scripts._03_Step1
                 if (outro)
                 {
                     outro.SetSyncCommand("STEP1_OUTRO_COMPLETE");
-                    outro.SetupData(settings.outroPage);
+                    outro.SetupData(step1Setting.outroPage);
                 }
             }
         }

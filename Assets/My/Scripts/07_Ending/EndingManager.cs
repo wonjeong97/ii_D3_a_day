@@ -39,14 +39,34 @@ namespace My.Scripts._07_Ending
         /// </summary>
         protected override void LoadSettings()
         {
-            EndingSetting setting = JsonLoader.Load<EndingSetting>(GameConstants.Path.Ending);
+            string lang = "ko";
+
+            // 다국어 경로 구성을 위해 세션 매니저 인스턴스 유무를 확인함.
+            if (SessionManager.Instance)
+            {
+                lang = SessionManager.Instance.CurrentLanguage;
+
+                if (string.IsNullOrEmpty(lang))
+                {
+                    lang = "ko"; 
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[EndingManager] SessionManager 부재로 기본 언어(ko) 적용함.");
+            }
+
+            // # TODO: 향후 언어 팩 로드 실패 시 재시도 로직 추가 고려
+            string path = $"{GameConstants.Path.ContentRoot}/{lang}/{GameConstants.Path.Ending}";
+            EndingSetting setting = JsonLoader.Load<EndingSetting>(path);
 
             if (setting == null)
             {
-                Debug.LogError("[EndingManager] JSON/Ending 로드 실패. 데이터를 확인할 수 없습니다.");
+                Debug.LogError($"[EndingManager] {path} 로드 실패.");
                 return;
             }
 
+            // 각 페이지 컴포넌트의 유효성을 검사한 뒤 데이터를 할당함.
             if (pages.Count > 0 && pages[0]) pages[0].SetupData(setting.page1);
             if (pages.Count > 1 && pages[1]) pages[1].SetupData(setting.page2);
             if (pages.Count > 2 && pages[2]) pages[2].SetupData(setting.page3);

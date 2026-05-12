@@ -25,22 +25,22 @@ namespace My.Scripts.Global
 
         /// <summary>
         /// 외부 리소스 및 구성 파일 로드 시 사용되는 경로 정의.
-        /// Resources 폴더 또는 StreamingAssets 내의 JSON 파일 위치를 일괄 관리함.
+        /// StreamingAssets 내의 JSON 파일 위치를 일괄 관리함.
         /// </summary>
         public static class Path
-        {
+        {   
+            public const string ContentRoot = "JSON";
             public const string JsonSetting = "Settings"; 
-            public const string Title = "JSON/Title"; 
-            public const string Tutorial = "JSON/Tutorial";            
-            public const string PlayTutorial = "JSON/PlayTutorial";
+            public const string Tutorial = "Tutorial";            
+            public const string PlayTutorial = "PlayTutorial";
             public const string TcpSetting = "JSON/TcpSetting";
-            public const string Step1 = "JSON/Step1";
-            public const string Step2 = "JSON/Step2";
-            public const string Step3 = "JSON/Step3";
-            public const string PlayVideo = "JSON/PlayVideo";
-            public const string Ending = "JSON/Ending";
+            public const string Step1 = "Step1";
+            public const string Step3 = "Step3";
+            public const string PlayVideo = "PlayVideo";
+            public const string Ending = "Ending";
             public const string ApiSetting = "JSON/API";
             public const string CameraSetting = "JSON/CameraSetting";
+            public const string Common = "Common";
         }
     }
 }

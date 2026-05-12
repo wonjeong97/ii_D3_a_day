@@ -99,32 +99,60 @@ namespace My.Scripts._06_PlayVideo
         /// 외부 JSON 파일에서 설정 데이터를 로드하여 UI 텍스트 등에 할당함.
         /// </summary>
         private void LoadSettings()
-        {
-            PlayVideoSetting setting = JsonLoader.Load<PlayVideoSetting>(GameConstants.Path.PlayVideo);
+        {   
+            string lang = "ko";
 
-            if (setting != null)
+            // 전역 세션에서 언어 정보를 조회하여 다국어 경로를 결정함
+            if (SessionManager.Instance)
             {
-                if (setting.mainText != null && mainTextUI)
-                {
-                    if (UIManager.Instance) UIManager.Instance.SetText(mainTextUI.gameObject, setting.mainText);
-                    mainTextUI.text = ProcessMainTextPlayerName(setting.mainText.text);
-                }
+                lang = SessionManager.Instance.CurrentLanguage;
 
-                if (setting.leftText != null && leftTextUI)
+                if (string.IsNullOrEmpty(lang))
                 {
-                    if (UIManager.Instance) UIManager.Instance.SetText(leftTextUI.gameObject, setting.leftText);
-                    leftTextUI.text = ProcessPlayerName(setting.leftText.text, true);
-                }
-
-                if (setting.rightText != null && rightTextUI)
-                {
-                    if (UIManager.Instance) UIManager.Instance.SetText(rightTextUI.gameObject, setting.rightText);
-                    rightTextUI.text = ProcessPlayerName(setting.rightText.text, false);
+                    lang = "ko"; // 언어 설정 누락 시 기본값으로 복구함
                 }
             }
             else
             {
-                Debug.LogWarning("[PlayVideoManager] JSON/PlayVideo 로드 실패. 설정값을 찾을 수 없습니다.");
+                Debug.LogWarning("[PlayVideoManager] SessionManager 부재로 기본 언어(ko) 적용함.");
+            }
+            
+            // 언어별 폴더 구조(JSON/{lang}/...)에서 데이터를 불러옴
+            string path = $"{GameConstants.Path.ContentRoot}/{lang}/{GameConstants.Path.PlayVideo}";
+            PlayVideoSetting setting = JsonLoader.Load<PlayVideoSetting>(path);
+
+            if (setting == null)
+            {
+                Debug.LogWarning($"[PlayVideoManager] {path} 로드 실패. 설정값을 찾을 수 없음.");
+                return;
+            }
+
+            // UI 텍스트 컴포넌트와 전역 UIManager 유효성을 확인한 뒤 데이터 주입함
+            if (setting.mainText != null && mainTextUI)
+            {
+                if (UIManager.Instance)
+                {
+                    UIManager.Instance.SetText(mainTextUI.gameObject, setting.mainText);
+                }
+                mainTextUI.text = ProcessMainTextPlayerName(setting.mainText.text);
+            }
+
+            if (setting.leftText != null && leftTextUI)
+            {
+                if (UIManager.Instance)
+                {
+                    UIManager.Instance.SetText(leftTextUI.gameObject, setting.leftText);
+                }
+                leftTextUI.text = ProcessPlayerName(setting.leftText.text, true);
+            }
+
+            if (setting.rightText != null && rightTextUI)
+            {
+                if (UIManager.Instance)
+                {
+                    UIManager.Instance.SetText(rightTextUI.gameObject, setting.rightText);
+                }
+                rightTextUI.text = ProcessPlayerName(setting.rightText.text, false);
             }
         }
         
