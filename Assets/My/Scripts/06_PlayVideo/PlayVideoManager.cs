@@ -257,6 +257,13 @@ namespace My.Scripts._06_PlayVideo
         /// </summary>
         private async UniTaskVoid LoadAndPrepareAsync()
         {
+            // 클라이언트: 게임 플레이 중 NOTIFY_PHOTO_READY를 놓쳐 누락된 서버 사진을 여기서 보완함.
+            if (FileTransferManager.Instance != null && TcpManager.Instance != null && !TcpManager.Instance.IsServer)
+            {
+                string userIdx = SessionManager.Instance != null ? SessionManager.Instance.CurrentUserIdx.ToString() : "0";
+                await FileTransferManager.Instance.SyncAllPhotosAsync(totalPhotos, userIdx);
+            }
+
             await LoadPhotosAsSpritesAsync();
             AssignInitialSprites();
 

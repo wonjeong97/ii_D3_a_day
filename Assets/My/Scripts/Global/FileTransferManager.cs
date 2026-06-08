@@ -374,9 +374,11 @@ else
                         {
                             await www.SendWebRequest();
 
-                            if (www.result == UnityWebRequest.Result.Success) 
+                            if (www.result == UnityWebRequest.Result.Success)
                             {
-                                return www.downloadHandler.data; // 다운로드 성공 시 데이터 반환
+                                byte[] data = www.downloadHandler.data;
+                                await CacheLocallyAsync(relativePath, data);
+                                return data;
                             }
                             else
                             {
@@ -398,6 +400,29 @@ else
             }
             
             return null;
+        }
+
+        /// <summary>
+        /// 로컬에 없는 파일을 비동기로 저장함.
+        /// DownloadPhotoAsync 성공 직후 자동 호출되어 이후 로컬 캐시로 재사용 가능하게 함.
+        /// </summary>
+        private async UniTask CacheLocallyAsync(string relativePath, byte[] data)
+        {
+            try
+            {
+                string fullPath = Path.Combine(localSaveRoot, relativePath.Replace('/', '\\'));
+                if (File.Exists(fullPath)) return;
+
+                string dir = Path.GetDirectoryName(fullPath);
+                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                    Directory.CreateDirectory(dir);
+
+                await File.WriteAllBytesAsync(fullPath, data);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[FileTransferManager] 로컬 캐시 저장 실패 ({relativePath}): {e.Message}");
+            }
         }
 
         /// <summary>
