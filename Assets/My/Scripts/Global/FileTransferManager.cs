@@ -314,7 +314,17 @@ else
         /// </summary>
         private async UniTaskVoid ReuploadPhotoAsync(string relativePath)
         {
-            string fullPath = Path.Combine(localSaveRoot, relativePath.Replace('/', '\\'));
+            // 디렉터리 탐색 공격 차단: 서버가 보낸 relativePath를 그대로 신뢰하지 않음.
+            // CacheLocallyAsync와 동일한 패턴으로 fullPath가 localSaveRoot 하위인지 검증함.
+            string fullPath = Path.GetFullPath(Path.Combine(localSaveRoot, relativePath.Replace('/', '\\')));
+            string safeRoot = Path.GetFullPath(localSaveRoot).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                              + Path.DirectorySeparatorChar;
+            if (!fullPath.StartsWith(safeRoot, StringComparison.OrdinalIgnoreCase))
+            {
+                Debug.LogWarning($"[FileTransferManager] 재업로드 요청 — 디렉터리 탐색 시도 차단: {relativePath}");
+                return;
+            }
+
             if (!File.Exists(fullPath))
             {
                 Debug.LogWarning($"[FileTransferManager] 재업로드 요청 수신 — 로컬에 파일 없음: {relativePath}");
