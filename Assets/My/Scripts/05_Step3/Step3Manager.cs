@@ -48,8 +48,6 @@ namespace My.Scripts._05_Step3
         /// </summary>
         protected override void Start()
         {
-            StillcutManager.GenerateVideoInBackground();
-
             skipFirstPageFade = true;
             base.Start();
         }
@@ -169,7 +167,7 @@ namespace My.Scripts._05_Step3
                 Page_Loading loading = pages[pageIndex] as Page_Loading;
                 if (loading)
                 {
-                    loading.SetSyncCommands("STEP3_LOADING_READY", "STEP3_LOADING_COMPLETE");
+                    loading.SetSyncCommands("STEP3_LOADING_READY", "STEP3_LOADING_COMPLETE", "STEP3_VIDEO_READY");
                 }
                 pages[pageIndex].SetupData(setting.loadingPage);
                 pageIndex++;
