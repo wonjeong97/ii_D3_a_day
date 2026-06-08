@@ -290,12 +290,56 @@ else
         /// </summary>
         private void OnNetworkMessageReceived(TcpMessage msg)
         {
-            if (msg != null && msg.command == "NOTIFY_PHOTO_READY")
+            if (msg == null) return;
+
+            if (msg.command == "NOTIFY_PHOTO_READY")
             {
                 if (TcpManager.Instance && !TcpManager.Instance.IsServer)
                 {
                     DownloadAndSavePhotoAsync(msg.payload).Forget();
                 }
+            }
+            else if (msg.command == "REQUEST_REUPLOAD")
+            {
+                // 클라이언트: 서버가 받지 못한 사진을 로컬에서 읽어 HTTP POST로 재전송함.
+                if (TcpManager.Instance && !TcpManager.Instance.IsServer && !string.IsNullOrEmpty(msg.payload))
+                {
+                    ReuploadPhotoAsync(msg.payload).Forget();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 서버로부터 재업로드 요청을 받아 로컬에 저장된 파일을 HTTP POST로 재전송함.
+        /// </summary>
+        private async UniTaskVoid ReuploadPhotoAsync(string relativePath)
+        {
+            // 디렉터리 탐색 공격 차단: 서버가 보낸 relativePath를 그대로 신뢰하지 않음.
+            // CacheLocallyAsync와 동일한 패턴으로 fullPath가 localSaveRoot 하위인지 검증함.
+            string fullPath = Path.GetFullPath(Path.Combine(localSaveRoot, relativePath.Replace('/', '\\')));
+            string safeRoot = Path.GetFullPath(localSaveRoot).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                              + Path.DirectorySeparatorChar;
+            if (!fullPath.StartsWith(safeRoot, StringComparison.OrdinalIgnoreCase))
+            {
+                Debug.LogWarning($"[FileTransferManager] 재업로드 요청 — 디렉터리 탐색 시도 차단: {relativePath}");
+                return;
+            }
+
+            if (!File.Exists(fullPath))
+            {
+                Debug.LogWarning($"[FileTransferManager] 재업로드 요청 수신 — 로컬에 파일 없음: {relativePath}");
+                return;
+            }
+
+            try
+            {
+                byte[] data = await File.ReadAllBytesAsync(fullPath);
+                if (data != null && data.Length > 0)
+                    await UploadPhotoAsync(data, relativePath);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[FileTransferManager] 재업로드 실패 ({relativePath}): {e.Message}");
             }
         }
 
@@ -374,9 +418,15 @@ else
                         {
                             await www.SendWebRequest();
 
-                            if (www.result == UnityWebRequest.Result.Success) 
+                            if (www.result == UnityWebRequest.Result.Success)
                             {
-                                return www.downloadHandler.data; // 다운로드 성공 시 데이터 반환
+                                byte[] data = www.downloadHandler.data;
+                                if (data != null && data.Length > 0)
+                                {
+                                    await CacheLocallyAsync(relativePath, data);
+                                    return data;
+                                }
+                                Debug.LogWarning($"[FileTransferManager] 빈 응답 수신 — 캐시하지 않고 재시도 ({attempt + 1}/{maxRetries}): {relativePath}");
                             }
                             else
                             {
@@ -401,6 +451,40 @@ else
         }
 
         /// <summary>
+        /// 로컬에 없는 파일을 비동기로 저장함.
+        /// DownloadPhotoAsync 성공 직후 자동 호출되어 이후 로컬 캐시로 재사용 가능하게 함.
+        /// </summary>
+        private async UniTask CacheLocallyAsync(string relativePath, byte[] data)
+        {
+            try
+            {
+                string fullPath = Path.GetFullPath(Path.Combine(localSaveRoot, relativePath.Replace('/', '\\')));
+
+                // 디렉터리 탐색 공격 차단: fullPath가 localSaveRoot 하위 경로인지 검증함.
+                // 끝에 구분자를 붙여 "C:\Base"가 "C:\BaseMalicious"에 매칭되는 오탐을 방지함.
+                string safeRoot = Path.GetFullPath(localSaveRoot).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                                  + Path.DirectorySeparatorChar;
+                if (!fullPath.StartsWith(safeRoot, StringComparison.OrdinalIgnoreCase))
+                {
+                    Debug.LogWarning($"[FileTransferManager] 디렉터리 탐색 시도 차단 — 저장 생략: {relativePath}");
+                    return;
+                }
+
+                if (File.Exists(fullPath)) return;
+
+                string dir = Path.GetDirectoryName(fullPath);
+                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                    Directory.CreateDirectory(dir);
+
+                await File.WriteAllBytesAsync(fullPath, data);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[FileTransferManager] 로컬 캐시 저장 실패 ({relativePath}): {e.Message}");
+            }
+        }
+
+        /// <summary>
         /// 특정 유저의 모든 질문 답변 사진을 동기화함.
         /// 영상 인코딩 전 누락된 사진이 없는지 교차 검증하기 위함.
         /// </summary>
@@ -420,20 +504,40 @@ else
                 string relativePath = $"{dateStr}/{userId}/{targetRole}/{userId}_{targetRole}_Q{i}.png";
                 string fullPath = Path.Combine(localSaveRoot, relativePath.Replace('/', '\\'));
                 
-                if (!File.Exists(fullPath) && !isServer)
+                if (!File.Exists(fullPath))
                 {
-                    byte[] data = await DownloadPhotoAsync(relativePath);
-                    if (data != null && data.Length > 0)
+                    if (isServer)
                     {
-                        try
+                        // 서버: 클라이언트에 재업로드 요청 후 파일 도착까지 폴링 대기함.
+                        if (TcpManager.Instance)
+                            TcpManager.Instance.SendMessageToTarget("REQUEST_REUPLOAD", relativePath);
+
+                        float elapsed = 0f;
+                        while (!File.Exists(fullPath) && elapsed < 15f)
                         {
-                            string dir = Path.GetDirectoryName(fullPath);
-                            if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
-                            await File.WriteAllBytesAsync(fullPath, data);
+                            await UniTask.Delay(TimeSpan.FromMilliseconds(500));
+                            elapsed += 0.5f;
                         }
-                        catch (Exception e)
+
+                        if (!File.Exists(fullPath))
+                            Debug.LogWarning($"[FileTransferManager] 클라이언트 사진 재수신 실패: {relativePath}");
+                    }
+                    else
+                    {
+                        // 클라이언트: 서버에서 HTTP GET으로 다운로드함.
+                        byte[] data = await DownloadPhotoAsync(relativePath);
+                        if (data != null && data.Length > 0)
                         {
-                            Debug.LogWarning($"[FileTransferManager] 누락 사진 동기화 저장 실패: {e.Message}");
+                            try
+                            {
+                                string dir = Path.GetDirectoryName(fullPath);
+                                if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+                                await File.WriteAllBytesAsync(fullPath, data);
+                            }
+                            catch (Exception e)
+                            {
+                                Debug.LogWarning($"[FileTransferManager] 누락 사진 동기화 저장 실패: {e.Message}");
+                            }
                         }
                     }
                 }

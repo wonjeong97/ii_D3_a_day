@@ -257,6 +257,23 @@ namespace My.Scripts._06_PlayVideo
         /// </summary>
         private async UniTaskVoid LoadAndPrepareAsync()
         {
+            // 클라이언트: 게임 플레이 중 NOTIFY_PHOTO_READY를 놓쳐 누락된 서버 사진을 여기서 보완함.
+            // 5초 예산 내 완료되면 즉시 진행하고, 초과 시 나머지 동기화는 백그라운드에서 계속 실행됨.
+            if (FileTransferManager.Instance != null && TcpManager.Instance != null && !TcpManager.Instance.IsServer)
+            {
+                string userIdx = SessionManager.Instance != null ? SessionManager.Instance.CurrentUserIdx.ToString() : "0";
+                using (var syncTimeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(5)))
+                {
+                    var cancelResult = await FileTransferManager.Instance
+                        .SyncAllPhotosAsync(totalPhotos, userIdx)
+                        .AttachExternalCancellation(syncTimeoutCts.Token)
+                        .SuppressCancellationThrow();
+
+                    if (cancelResult.IsCanceled)
+                        Debug.Log("[PlayVideoManager] 사진 동기화 시간 초과 — 나머지는 백그라운드에서 계속 진행합니다.");
+                }
+            }
+
             await LoadPhotosAsSpritesAsync();
             AssignInitialSprites();
 

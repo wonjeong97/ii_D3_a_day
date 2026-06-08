@@ -141,7 +141,7 @@ namespace My.Scripts._06_PlayVideo
         /// API 업로드에 필요한 인덱스와 UID 정보를 세션에서 추출하여 콜백으로 전달할 준비를 함께 수행함.
         /// 입력 예시: C:\UnitySharedPicture\2026-03-31\123\Left\123_Left_Q%d.png
         /// </summary>
-        public static void GenerateVideoInBackground()
+        public static async UniTask<bool> GenerateVideoAsync()
         {
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
             bool isServer = false;
@@ -181,7 +181,7 @@ namespace My.Scripts._06_PlayVideo
             if (!File.Exists(ffmpegPath))
             {
                 UnityEngine.Debug.LogError($"[StillcutManager] ffmpeg.exe 경로가 존재하지 않습니다: {ffmpegPath}");
-                return; 
+                return false;
             }
 
             string args;
@@ -206,9 +206,10 @@ namespace My.Scripts._06_PlayVideo
                        $"-c:v libx264 \"{outputVideoPath}\"";
             }
 
-            RunFFmpegAsync(ffmpegPath, args, outputVideoPath, userIdx, uid).Forget();
+            return await RunFFmpegAsync(ffmpegPath, args, outputVideoPath, userIdx, uid);
 #else
             UnityEngine.Debug.LogWarning("[StillcutManager] Windows 환경 전용 함수입니다.");
+            return false;
 #endif
         }
 
@@ -265,7 +266,7 @@ namespace My.Scripts._06_PlayVideo
         /// <param name="outputPath">인코딩 결과물이 최종 저장될 로컬 파일 경로.</param>
         /// <param name="userIdx">API 전송 시 식별자로 사용될 현재 유저의 고유 인덱스 번호.</param>
         /// <param name="uid">API 전송 시 식별자로 사용될 현재 유저의 고유 아이디.</param>
-        private static async UniTaskVoid RunFFmpegAsync(string ffmpegPath, string args, string outputPath, int userIdx, string uid)
+        private static async UniTask<bool> RunFFmpegAsync(string ffmpegPath, string args, string outputPath, int userIdx, string uid)
         {
             try
             {
@@ -275,7 +276,7 @@ namespace My.Scripts._06_PlayVideo
                     Arguments = args,
                     CreateNoWindow = true,
                     UseShellExecute = false,
-                    RedirectStandardError = true 
+                    RedirectStandardError = true
                 };
 
                 Process process = Process.Start(psi);
@@ -284,13 +285,13 @@ namespace My.Scripts._06_PlayVideo
                     Task<string> readErrorTask = process.StandardError.ReadToEndAsync();
 
                     await UniTask.RunOnThreadPool(() => process.WaitForExit());
-                    
+
                     string stderr = await readErrorTask;
 
                     if (process.ExitCode == 0 && File.Exists(outputPath))
                     {
                         UnityEngine.Debug.Log($"[StillcutManager] 비디오 인코딩 완료: {outputPath}");
-                        
+
                         if (APIManager.Instance)
                         {
                             string module = SessionManager.Instance ? SessionManager.Instance.CurrentModuleCode : "D3";
@@ -300,16 +301,20 @@ namespace My.Scripts._06_PlayVideo
                         {
                             UnityEngine.Debug.LogWarning("[StillcutManager] APIManager 인스턴스를 찾을 수 없어 영상을 업로드하지 못했습니다.");
                         }
+                        return true;
                     }
                     else
                     {
                         UnityEngine.Debug.LogError($"[StillcutManager] 인코딩 실패 (ExitCode: {process.ExitCode}): {stderr}");
+                        return false;
                     }
                 }
+                return false;
             }
             catch (Exception e)
             {
                 UnityEngine.Debug.LogError($"[StillcutManager] 프로세스 실행 에러: {e.Message}");
+                return false;
             }
         }
 

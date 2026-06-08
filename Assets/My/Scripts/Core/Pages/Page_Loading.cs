@@ -1,6 +1,9 @@
 using System.Collections;
+using Cysharp.Threading.Tasks;
 using My.Scripts.Core.Data;
-using My.Scripts.Network; 
+using My.Scripts.Global;
+using My.Scripts.Network;
+using My.Scripts._06_PlayVideo;
 using UnityEngine;
 using UnityEngine.UI;
 using Wonjeong.UI;
@@ -29,7 +32,9 @@ namespace My.Scripts.Core.Pages
         
         private string _readyCmd;
         private string _completeCmd;
+        private string _videoReadyCmd;
         private bool _isRemoteReady;
+        private bool _isVideoRemoteReady;
 
         /// <summary>
         /// 객체 생성 시 네트워크 메시지 수신 이벤트를 구독함.
@@ -48,10 +53,11 @@ namespace My.Scripts.Core.Pages
         /// </summary>
         /// <param name="readyCmd">상대방에게 준비됨을 알리는 커맨드.</param>
         /// <param name="completeCmd">모든 준비가 끝나 다음으로 넘어감을 알리는 커맨드.</param>
-        public void SetSyncCommands(string readyCmd, string completeCmd)
+        public void SetSyncCommands(string readyCmd, string completeCmd, string videoReadyCmd = "")
         {
             _readyCmd = readyCmd;
             _completeCmd = completeCmd;
+            _videoReadyCmd = videoReadyCmd;
         }
 
         /// <summary>
@@ -86,6 +92,7 @@ namespace My.Scripts.Core.Pages
         {
             base.OnExit();
             _isRemoteReady = false;
+            _isVideoRemoteReady = false;
 
             if (_loadingCoroutine != null)
             {
@@ -142,8 +149,41 @@ namespace My.Scripts.Core.Pages
                     }
                 }
 
-                // 양쪽 모두 준비된 후 연출 안정성을 위해 추가 대기 시간을 가짐.
-                yield return CoroutineData.GetWaitForSeconds(3.0f);
+                // 영상 생성 커맨드가 있으면 사진 동기화 → 영상 생성 → 상대방 완료 대기 순으로 진행함.
+                if (!string.IsNullOrEmpty(_videoReadyCmd))
+                {
+                    // 양쪽: 누락 사진 동기화 (클라이언트=HTTP 다운로드, 서버=클라이언트 재업로드 요청).
+                    if (FileTransferManager.Instance != null && SessionManager.Instance != null)
+                    {
+                        string userIdx = SessionManager.Instance.CurrentUserIdx.ToString();
+                        yield return FileTransferManager.Instance.SyncAllPhotosAsync(15, userIdx).ToCoroutine();
+                    }
+
+                    // 양쪽: EnsureSequentialImages 포함 FFmpeg 인코딩 실행 및 완료까지 대기함.
+                    bool videoSuccess = false;
+                    yield return StillcutManager.GenerateVideoAsync().ToCoroutine(r => videoSuccess = r);
+
+                    if (!videoSuccess)
+                        UnityEngine.Debug.LogWarning("[Page_Loading] 영상 생성 실패 — 상대방 대기 후 다음으로 진행합니다.");
+
+                    // 상대방 영상 완료까지 대기함 (1초 간격 재전송으로 수신 누락 방지).
+                    if (TcpManager.Instance)
+                        TcpManager.Instance.SendMessageToTarget(_videoReadyCmd, "");
+
+                    while (!_isVideoRemoteReady)
+                    {
+                        yield return CoroutineData.GetWaitForSeconds(1.0f);
+                        if (TcpManager.Instance)
+                            TcpManager.Instance.SendMessageToTarget(_videoReadyCmd, "");
+                    }
+
+                    yield return CoroutineData.GetWaitForSeconds(1.0f);
+                }
+                else
+                {
+                    // 영상 생성이 필요 없는 씬에서는 기존 안정화 대기 시간을 유지함.
+                    yield return CoroutineData.GetWaitForSeconds(3.0f);
+                }
 
                 if (TcpManager.Instance && TcpManager.Instance.IsServer)
                 {
@@ -170,6 +210,10 @@ namespace My.Scripts.Core.Pages
             if (!string.IsNullOrEmpty(_readyCmd) && msg.command == _readyCmd)
             {
                 _isRemoteReady = true;
+            }
+            else if (!string.IsNullOrEmpty(_videoReadyCmd) && msg.command == _videoReadyCmd)
+            {
+                _isVideoRemoteReady = true;
             }
             else if (!string.IsNullOrEmpty(_completeCmd) && msg.command == _completeCmd)
             {
