@@ -127,12 +127,29 @@ namespace My.Scripts._00_Title
                     {
                         if (!_isWaitingForClient)
                         {
+                            // TCP 연결이 없으면 클라이언트 동기화 없이 단독으로 바로 전환
+                            if (!TcpManager.Instance.IsConnected)
+                            {
+                                Debug.Log("[TitleManager] TCP 미연결 상태. 단독 씬 전환을 진행합니다.");
+                                ProcessTag(1);
+                                return;
+                            }
+
                             _isWaitingForClient = true;
                             Debug.Log("[TitleManager] 수동 엔터 입력. 클라이언트 진입 대기를 시작합니다...");
 
                             if (_pollCoroutine != null) StopCoroutine(_pollCoroutine);
                             _requestCoroutine = StartCoroutine(RequestStartRoutine());
                         }
+                    }
+                }
+                else
+                {
+                    // 클라이언트도 TCP 미연결 시 엔터로 단독 씬 전환 가능
+                    if (Input.GetKeyDown(KeyCode.Return) && !TcpManager.Instance.IsConnected)
+                    {
+                        Debug.Log("[TitleManager] 클라이언트 TCP 미연결 상태. 단독 씬 전환을 진행합니다.");
+                        ProcessTag(1);
                     }
                 }
             }

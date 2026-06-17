@@ -1241,8 +1241,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a5ec9dfc1f159984baa7e3426eac560d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  overrideSettings: 0
-  inspectorIsServer: 1
+  overrideSettings: 1
+  inspectorIsServer: 0
 --- !u!4 &1608457130
 Transform:
   m_ObjectHideFlags: 0
@@ -1288,7 +1288,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   reporter: {fileID: 972044177}
-  isDebugMode: 0
+  isDebugMode: 1
   firstTaggedPlayer: 0
   playerColorSprites:
   - {fileID: 21300000, guid: 0679e0eab26f5ea448444c6c7c4493c4, type: 3}
@@ -1418,13 +1418,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1173d1d4dac74964589f16c781715017, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  useEditorTestData: 0
+  useEditorTestData: 1
   testNameA: AAA
   testNameB: BBB
   testColorA: 2
   testColorB: 1
-  testCartridge: A
-  testRelation: 3
+  testCartridge: C
+  testRelation: 4
 --- !u!4 &1868562763
 Transform:
   m_ObjectHideFlags: 0

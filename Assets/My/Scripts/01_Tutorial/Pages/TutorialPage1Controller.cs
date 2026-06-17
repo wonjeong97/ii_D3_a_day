@@ -72,6 +72,14 @@ namespace My.Scripts._01_Tutorial.Pages
                         OnConfirmInput();
                     }
                 }
+                else
+                {
+                    // 클라이언트 TCP 미연결 시 단독 진행 가능
+                    if ((Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter)) && !TcpManager.Instance.IsConnected)
+                    {
+                        CompletePage();
+                    }
+                }
             }
         }
 

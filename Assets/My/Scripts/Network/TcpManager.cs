@@ -75,14 +75,16 @@ namespace My.Scripts.Network
         [Tooltip("overrideSettings가 true일 때 적용되는 서버/클라이언트 여부")]
         [SerializeField] private bool inspectorIsServer = true;
 
-        public bool IsServer 
+        public bool IsServer
         {
-            get 
-            { 
+            get
+            {
                 if (overrideSettings) return inspectorIsServer;
-                return _tcpSetting != null && _tcpSetting.isServer; 
+                return _tcpSetting != null && _tcpSetting.isServer;
             }
         }
+
+        public bool IsConnected => _isConnectionActive;
 
         /// <summary>
         /// 싱글톤 인스턴스를 초기화하고 네트워크 설정을 로드함.

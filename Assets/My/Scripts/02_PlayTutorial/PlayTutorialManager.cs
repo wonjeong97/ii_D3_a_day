@@ -115,12 +115,17 @@ namespace My.Scripts._02_PlayTutorial
             _isLocalFinished = true;
             Debug.Log("[PlayTutorialManager] 내 PC 플레이 튜토리얼 완료. 상대방 대기 중...");
 
-            if (TcpManager.Instance)
+            if (TcpManager.Instance && TcpManager.Instance.IsConnected)
             {
                 TcpManager.Instance.SendMessageToTarget("PLAY_TUTORIAL_COMPLETE", "");
+                StartCoroutine(SendCompleteSignalRoutine());
+            }
+            else
+            {
+                // TCP 미연결 시 단독 진행
+                _isRemoteFinished = true;
             }
 
-            StartCoroutine(SendCompleteSignalRoutine());
             CheckSyncAndChangeScene();
         }
 
