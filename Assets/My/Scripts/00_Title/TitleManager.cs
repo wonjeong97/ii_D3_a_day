@@ -127,10 +127,10 @@ namespace My.Scripts._00_Title
                     {
                         if (!_isWaitingForClient)
                         {
-                            // TCP 연결이 없으면 클라이언트 동기화 없이 단독으로 바로 전환
-                            if (!TcpManager.Instance.IsConnected)
+                            // 단독 실행 모드일 때 클라이언트 동기화 없이 바로 전환
+                            if (TcpManager.Instance.StandaloneMode)
                             {
-                                Debug.Log("[TitleManager] TCP 미연결 상태. 단독 씬 전환을 진행합니다.");
+                                Debug.Log("[TitleManager] 단독 실행 모드. 단독 씬 전환을 진행합니다.");
                                 ProcessTag(1);
                                 return;
                             }
@@ -145,10 +145,10 @@ namespace My.Scripts._00_Title
                 }
                 else
                 {
-                    // 클라이언트도 TCP 미연결 시 엔터로 단독 씬 전환 가능
-                    if (Input.GetKeyDown(KeyCode.Return) && !TcpManager.Instance.IsConnected)
+                    // 클라이언트 단독 실행 모드 시 엔터로 씬 전환 가능
+                    if (Input.GetKeyDown(KeyCode.Return) && TcpManager.Instance.StandaloneMode)
                     {
-                        Debug.Log("[TitleManager] 클라이언트 TCP 미연결 상태. 단독 씬 전환을 진행합니다.");
+                        Debug.Log("[TitleManager] 클라이언트 단독 실행 모드. 단독 씬 전환을 진행합니다.");
                         ProcessTag(1);
                     }
                 }

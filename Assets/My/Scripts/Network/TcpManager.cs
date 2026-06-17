@@ -74,6 +74,8 @@ namespace My.Scripts.Network
         [SerializeField] private bool overrideSettings;
         [Tooltip("overrideSettings가 true일 때 적용되는 서버/클라이언트 여부")]
         [SerializeField] private bool inspectorIsServer = true;
+        [Tooltip("체크하면 TCP 연결 없이 단독 실행 모드로 동작합니다. 일시적 연결 끊김과 무관하게 의도적으로 단독 진행할 때만 사용합니다.")]
+        [SerializeField] private bool standaloneMode;
 
         public bool IsServer
         {
@@ -85,6 +87,9 @@ namespace My.Scripts.Network
         }
 
         public bool IsConnected => _isConnectionActive;
+
+        // 의도적 단독 실행 여부. IsConnected(순간 연결 상태)와 달리 명시적으로 설정된 값만 반영함.
+        public bool StandaloneMode => standaloneMode;
 
         /// <summary>
         /// 싱글톤 인스턴스를 초기화하고 네트워크 설정을 로드함.
