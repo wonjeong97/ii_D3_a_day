@@ -367,10 +367,24 @@ namespace My.Scripts._02_PlayTutorial.Pages
         /// <returns>눌린 KeyCode 반환.</returns>
         private KeyCode GetValidKey(bool isServer)
         {
-            KeyCode[] keys = isServer 
+            bool isStandalone = !TcpManager.Instance || TcpManager.Instance.StandaloneMode;
+
+            // 단독 실행 모드 시 양쪽 키 범위 모두 허용 (단독 테스트용)
+            if (isStandalone)
+            {
+                KeyCode[] allKeys = { KeyCode.Alpha1, KeyCode.Alpha2, KeyCode.Alpha3, KeyCode.Alpha4, KeyCode.Alpha5,
+                                      KeyCode.Alpha6, KeyCode.Alpha7, KeyCode.Alpha8, KeyCode.Alpha9, KeyCode.Alpha0 };
+                foreach (KeyCode key in allKeys)
+                {
+                    if (Input.GetKeyDown(key)) return key;
+                }
+                return KeyCode.None;
+            }
+
+            KeyCode[] keys = isServer
                 ? new KeyCode[] { KeyCode.Alpha1, KeyCode.Alpha2, KeyCode.Alpha3, KeyCode.Alpha4, KeyCode.Alpha5 }
                 : new KeyCode[] { KeyCode.Alpha6, KeyCode.Alpha7, KeyCode.Alpha8, KeyCode.Alpha9, KeyCode.Alpha0 };
-            
+
             foreach (KeyCode key in keys)
             {
                 if (Input.GetKeyDown(key)) return key;

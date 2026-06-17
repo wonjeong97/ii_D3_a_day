@@ -86,3 +86,6 @@ crashlytics-build.properties
 /Assets/StreamingAssets/build_info.meta
 
 /Pictures
+
+# Claude Code
+.claude/

@@ -127,12 +127,29 @@ namespace My.Scripts._00_Title
                     {
                         if (!_isWaitingForClient)
                         {
+                            // 단독 실행 모드일 때 클라이언트 동기화 없이 바로 전환
+                            if (TcpManager.Instance.StandaloneMode)
+                            {
+                                Debug.Log("[TitleManager] 단독 실행 모드. 단독 씬 전환을 진행합니다.");
+                                ProcessTag(1);
+                                return;
+                            }
+
                             _isWaitingForClient = true;
                             Debug.Log("[TitleManager] 수동 엔터 입력. 클라이언트 진입 대기를 시작합니다...");
 
                             if (_pollCoroutine != null) StopCoroutine(_pollCoroutine);
                             _requestCoroutine = StartCoroutine(RequestStartRoutine());
                         }
+                    }
+                }
+                else
+                {
+                    // 클라이언트 단독 실행 모드 시 엔터로 씬 전환 가능
+                    if (Input.GetKeyDown(KeyCode.Return) && TcpManager.Instance.StandaloneMode)
+                    {
+                        Debug.Log("[TitleManager] 클라이언트 단독 실행 모드. 단독 씬 전환을 진행합니다.");
+                        ProcessTag(1);
                     }
                 }
             }
